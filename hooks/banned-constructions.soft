@@ -1,0 +1,22 @@
+# Constructions the Stop hook lets through. check-constructions.sh --soft
+# prints only these, --hard prints the rest. A name is the text of a rule in
+# banned-constructions.txt up to its first full stop, matched whole.
+# prose-write.sh ignores this file, so a written file is still refused on
+# every construction.
+Negative incorporation on a determiner
+Active clause with a pronominalised head
+Active relative clause with a pronominalised head
+Selectional restriction on the subject
+Contrast coordinated with 'and'
+Delexical verb
+Unnamed document
+Bare definite noun phrase
+Verbless fragment after a comma
+Wrong preposition: "at" for a thing that isn't a place
+Contact clause with the head as its object
+Selectional restriction: a card can't speak
+Selectional restriction: "names" with a thing as its subject
+Manner clause with "as" and a pronominalised object
+Contact clause with a negated verb
+Delexical "get" for a future passive
+Present tense for work that will happen later
