@@ -1,6 +1,7 @@
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { DatabaseSync } from 'node:sqlite'
 import { afterEach, beforeEach, vi } from 'vitest'
 import { newProgressTracker } from '../progress-tracker/progress-tracker'
 import { ScratchPadFolder } from './scratch-pad-folder'
@@ -28,15 +29,34 @@ export function removeTemporaryHomes(): void {
 }
 
 export function exportJobScratchPad(home: string): ScratchPadFolder {
-  return ScratchPadFolder.create(
-    join(home, '2026-03-14-export-job'),
-    newProgressTracker('Export job'),
-    exportJobIndexPage,
+  return ScratchPadFolder.create(join(home, '2026-03-14-export-job'), exportJobIndexPage, (pad) =>
+    pad.writeProgressTracker(newProgressTracker('Export job')),
   )
 }
 
 export function writeFileInPad(folder: ScratchPadFolder, file: string, text: string): void {
   writeFileSync(join(folder.path, file), text)
+}
+
+export function runSqlOnPadDb(folder: ScratchPadFolder, sql: string): void {
+  const db = new DatabaseSync(join(folder.path, 'pad.db'))
+  try {
+    db.exec(sql)
+  } finally {
+    db.close()
+  }
+}
+
+export function refuseNewEvents(folder: ScratchPadFolder): void {
+  runSqlOnPadDb(
+    folder,
+    `CREATE TRIGGER refuse_new_events BEFORE INSERT ON events
+     BEGIN SELECT RAISE(ABORT, 'the disk is full'); END`,
+  )
+}
+
+export function acceptNewEvents(folder: ScratchPadFolder): void {
+  runSqlOnPadDb(folder, 'DROP TRIGGER refuse_new_events')
 }
 
 export function freezeClockAt(time: string): void {

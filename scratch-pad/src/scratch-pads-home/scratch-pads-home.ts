@@ -1,6 +1,5 @@
 import { existsSync, mkdirSync, readdirSync } from 'node:fs'
 import { isAbsolute, join, resolve } from 'node:path'
-import { nextEvent } from '../events/scratch-pad-event'
 import { newProgressTracker } from '../progress-tracker/progress-tracker'
 import { ScratchPadFolder } from '../scratch-pad-folder/scratch-pad-folder'
 import { ScratchPadError } from '../scratch-pad-error'
@@ -77,16 +76,15 @@ export function createScratchPad(home: string, topic: string, today: Date): Scra
   }
   mkdirSync(home, { recursive: true })
   const title = scratchPadTitle(topic)
-  const folder = ScratchPadFolder.create(path, newProgressTracker(title), `# ${title}\n`)
-  folder.appendEvent(
-    nextEvent(folder.readEvents(), {
+  return ScratchPadFolder.create(path, `# ${title}\n`, (pad) => {
+    pad.writeProgressTracker(newProgressTracker(title))
+    pad.appendEvent({
       time: today.toISOString(),
       kind: 'scratch-pad-created',
       by: 'agent',
       item: undefined,
-    }),
-  )
-  return folder
+    })
+  })
 }
 
 function scratchPadPath(home: string, selector: string): string {

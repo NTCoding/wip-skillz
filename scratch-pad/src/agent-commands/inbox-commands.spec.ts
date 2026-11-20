@@ -56,7 +56,7 @@ describe('readAgentInbox', () => {
 
     readAgentInbox(folder, mainTypes)
 
-    expect(folder.readDecisionAnswer('d-1').seenByAgent).toBe(true)
+    expect(folder.read((pad) => pad.readDecisionAnswer('d-1')).seenByAgent).toBe(true)
   })
 
   it('keeps the grammar notes new for the subagent after the main agent has read its inbox', () => {

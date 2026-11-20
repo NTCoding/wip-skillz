@@ -29,7 +29,7 @@ function commentOnRetryPolicy(folder: ScratchPadFolder): void {
 
 function lastMessageOfComment(environment: ReturnType<typeof environmentWithScratchPad>) {
   return new ScratchPadFolder(join(environment.SCRATCH_PADS_HOME, environment.SCRATCH_PAD))
-    .readThread('c-1')
+    .read((pad) => pad.readThread('c-1'))
     .messages.at(-1)?.text
 }
 
@@ -113,14 +113,27 @@ describe('runCommandLine', () => {
 
   it('prints the message of a file system error and returns 1', () => {
     const environment = environmentWithScratchPad()
-    const threads = join(environment.SCRATCH_PADS_HOME, environment.SCRATCH_PAD, 'threads')
-    rmSync(threads, { recursive: true })
-    writeFileSync(threads, '')
+    const pages = join(environment.SCRATCH_PADS_HOME, environment.SCRATCH_PAD, 'pages')
+    rmSync(pages, { recursive: true })
+    writeFileSync(pages, '')
 
-    expect(runScratchPad(['status'], environment)).toStrictEqual({
+    expect(runScratchPad(['pages'], environment)).toStrictEqual({
       exitCode: 1,
       stdout: '',
-      stderr: `ENOTDIR: not a directory, scandir '${threads}'\n`,
+      stderr: `ENOTDIR: not a directory, scandir '${pages}'\n`,
+    })
+  })
+
+  it('prints that pad.db is broken without telling the agent to delete anything', () => {
+    const environment = environmentWithScratchPad()
+    const padDb = join(environment.SCRATCH_PADS_HOME, environment.SCRATCH_PAD, 'pad.db')
+    writeFileSync(padDb, 'The export job retries 5 times.\n'.repeat(40))
+
+    expect(runScratchPad(['inbox'], environment)).toStrictEqual({
+      exitCode: 1,
+      stdout: '',
+      stderr:
+        'pad.db in 2026-03-14-export-job is broken: file is not a database. Nothing was saved. Tell Nick, because the threads, the decisions and the progress tracker of the scratch pad are in pad.db.\n',
     })
   })
 

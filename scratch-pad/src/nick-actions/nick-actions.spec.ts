@@ -1,8 +1,10 @@
 import { afterEach, describe, expect, it } from 'vitest'
 import { UnknownPageError } from '../pages/page-markdown'
+import { PadDbFailureError } from '../scratch-pad-folder/scratch-pad-folder'
 import {
   exportJobScratchPad,
   freezeClockAt,
+  refuseNewEvents,
   removeTemporaryHomes,
   temporaryHome,
 } from '../scratch-pad-folder/scratch-pad-folder-fixtures'
@@ -33,7 +35,7 @@ describe('nickComments', () => {
 
     commentOn(folder)
 
-    expect(folder.readThread('c-1')).toStrictEqual({
+    expect(folder.read((pad) => pad.readThread('c-1'))).toStrictEqual({
       id: 'c-1',
       type: 'comment',
       page: 'pages/index.md',
@@ -63,9 +65,17 @@ describe('nickComments', () => {
 
     commentOn(folder)
 
-    expect(folder.readEvents()).toStrictEqual([
+    expect(folder.read((pad) => pad.readEvents())).toStrictEqual([
       { number: 1, time, kind: 'thread-opened', by: 'nick', item: 'c-1' },
     ])
+  })
+
+  it('saves no thread when the event of the thread cannot be saved', () => {
+    const folder = exportJobScratchPad(temporaryHome())
+    refuseNewEvents(folder)
+
+    expect(() => commentOn(folder)).toThrow(PadDbFailureError)
+    expect(folder.read((pad) => pad.readThreads())).toStrictEqual([])
   })
 
   it('throws UnknownPageError when the page does not exist', () => {
@@ -85,7 +95,7 @@ describe('nickReplies', () => {
 
     nickReplies(folder, 'c-1', 'And what about 8?')
 
-    expect(folder.readThread('c-1').messages).toStrictEqual([
+    expect(folder.read((pad) => pad.readThread('c-1')).messages).toStrictEqual([
       { author: 'nick', text: 'Is 5 retries enough on a slow network?', time },
       { author: 'nick', text: 'And what about 8?', time },
     ])
@@ -93,11 +103,12 @@ describe('nickReplies', () => {
 
   it('makes the thread wait for the agent when the thread waited for Nick', () => {
     const folder = exportJobScratchPad(temporaryHome())
-    folder.writeThread({ ...commentOn(folder), waitsFor: 'nick' })
+    const comment = commentOn(folder)
+    folder.change((pad) => pad.writeThread({ ...comment, waitsFor: 'nick' }))
 
     nickReplies(folder, 'c-1', 'And what about 8?')
 
-    expect(folder.readThread('c-1').waitsFor).toBe('agent')
+    expect(folder.read((pad) => pad.readThread('c-1')).waitsFor).toBe('agent')
   })
 
   it('appends a thread-replied event by Nick', () => {
@@ -106,7 +117,7 @@ describe('nickReplies', () => {
 
     nickReplies(folder, 'c-1', 'And what about 8?')
 
-    expect(folder.readEvents().at(-1)).toStrictEqual({
+    expect(folder.read((pad) => pad.readEvents()).at(-1)).toStrictEqual({
       number: 2,
       time,
       kind: 'thread-replied',
@@ -123,7 +134,7 @@ describe('nickResolves', () => {
 
     nickResolves(folder, 'c-1')
 
-    expect(folder.readThread('c-1').waitsFor).toBe('nobody')
+    expect(folder.read((pad) => pad.readThread('c-1')).waitsFor).toBe('nobody')
   })
 
   it('appends a thread-resolved event by Nick', () => {
@@ -132,7 +143,7 @@ describe('nickResolves', () => {
 
     nickResolves(folder, 'c-1')
 
-    expect(folder.readEvents().at(-1)).toStrictEqual({
+    expect(folder.read((pad) => pad.readEvents()).at(-1)).toStrictEqual({
       number: 2,
       time,
       kind: 'thread-resolved',
@@ -153,7 +164,7 @@ describe('nickAnswersDecision', () => {
       answer: { choice: 'proposal' },
     })
 
-    expect(folder.readDecisionAnswer('d-1')).toStrictEqual({
+    expect(folder.read((pad) => pad.readDecisionAnswer('d-1'))).toStrictEqual({
       id: 'd-1',
       page: 'pages/index.md',
       line: 9,
@@ -174,7 +185,7 @@ describe('nickAnswersDecision', () => {
       answer: { written: 'Only for companies.' },
     })
 
-    expect(folder.readDecisionLog()).toStrictEqual([
+    expect(folder.read((pad) => pad.readDecisionLog())).toStrictEqual([
       {
         number: 1,
         time,
@@ -188,7 +199,7 @@ describe('nickAnswersDecision', () => {
   it('replaces the saved answer and keeps its id when Nick changes the answer', () => {
     const folder = answeredThenChanged()
 
-    expect(folder.readDecisionAnswers()).toStrictEqual([
+    expect(folder.read((pad) => pad.readDecisionAnswers())).toStrictEqual([
       {
         id: 'd-1',
         page: 'pages/index.md',
@@ -202,11 +213,13 @@ describe('nickAnswersDecision', () => {
   })
 
   it('makes the answer unseen by the agent again when Nick changes the answer', () => {
-    expect(answeredThenChanged().readDecisionAnswer('d-1').seenByAgent).toBe(false)
+    expect(answeredThenChanged().read((pad) => pad.readDecisionAnswer('d-1')).seenByAgent).toBe(
+      false,
+    )
   })
 
   it('keeps one log entry for the decision when Nick changes the answer', () => {
-    expect(answeredThenChanged().readDecisionLog()).toStrictEqual([
+    expect(answeredThenChanged().read((pad) => pad.readDecisionLog())).toStrictEqual([
       {
         number: 1,
         time,
@@ -246,7 +259,7 @@ describe('nickAnswersDecision', () => {
       answer: { choice: 'proposal' },
     })
 
-    expect(folder.readEvents()).toStrictEqual([
+    expect(folder.read((pad) => pad.readEvents())).toStrictEqual([
       { number: 1, time, kind: 'decision-answered', by: 'nick', item: 'd-1' },
     ])
   })
@@ -260,7 +273,9 @@ function answeredThenChanged() {
     question,
     answer: { choice: 'proposal' },
   })
-  folder.writeDecisionAnswer({ ...folder.readDecisionAnswer('d-1'), seenByAgent: true })
+  folder.change((pad) =>
+    pad.writeDecisionAnswer({ ...pad.readDecisionAnswer('d-1'), seenByAgent: true }),
+  )
   nickAnswersDecision(folder, {
     page: 'index',
     line: 11,

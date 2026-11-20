@@ -1,50 +1,39 @@
-import {
-  appendFileSync,
-  existsSync,
-  mkdirSync,
-  readdirSync,
-  readFileSync,
-  renameSync,
-  writeFileSync,
-} from 'node:fs'
-import { basename, dirname, join } from 'node:path'
-import { nothingPrinted, type LastPrintedEvents } from '../agent-inbox/agent-inbox'
-import { type DecisionAnswer } from '../decisions/decision-answer'
-import { type DecisionLogEntry } from '../decisions/decision-log'
-import { type ScratchPadEvent } from '../events/scratch-pad-event'
-import { itemTypeOf, type ItemType } from '../items/item-id'
+import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { basename, join } from 'node:path'
+import { DatabaseSync } from 'node:sqlite'
 import { isPagePath } from '../pages/page-markdown'
-import { type ProgressTracker } from '../progress-tracker/progress-tracker'
 import { ScratchPadError } from '../scratch-pad-error'
-import { type Thread } from '../threads/thread'
-import {
-  decisionAnswerFromFile,
-  decisionLogEntryFromLine,
-  eventFromLine,
-  lastPrintedEventsFromFile,
-  progressTrackerFromFile,
-  threadFromFile,
-} from './file-contents'
+import { PadDb } from './pad-db'
+import { BrokenPadDbError } from './pad-row'
+import { padSchema, padSchemaVersion } from './pad-schema'
 
-const progressTrackerFile = 'progress-tracker.json'
-const threadsFolder = 'threads'
-const decisionAnswersFolder = 'decision-answers'
+const padDbFile = 'pad.db'
 const pagesFolder = 'pages'
-const eventsFile = 'events.jsonl'
-const decisionLogFile = 'decision-log.jsonl'
-const agentInboxFile = 'agent-inbox.json'
+const busyTimeoutMilliseconds = 5000
+const sqliteNotADatabase = 26
+const sqliteCorrupt = 11
 
-export class UnknownThreadError extends ScratchPadError {
-  constructor(id: string, type: ItemType, padName: string) {
+export class MissingPadDbError extends ScratchPadError {
+  constructor(padName: string) {
     super(
-      `There isn't any thread called ${id} in ${padName}. Run "scratch-pad inbox --all --type ${type}" to list the threads that wait for the agent.`,
+      `${padName} doesn't have a pad.db, so its threads, decisions and progress tracker can't be read. Tell Nick.`,
     )
   }
 }
 
-export class UnknownDecisionError extends ScratchPadError {
-  constructor(id: string, padName: string) {
-    super(`There isn't any answered decision called ${id} in ${padName}.`)
+export class NewerPadDbError extends ScratchPadError {
+  constructor(padName: string, version: number) {
+    super(
+      `pad.db in ${padName} has the tables of version ${version}, but this scratch-pad only knows version ${padSchemaVersion}. Update scratch-pad.`,
+    )
+  }
+}
+
+export class PadDbFailureError extends ScratchPadError {
+  constructor(padName: string, problem: string) {
+    super(
+      `pad.db in ${padName} failed: ${problem}. Nothing was saved, so you can run the command again.`,
+    )
   }
 }
 
@@ -52,17 +41,20 @@ export class ScratchPadFolder {
   constructor(readonly path: string) {}
 
   static isScratchPad(path: string): boolean {
-    return existsSync(join(path, progressTrackerFile))
+    return existsSync(join(path, padDbFile)) || existsSync(join(path, pagesFolder))
   }
 
-  static create(path: string, tracker: ProgressTracker, indexPage: string): ScratchPadFolder {
+  static create(path: string, indexPage: string, fill: (pad: PadDb) => void): ScratchPadFolder {
     const folder = new ScratchPadFolder(path)
     mkdirSync(join(path, pagesFolder), { recursive: true })
-    mkdirSync(join(path, threadsFolder))
-    mkdirSync(join(path, decisionAnswersFolder))
     writeFileSync(join(path, pagesFolder, 'index.md'), indexPage)
-    folder.writeLastPrintedEvents(nothingPrinted)
-    folder.writeProgressTracker(tracker)
+    folder.usePadDb((db) => {
+      db.exec('PRAGMA journal_mode = WAL')
+      folder.inTransaction(db, 'BEGIN IMMEDIATE', (pad) => {
+        db.exec(padSchema)
+        fill(pad)
+      })
+    })
     return folder
   }
 
@@ -70,82 +62,21 @@ export class ScratchPadFolder {
     return basename(this.path)
   }
 
-  readProgressTracker(): ProgressTracker {
-    return progressTrackerFromFile(this.readText(progressTrackerFile), progressTrackerFile)
+  read<T>(work: (pad: PadDb) => T): T {
+    return this.withPadDb((db) => this.inTransaction(db, 'BEGIN', work))
   }
 
-  writeProgressTracker(tracker: ProgressTracker): void {
-    this.writeJson(progressTrackerFile, tracker)
-  }
-
-  readThreads(): Thread[] {
-    return this.jsonFilesIn(threadsFolder).map((file) => threadFromFile(this.readText(file), file))
-  }
-
-  readThread(id: string): Thread {
-    const type = itemTypeOf(id)
-    const file = `${threadsFolder}/${id}.json`
-    if (!existsSync(join(this.path, file))) {
-      throw new UnknownThreadError(id, type, this.name)
-    }
-    return threadFromFile(this.readText(file), file)
-  }
-
-  writeThread(thread: Thread): void {
-    this.writeJson(`${threadsFolder}/${thread.id}.json`, thread)
-  }
-
-  readDecisionAnswers(): DecisionAnswer[] {
-    return this.jsonFilesIn(decisionAnswersFolder).map((file) =>
-      decisionAnswerFromFile(this.readText(file), file),
-    )
-  }
-
-  readDecisionAnswer(id: string): DecisionAnswer {
-    itemTypeOf(id)
-    const file = `${decisionAnswersFolder}/${id}.json`
-    if (!existsSync(join(this.path, file))) {
-      throw new UnknownDecisionError(id, this.name)
-    }
-    return decisionAnswerFromFile(this.readText(file), file)
-  }
-
-  writeDecisionAnswer(decision: DecisionAnswer): void {
-    this.writeJson(`${decisionAnswersFolder}/${decision.id}.json`, decision)
-  }
-
-  readEvents(): ScratchPadEvent[] {
-    return this.jsonLines(eventsFile).map(({ text, file }) => eventFromLine(text, file))
-  }
-
-  appendEvent(event: ScratchPadEvent): void {
-    const path = join(this.path, eventsFile)
-    const missingNewline = existsSync(path) && /[^\n]$/.test(readFileSync(path, 'utf8'))
-    appendFileSync(path, `${missingNewline ? '\n' : ''}${JSON.stringify(event)}\n`)
-  }
-
-  readDecisionLog(): DecisionLogEntry[] {
-    return this.jsonLines(decisionLogFile).map(({ text, file }) =>
-      decisionLogEntryFromLine(text, file),
-    )
-  }
-
-  writeDecisionLog(entries: readonly DecisionLogEntry[]): void {
-    this.writeText(decisionLogFile, entries.map((entry) => `${JSON.stringify(entry)}\n`).join(''))
-  }
-
-  readLastPrintedEvents(): LastPrintedEvents {
-    return existsSync(join(this.path, agentInboxFile))
-      ? lastPrintedEventsFromFile(this.readText(agentInboxFile), agentInboxFile)
-      : nothingPrinted
-  }
-
-  writeLastPrintedEvents(lastPrinted: LastPrintedEvents): void {
-    this.writeJson(agentInboxFile, { lastPrintedEvent: lastPrinted })
+  change<T>(work: (pad: PadDb) => T): T {
+    return this.withPadDb((db) => this.inTransaction(db, 'BEGIN IMMEDIATE', work))
   }
 
   pages(): string[] {
-    return this.filesIn(pagesFolder, '.md')
+    const path = join(this.path, pagesFolder)
+    return existsSync(path)
+      ? readdirSync(path)
+          .filter((name) => name.endsWith('.md'))
+          .map((name) => `${pagesFolder}/${name}`)
+      : []
   }
 
   readPageLines(page: string): readonly string[] {
@@ -153,47 +84,71 @@ export class ScratchPadFolder {
     return isPagePath(page) && existsSync(path) ? readFileSync(path, 'utf8').split('\n') : []
   }
 
-  private readText(file: string): string {
-    return readFileSync(join(this.path, file), 'utf8')
-  }
-
-  private writeJson(file: string, value: unknown): void {
-    this.writeText(file, `${JSON.stringify(value, null, 2)}\n`)
-  }
-
-  private writeText(file: string, text: string): void {
-    const target = join(this.path, file)
-    const temporary = `${target}.${process.pid}.tmp`
-    mkdirSync(dirname(target), { recursive: true })
-    writeFileSync(temporary, text)
-    renameSync(temporary, target)
-  }
-
-  private filesIn(folder: string, extension: string): string[] {
-    const path = join(this.path, folder)
-    return existsSync(path)
-      ? readdirSync(path)
-          .filter((name) => name.endsWith(extension))
-          .map((name) => `${folder}/${name}`)
-      : []
-  }
-
-  private jsonFilesIn(folder: string): string[] {
-    return this.filesIn(folder, '.json').toSorted(byItemNumber)
-  }
-
-  private jsonLines(file: string): Array<{ text: string; file: string }> {
-    const path = join(this.path, file)
-    if (!existsSync(path)) {
-      return []
+  private withPadDb<T>(use: (db: DatabaseSync) => T): T {
+    if (!existsSync(join(this.path, padDbFile))) {
+      throw new MissingPadDbError(this.name)
     }
-    return readFileSync(path, 'utf8')
-      .split('\n')
-      .map((text, index) => ({ text, file: `${file} line ${index + 1}` }))
-      .filter((line) => line.text.trim() !== '')
+    return this.usePadDb((db) => {
+      this.checkSchemaVersion(db)
+      return use(db)
+    })
+  }
+
+  private usePadDb<T>(use: (db: DatabaseSync) => T): T {
+    try {
+      const db = new DatabaseSync(join(this.path, padDbFile), { timeout: busyTimeoutMilliseconds })
+      try {
+        return use(db)
+      } finally {
+        db.close()
+      }
+    } catch (error) {
+      throw scratchPadErrorFrom(error, this.name)
+    }
+  }
+
+  private checkSchemaVersion(db: DatabaseSync): void {
+    const version = Math.max(
+      ...db
+        .prepare('PRAGMA user_version')
+        .all()
+        .map((row) => Number(row['user_version'])),
+    )
+    if (version > padSchemaVersion) {
+      throw new NewerPadDbError(this.name, version)
+    }
+    if (version < padSchemaVersion) {
+      throw new BrokenPadDbError(this.name, "it doesn't contain the tables of a scratch pad")
+    }
+  }
+
+  private inTransaction<T>(db: DatabaseSync, begin: string, work: (pad: PadDb) => T): T {
+    db.exec(begin)
+    const result = rolledBackOnError(db, () => work(new PadDb(db, this.name)))
+    db.exec('COMMIT')
+    return result
   }
 }
 
-function byItemNumber(first: string, second: string): number {
-  return first.localeCompare(second, 'en', { numeric: true })
+function rolledBackOnError<T>(db: DatabaseSync, work: () => T): T {
+  try {
+    return work()
+  } catch (error) {
+    db.exec('ROLLBACK')
+    throw error
+  }
+}
+
+function scratchPadErrorFrom(error: unknown, padName: string): unknown {
+  if (!isSqliteError(error)) {
+    return error
+  }
+  const primaryCode = error.errcode % 256
+  return primaryCode === sqliteNotADatabase || primaryCode === sqliteCorrupt
+    ? new BrokenPadDbError(padName, error.message)
+    : new PadDbFailureError(padName, error.message)
+}
+
+function isSqliteError(error: unknown): error is Error & { readonly errcode: number } {
+  return error instanceof Error && 'errcode' in error && typeof error.errcode === 'number'
 }

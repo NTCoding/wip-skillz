@@ -46,7 +46,7 @@ describe('scratchPadsHome', () => {
 })
 
 describe('scratchPadNames', () => {
-  it('lists the folders that have a progress tracker in alphabetical order', () => {
+  it('lists the folders that have a pad.db in alphabetical order', () => {
     const home = temporaryHome()
     createScratchPad(home, 'retry limit', today)
     exportJobScratchPad(home)
@@ -136,7 +136,7 @@ describe('createScratchPad', () => {
 
     const folder = createScratchPad(home, 'retry limit', today)
 
-    expect(existsSync(join(folder.path, 'progress-tracker.json'))).toBe(true)
+    expect(existsSync(join(folder.path, 'pad.db'))).toBe(true)
   })
 
   it('writes the topic with a capital letter as the title of the index page', () => {
@@ -148,13 +148,13 @@ describe('createScratchPad', () => {
   it('uses the same title for the progress tracker', () => {
     const folder = createScratchPad(temporaryHome(), 'retry limit', today)
 
-    expect(folder.readProgressTracker().title).toBe('Retry limit')
+    expect(folder.read((pad) => pad.readProgressTracker()).title).toBe('Retry limit')
   })
 
   it('appends a scratch-pad-created event as the first event', () => {
     const folder = createScratchPad(temporaryHome(), 'retry limit', today)
 
-    expect(folder.readEvents()).toStrictEqual([
+    expect(folder.read((pad) => pad.readEvents())).toStrictEqual([
       {
         number: 1,
         time: today.toISOString(),

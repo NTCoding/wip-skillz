@@ -11,18 +11,21 @@ interface InboxRequest {
 }
 
 export function readAgentInbox(folder: ScratchPadFolder, request: InboxRequest): string {
-  const selection = selectAgentInbox({
-    threads: folder.readThreads(),
-    decisions: folder.readDecisionAnswers(),
-    events: folder.readEvents(),
-    lastPrinted: folder.readLastPrintedEvents(),
-    types: request.types,
-    includeSeen: request.includeSeen,
+  const selection = folder.change((pad) => {
+    const selected = selectAgentInbox({
+      threads: pad.readThreads(),
+      decisions: pad.readDecisionAnswers(),
+      events: pad.readEvents(),
+      lastPrinted: pad.readLastPrintedEvents(),
+      types: request.types,
+      includeSeen: request.includeSeen,
+    })
+    pad.writeLastPrintedEvents(selected.lastPrinted)
+    selected.printed
+      .flatMap((item) => (item.kind === 'decision' ? [item.decision] : []))
+      .forEach((decision) => pad.writeDecisionAnswer(markSeenByAgent(decision)))
+    return selected
   })
-  folder.writeLastPrintedEvents(selection.lastPrinted)
-  selection.printed
-    .flatMap((item) => (item.kind === 'decision' ? [item.decision] : []))
-    .forEach((decision) => folder.writeDecisionAnswer(markSeenByAgent(decision)))
   return agentInboxText(selection, {
     padName: folder.name,
     includeSeen: request.includeSeen,
@@ -31,11 +34,13 @@ export function readAgentInbox(folder: ScratchPadFolder, request: InboxRequest):
 }
 
 export function scratchPadStatus(folder: ScratchPadFolder): string {
-  return statusText({
-    padName: folder.name,
-    padPath: folder.path,
-    tracker: folder.readProgressTracker(),
-    threads: folder.readThreads(),
-    decisions: folder.readDecisionAnswers(),
-  })
+  return folder.read((pad) =>
+    statusText({
+      padName: folder.name,
+      padPath: folder.path,
+      tracker: pad.readProgressTracker(),
+      threads: pad.readThreads(),
+      decisions: pad.readDecisionAnswers(),
+    }),
+  )
 }

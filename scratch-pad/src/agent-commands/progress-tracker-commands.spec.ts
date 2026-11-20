@@ -1,7 +1,10 @@
 import { afterEach, describe, expect, it } from 'vitest'
+import { PadDbFailureError } from '../scratch-pad-folder/scratch-pad-folder'
 import {
+  acceptNewEvents,
   exportJobScratchPad,
   freezeClockAt,
+  refuseNewEvents,
   removeTemporaryHomes,
   temporaryHome,
 } from '../scratch-pad-folder/scratch-pad-folder-fixtures'
@@ -40,7 +43,7 @@ describe('setGoalOfScratchPad', () => {
 
     setGoalOfScratchPad(folder, 'Ship the export job.')
 
-    expect(folder.readProgressTracker().goal).toBe('Ship the export job.')
+    expect(folder.read((pad) => pad.readProgressTracker()).goal).toBe('Ship the export job.')
   })
 
   it('appends a goal-set event without an item', () => {
@@ -48,7 +51,7 @@ describe('setGoalOfScratchPad', () => {
 
     setGoalOfScratchPad(folder, 'Ship the export job.')
 
-    expect(folder.readEvents()).toStrictEqual([
+    expect(folder.read((pad) => pad.readEvents())).toStrictEqual([
       { number: 1, time, kind: 'goal-set', by: 'agent', item: undefined },
     ])
   })
@@ -64,7 +67,30 @@ describe('addTaskToTracker', () => {
   it('appends a task-added event that refers to the task', () => {
     const folder = scratchPadWithTwoTasks()
 
-    expect(folder.readEvents().at(-1)?.item).toBe('task-2')
+    expect(folder.read((pad) => pad.readEvents()).at(-1)?.item).toBe('task-2')
+  })
+
+  it('saves no task when the event of the task cannot be saved', () => {
+    const folder = exportJobScratchPad(temporaryHome())
+    refuseNewEvents(folder)
+
+    expect(() => addTaskToTracker(folder, 'Write the retry policy')).toThrow(PadDbFailureError)
+    expect(folder.read((pad) => pad.readProgressTracker().tasks)).toStrictEqual([])
+  })
+
+  it('adds the task once when the command is run again after it failed', () => {
+    const folder = exportJobScratchPad(temporaryHome())
+    refuseNewEvents(folder)
+    expect(() => addTaskToTracker(folder, 'Write the retry policy')).toThrow(
+      'pad.db in 2026-03-14-export-job failed: the disk is full. Nothing was saved, so you can run the command again.',
+    )
+    acceptNewEvents(folder)
+
+    addTaskToTracker(folder, 'Write the retry policy')
+
+    expect(folder.read((pad) => pad.readProgressTracker().tasks)).toStrictEqual([
+      { number: 1, title: 'Write the retry policy', state: 'to-do' },
+    ])
   })
 })
 
@@ -80,10 +106,9 @@ describe('startTaskInTracker', () => {
 
     startTaskInTracker(folder, 2)
 
-    expect(folder.readProgressTracker().tasks.map((task) => task.state)).toStrictEqual([
-      'to-do',
-      'in-progress',
-    ])
+    expect(
+      folder.read((pad) => pad.readProgressTracker()).tasks.map((task) => task.state),
+    ).toStrictEqual(['to-do', 'in-progress'])
   })
 
   it('prints that the task was done when a done task is started again', () => {
@@ -112,10 +137,10 @@ describe('finishTaskInTracker', () => {
   it('appends no event when the task is already done', () => {
     const folder = scratchPadWithTwoTasks()
     finishTaskInTracker(folder, 1)
-    const events = folder.readEvents()
+    const events = folder.read((pad) => pad.readEvents())
 
     expect(() => finishTaskInTracker(folder, 1)).toThrow(TaskAlreadyDoneError)
-    expect(folder.readEvents()).toStrictEqual(events)
+    expect(folder.read((pad) => pad.readEvents())).toStrictEqual(events)
   })
 
   it('saves both changes to the progress tracker', () => {
@@ -124,9 +149,8 @@ describe('finishTaskInTracker', () => {
 
     finishTaskInTracker(folder, 1)
 
-    expect(folder.readProgressTracker().tasks.map((task) => task.state)).toStrictEqual([
-      'done',
-      'in-progress',
-    ])
+    expect(
+      folder.read((pad) => pad.readProgressTracker()).tasks.map((task) => task.state),
+    ).toStrictEqual(['done', 'in-progress'])
   })
 })

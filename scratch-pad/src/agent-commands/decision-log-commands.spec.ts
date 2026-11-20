@@ -27,7 +27,7 @@ describe('logDecisionFromChat', () => {
 
     logDecisionFromChat(folder, 'Keep 5 retries.')
 
-    expect(folder.readDecisionLog()).toStrictEqual([
+    expect(folder.read((pad) => pad.readDecisionLog())).toStrictEqual([
       { number: 1, time, source: 'chat', text: 'Keep 5 retries.', decision: undefined },
     ])
   })
@@ -37,7 +37,7 @@ describe('logDecisionFromChat', () => {
 
     logDecisionFromChat(folder, 'Keep 5 retries.')
 
-    expect(folder.readEvents()).toStrictEqual([
+    expect(folder.read((pad) => pad.readEvents())).toStrictEqual([
       { number: 1, time, kind: 'decision-logged', by: 'agent', item: undefined },
     ])
   })

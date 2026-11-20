@@ -1,7 +1,9 @@
 import { afterEach, describe, expect, it } from 'vitest'
+import { PadDbFailureError } from '../scratch-pad-folder/scratch-pad-folder'
 import {
   exportJobScratchPad,
   freezeClockAt,
+  refuseNewEvents,
   removeTemporaryHomes,
   temporaryHome,
 } from '../scratch-pad-folder/scratch-pad-folder-fixtures'
@@ -58,7 +60,7 @@ describe('replyToThread', () => {
 
     replyToThread(folder, 'c-1', 'I raised the limit to 8.')
 
-    expect(folder.readThread('c-1').messages.at(-1)).toStrictEqual({
+    expect(folder.read((pad) => pad.readThread('c-1')).messages.at(-1)).toStrictEqual({
       author: 'agent',
       text: 'I raised the limit to 8.',
       time,
@@ -70,13 +72,23 @@ describe('replyToThread', () => {
 
     replyToThread(folder, 'c-1', 'I raised the limit to 8.')
 
-    expect(folder.readEvents().at(-1)).toStrictEqual({
+    expect(folder.read((pad) => pad.readEvents()).at(-1)).toStrictEqual({
       number: 4,
       time,
       kind: 'thread-replied',
       by: 'agent',
       item: 'c-1',
     })
+  })
+
+  it('saves no reply when the event of the reply cannot be saved', () => {
+    const folder = preparedScratchPad()
+    refuseNewEvents(folder)
+
+    expect(() => replyToThread(folder, 'c-1', 'I raised the limit to 8.')).toThrow(
+      PadDbFailureError,
+    )
+    expect(folder.read((pad) => pad.readThread('c-1').messages)).toHaveLength(1)
   })
 
   it('throws DecisionReplyError when the id is a decision', () => {
@@ -99,7 +111,9 @@ describe('finishNoteThread', () => {
 
     finishNoteThread(folder, 'g-1', 'Changed "waits" to "waits for".')
 
-    expect(folder.readThread('g-1').outcome).toBe('Changed "waits" to "waits for".')
+    expect(folder.read((pad) => pad.readThread('g-1')).outcome).toBe(
+      'Changed "waits" to "waits for".',
+    )
   })
 
   it('appends a note-done event by the agent', () => {
@@ -107,6 +121,6 @@ describe('finishNoteThread', () => {
 
     finishNoteThread(folder, 'g-1', 'Changed the verb.')
 
-    expect(folder.readEvents().at(-1)?.kind).toBe('note-done')
+    expect(folder.read((pad) => pad.readEvents()).at(-1)?.kind).toBe('note-done')
   })
 })

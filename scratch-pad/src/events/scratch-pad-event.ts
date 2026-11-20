@@ -25,10 +25,6 @@ export interface ScratchPadEvent {
 
 export type NewEvent = Omit<ScratchPadEvent, 'number'>
 
-export function nextEvent(events: readonly ScratchPadEvent[], event: NewEvent): ScratchPadEvent {
-  return { number: latestEventNumber(events) + 1, ...event }
-}
-
 export function latestEventNumber(events: readonly ScratchPadEvent[]): number {
   return events.at(-1)?.number ?? 0
 }

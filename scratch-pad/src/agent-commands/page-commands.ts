@@ -3,7 +3,9 @@ import { outlineText, pageListText } from '../pages/page-text'
 import { type ScratchPadFolder } from '../scratch-pad-folder/scratch-pad-folder'
 
 export function listPages(folder: ScratchPadFolder): string {
-  const openThreads = folder.readThreads().filter((thread) => thread.waitsFor !== 'nobody')
+  const openThreads = folder
+    .read((pad) => pad.readThreads())
+    .filter((thread) => thread.waitsFor !== 'nobody')
   return pageListText(
     pagesInOrder(folder.pages()).map((page) => ({
       page,

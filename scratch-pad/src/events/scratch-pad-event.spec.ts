@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest'
 import {
   lastEventNumberPerItem,
   latestEventNumber,
-  nextEvent,
   type ScratchPadEvent,
 } from './scratch-pad-event'
 
@@ -14,24 +13,6 @@ const events: ScratchPadEvent[] = [
   { number: 3, time, kind: 'thread-opened', by: 'nick', item: 'g-1' },
   { number: 4, time, kind: 'thread-replied', by: 'agent', item: 'c-1' },
 ]
-
-describe('nextEvent', () => {
-  it('numbers the first event 1', () => {
-    expect(nextEvent([], { time, kind: 'goal-set', by: 'agent', item: undefined }).number).toBe(1)
-  })
-
-  it('numbers an event after the last event', () => {
-    expect(
-      nextEvent(events, { time, kind: 'thread-resolved', by: 'nick', item: 'c-1' }),
-    ).toStrictEqual({
-      number: 5,
-      time,
-      kind: 'thread-resolved',
-      by: 'nick',
-      item: 'c-1',
-    })
-  })
-})
 
 describe('latestEventNumber', () => {
   it('returns 0 when there are no events', () => {
