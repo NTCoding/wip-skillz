@@ -1,0 +1,6 @@
+{
+  "$schema": "https://unpkg.com/knip@5/schema.json",
+  "entry": ["src/executable.ts"],
+  "project": ["src/**/*.ts"],
+  "include": ["classMembers", "nsExports", "nsTypes"]
+}

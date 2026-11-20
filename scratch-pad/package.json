@@ -1,0 +1,41 @@
+{
+  "name": "scratch-pad",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@11.21.0",
+  "engines": {
+    "node": "24.x"
+  },
+  "bin": {
+    "scratch-pad": "./dist/scratch-pad"
+  },
+  "scripts": {
+    "build": "node esbuild.config.mjs",
+    "scratch-pad": "node dist/scratch-pad",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "lint": "eslint . --max-warnings 0",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "knip": "knip",
+    "verify": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test && pnpm knip"
+  },
+  "devDependencies": {
+    "@eslint-community/eslint-plugin-eslint-comments": "^4.5.0",
+    "@eslint/js": "^9.39.0",
+    "@types/node": "^24.10.1",
+    "@vitest/coverage-v8": "^4.0.16",
+    "@vitest/eslint-plugin": "1.6.6",
+    "esbuild": "^0.27.0",
+    "eslint": "^9.39.0",
+    "eslint-plugin-import": "^2.32.0",
+    "eslint-plugin-sonarjs": "^3.0.5",
+    "eslint-plugin-unicorn": "^62.0.0",
+    "knip": "^5.21.2",
+    "prettier": "^3.7.4",
+    "typescript": "5.9.3",
+    "typescript-eslint": "^8.50.1",
+    "vitest": "^4.0.8"
+  }
+}
