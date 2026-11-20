@@ -11,6 +11,7 @@ import {
 import { basename, dirname, join } from 'node:path'
 import { DatabaseSync } from 'node:sqlite'
 import { isPagePath } from '../pages/page-markdown'
+import { isCustomHtmlPath } from '../rendered-page/html-block'
 import { ScratchPadError } from '../scratch-pad-error'
 import { PadDb } from './pad-db'
 import {
@@ -79,8 +80,17 @@ export class ScratchPadFolder {
   }
 
   readPageLines(page: string): readonly string[] {
-    const path = join(this.path, page)
-    return isPagePath(page) && existsSync(path) ? readFileSync(path, 'utf8').split('\n') : []
+    const text = isPagePath(page) ? this.readFile(page) : undefined
+    return text === undefined ? [] : text.split('\n')
+  }
+
+  readCustomFile(file: string): string | undefined {
+    return isCustomHtmlPath(file) ? this.readFile(file) : undefined
+  }
+
+  private readFile(file: string): string | undefined {
+    const path = join(this.path, file)
+    return existsSync(path) ? readFileSync(path, 'utf8') : undefined
   }
 
   private build(indexPage: string, fill: (pad: PadDb) => void): void {

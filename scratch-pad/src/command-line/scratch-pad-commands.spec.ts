@@ -1,9 +1,11 @@
 import { afterEach, describe, expect, it } from 'vitest'
 import { commentAndGrammarNoteAndDecision } from '../agent-commands/agent-commands-fixtures'
+import { join } from 'node:path'
 import {
   freezeClockAt,
   removeTemporaryHomes,
   temporaryHome,
+  writeFileInPad,
 } from '../scratch-pad-folder/scratch-pad-folder-fixtures'
 import { type Environment } from '../scratch-pads-home/scratch-pads-home'
 import { environmentWithScratchPad, runScratchPad } from './command-line-fixtures'
@@ -16,6 +18,12 @@ afterEach(() => {
 
 function environmentWithItems() {
   return environmentWithScratchPad(commentAndGrammarNoteAndDecision)
+}
+
+function environmentWithBrokenLink() {
+  return environmentWithScratchPad((folder) => {
+    writeFileInPad(folder, 'pages/retry.md', '# Retry\n\nSee [the queue](queue.md).\n')
+  })
 }
 
 function output(
@@ -140,5 +148,49 @@ describe('the scratch-pad commands', () => {
 
   it('decide logs a decision that starts with a dash', () => {
     expect(output(['decide', '-5 is too low so keep 8.'])).toBe('decision 2 is logged\n')
+  })
+
+  it('inbox prints one line for the decision when only comments are requested and a decision waits', () => {
+    expect(output(['inbox', '--type', 'comment']).split('\n').at(-2)).toBe(
+      '1 decision waits for the agent (scratch-pad inbox --type decision) · 1 grammar note waits for a subagent',
+    )
+  })
+
+  it('tasks lists every task with its state when 2 tasks were added', () => {
+    const environment = environmentWithItems()
+    output(['task', 'add', 'Write the retry policy'], environment)
+    output(['task', 'add', 'Write the invoice template'], environment)
+
+    expect(output(['tasks'], environment)).toBe(
+      '1  to do  Write the retry policy\n2  to do  Write the invoice template\n',
+    )
+  })
+
+  it('check prints the problems and returns 1 when a page has a broken link', () => {
+    expect(runScratchPad(['check'], environmentWithBrokenLink())).toStrictEqual({
+      exitCode: 1,
+      stdout:
+        "pages/retry.md:3  the link points to pages/queue.md, which doesn't exist\n1 problem in 2 pages\n",
+      stderr: '',
+    })
+  })
+
+  it("check returns 0 when the checked page doesn't have any problems", () => {
+    expect(runScratchPad(['check', 'index.md'], environmentWithBrokenLink())).toStrictEqual({
+      exitCode: 0,
+      stdout: "there aren't any problems in 1 page\n",
+      stderr: '',
+    })
+  })
+
+  it("check prints an error when SCRATCH_PAD_PROSE_CHECK points at a file that doesn't exist", () => {
+    const environment = environmentWithItems()
+    const executable = join(environment.SCRATCH_PADS_HOME, 'missing.sh')
+
+    expect(
+      runScratchPad(['check'], { ...environment, SCRATCH_PAD_PROSE_CHECK: executable }).stderr,
+    ).toBe(
+      `SCRATCH_PAD_PROSE_CHECK is ${executable}, which can't be run (spawnSync ${executable} ENOENT). Point it at an executable or unset it.\n`,
+    )
   })
 })

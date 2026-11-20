@@ -1,5 +1,5 @@
 import { countedNoun } from '../counted-noun'
-import { type Heading } from './page-markdown'
+import { type Heading } from '../rendered-page/page-headings'
 
 interface PageSummary {
   readonly page: string

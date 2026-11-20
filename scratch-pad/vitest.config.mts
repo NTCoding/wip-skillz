@@ -8,6 +8,7 @@ export default defineConfig({
     reporters: ['default'],
     restoreMocks: true,
     unstubEnvs: true,
+    env: { TZ: 'UTC' },
     coverage: {
       enabled: true,
       provider: 'v8',

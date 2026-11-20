@@ -348,4 +348,22 @@ describe('ScratchPadFolder', () => {
     const folder = exportJobScratchPad(temporaryHome())
     expect(folder.readPageLines('pad.db')).toStrictEqual([])
   })
+
+  it('reads a custom HTML file when it exists in the custom folder', () => {
+    const folder = exportJobScratchPad(temporaryHome())
+    mkdirSync(join(folder.path, 'custom'))
+    writeFileInPad(folder, 'custom/retry-steps.html', '<ol><li>retry</li></ol>')
+
+    expect(folder.readCustomFile('custom/retry-steps.html')).toBe('<ol><li>retry</li></ol>')
+  })
+
+  it('reads nothing when the custom HTML file does not exist', () => {
+    expect(
+      exportJobScratchPad(temporaryHome()).readCustomFile('custom/missing.html'),
+    ).toBeUndefined()
+  })
+
+  it('reads nothing when the file is outside the custom folder', () => {
+    expect(exportJobScratchPad(temporaryHome()).readCustomFile('pages/index.md')).toBeUndefined()
+  })
 })

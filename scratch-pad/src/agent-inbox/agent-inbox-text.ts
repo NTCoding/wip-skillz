@@ -15,11 +15,13 @@ export function agentInboxText(
   context: AgentInboxTextContext,
 ): string {
   const items = selection.printed.flatMap((item) => ['', ...itemLines(item, context)])
-  const sideNotes =
-    selection.sideNotes.length === 0
-      ? []
-      : [...(items.length === 0 ? [] : ['']), sideNotesLine(selection.sideNotes)]
-  return [headerLine(selection, context), ...items, ...sideNotes].join('\n')
+  const summary = [
+    ...(selection.otherItems.length === 0 ? [] : [otherItemsText(selection.otherItems)]),
+    ...(selection.sideNotes.length === 0 ? [] : [sideNotesText(selection.sideNotes)]),
+  ]
+  const summaryLines =
+    summary.length === 0 ? [] : [...(items.length === 0 ? [] : ['']), summary.join(' · ')]
+  return [headerLine(selection, context), ...items, ...summaryLines].join('\n')
 }
 
 export function itemCountText(entry: ItemCount): string {
@@ -47,9 +49,21 @@ function itemLines(item: AgentInboxItem, context: AgentInboxTextContext): string
     : decisionInboxLines(item.decision)
 }
 
-function sideNotesLine(sideNotes: readonly ItemCount[]): string {
-  const total = sideNotes.reduce((sum, entry) => sum + entry.count, 0)
-  return `${sideNotes.map(itemCountText).join(' and ')} ${waitVerb(total)} for a subagent`
+function sideNotesText(sideNotes: readonly ItemCount[]): string {
+  return `${countsText(sideNotes)} ${waitVerb(totalOf(sideNotes))} for a subagent`
+}
+
+function otherItemsText(otherItems: readonly ItemCount[]): string {
+  const types = otherItems.map((entry) => entry.type).join(',')
+  return `${countsText(otherItems)} ${waitVerb(totalOf(otherItems))} for the agent (scratch-pad inbox --type ${types})`
+}
+
+function countsText(counts: readonly ItemCount[]): string {
+  return counts.map(itemCountText).join(' and ')
+}
+
+function totalOf(counts: readonly ItemCount[]): number {
+  return counts.reduce((sum, entry) => sum + entry.count, 0)
 }
 
 function waitVerb(count: number): string {

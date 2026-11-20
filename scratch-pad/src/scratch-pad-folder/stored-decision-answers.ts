@@ -1,6 +1,6 @@
 import { type DatabaseSync } from 'node:sqlite'
 import { type Answer, type DecisionAnswer } from '../decisions/decision-answer'
-import { byItemNumber, itemTypeOf } from '../items/item-id'
+import { byItemNumber, InvalidDecisionIdError, isDecisionId } from '../items/item-id'
 import { ScratchPadError } from '../scratch-pad-error'
 import { readSavedValues, type SavedValues } from './saved-values'
 
@@ -23,7 +23,9 @@ export class StoredDecisionAnswers {
   }
 
   read(id: string): DecisionAnswer {
-    itemTypeOf(id)
+    if (!isDecisionId(id)) {
+      throw new InvalidDecisionIdError(id)
+    }
     const [decision] = readSavedValues(
       this.db,
       this.padName,

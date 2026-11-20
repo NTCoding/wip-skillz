@@ -11,6 +11,7 @@ import {
 import {
   addTaskToTracker,
   finishTaskInTracker,
+  listTasks,
   setGoalOfScratchPad,
   startTaskInTracker,
 } from './progress-tracker-commands'
@@ -152,5 +153,16 @@ describe('finishTaskInTracker', () => {
     expect(
       folder.read((pad) => pad.readProgressTracker()).tasks.map((task) => task.state),
     ).toStrictEqual(['done', 'in-progress'])
+  })
+})
+
+describe('listTasks', () => {
+  it('lists every task with its state when tasks were added and started', () => {
+    const folder = scratchPadWithTwoTasks()
+    startTaskInTracker(folder, 1)
+
+    expect(listTasks(folder)).toBe(
+      '1  in progress  Write the retry policy\n2  to do        Write the invoice template',
+    )
   })
 })

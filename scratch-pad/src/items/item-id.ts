@@ -11,11 +11,22 @@ const itemPrefixes: Readonly<Record<ItemType, string>> = {
 }
 
 const itemIdPattern = /^([cdgi])-[1-9]\d*$/
+const decisionIdPattern = /^d-[1-9]\d*$/
 
 export class InvalidItemIdError extends ScratchPadError {
   constructor(id: string) {
     super(`"${id}" isn't an id. An id looks like c-1, g-1, i-1 or d-1.`)
   }
+}
+
+export class InvalidDecisionIdError extends ScratchPadError {
+  constructor(id: string) {
+    super(`"${id}" isn't the id of a decision. A decision id looks like d-1.`)
+  }
+}
+
+export function isDecisionId(id: string): boolean {
+  return decisionIdPattern.test(id)
 }
 
 export function nextItemId(type: ItemType, existingIds: readonly string[]): string {

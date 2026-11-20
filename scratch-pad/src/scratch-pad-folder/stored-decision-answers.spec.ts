@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { aDecisionAnswer } from '../decisions/decision-answer-fixtures'
+import { InvalidDecisionIdError } from '../items/item-id'
 import { exportJobPadName, inMemoryPadDb } from './scratch-pad-folder-fixtures'
 import { StoredDecisionAnswers, UnknownDecisionError } from './stored-decision-answers'
 
@@ -30,5 +31,12 @@ describe('StoredDecisionAnswers', () => {
 
     expect(read).toThrow(UnknownDecisionError)
     expect(read).toThrow("There isn't any answered decision called d-4 in 2026-03-14-export-job.")
+  })
+
+  it('throws InvalidDecisionIdError when the id belongs to a comment', () => {
+    const read = () => storedDecisionAnswers().read('c-1')
+
+    expect(read).toThrow(InvalidDecisionIdError)
+    expect(read).toThrow('"c-1" isn\'t the id of a decision. A decision id looks like d-1.')
   })
 })

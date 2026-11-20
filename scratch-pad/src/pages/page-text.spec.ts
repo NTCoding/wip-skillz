@@ -21,8 +21,8 @@ describe('outlineText', () => {
   it('prints each heading with its line number padded to the widest number', () => {
     expect(
       outlineText('pages/index.md', [
-        { line: 1, level: 1, text: 'Export job' },
-        { line: 14, level: 2, text: 'Retry policy' },
+        { line: 1, level: 1, text: 'Export job', id: 'export-job' },
+        { line: 14, level: 2, text: 'Retry policy', id: 'retry-policy' },
       ]),
     ).toBe(' 1  # Export job\n14  ## Retry policy')
   })

@@ -31,6 +31,7 @@ export interface AgentInboxSelection {
   readonly printed: readonly AgentInboxItem[]
   readonly seenBefore: number
   readonly sideNotes: readonly ItemCount[]
+  readonly otherItems: readonly ItemCount[]
   readonly lastPrinted: LastPrintedEvents
 }
 
@@ -84,14 +85,17 @@ export function selectAgentInbox(request: AgentInboxRequest): AgentInboxSelectio
     : ofRequestedTypes.filter((item) => lastEventOf(item) > request.lastPrinted[itemType(item)])
   const lastPrintedFor = (type: ItemType): number =>
     request.types.includes(type) ? latest : request.lastPrinted[type]
+  const notRequested = (types: readonly ItemType[]): ItemCount[] =>
+    countsByType(
+      waiting.filter(
+        (item) => types.includes(itemType(item)) && !request.types.includes(itemType(item)),
+      ),
+    )
   return {
     printed: printed.toSorted((first, second) => lastEventOf(first) - lastEventOf(second)),
     seenBefore: ofRequestedTypes.length - printed.length,
-    sideNotes: countsByType(
-      waiting.filter(
-        (item) => sideNoteTypes.includes(itemType(item)) && !request.types.includes(itemType(item)),
-      ),
-    ),
+    sideNotes: notRequested(sideNoteTypes),
+    otherItems: notRequested(mainAgentTypes),
     lastPrinted: {
       comment: lastPrintedFor('comment'),
       decision: lastPrintedFor('decision'),

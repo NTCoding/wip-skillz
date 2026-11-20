@@ -5,7 +5,11 @@ import {
   type Environment,
 } from '../scratch-pads-home/scratch-pads-home'
 import { parseCommandWords, type CommandWords } from './command-words'
-import { scratchPadCommands, type ScratchPadCommand } from './scratch-pad-commands'
+import {
+  scratchPadCommands,
+  type CommandOutput,
+  type ScratchPadCommand,
+} from './scratch-pad-commands'
 
 interface OutputStream {
   write(text: string): unknown
@@ -32,8 +36,9 @@ class OptionNotAllowedError extends ScratchPadError {
 
 export function runCommandLine(commandLine: CommandLine): number {
   try {
-    commandLine.stdout.write(`${runCommand(commandLine)}\n`)
-    return 0
+    const output = runCommand(commandLine)
+    commandLine.stdout.write(`${output.text}\n`)
+    return output.exitCode
   } catch (error) {
     if (error instanceof ScratchPadError || isSystemError(error)) {
       commandLine.stderr.write(`${error.message}\n`)
@@ -57,10 +62,10 @@ export function helpText(): string {
   ].join('\n')
 }
 
-function runCommand(commandLine: CommandLine): string {
+function runCommand(commandLine: CommandLine): CommandOutput {
   const parsed = parseCommandWords(commandLine.argv, startsText)
   if (parsed.help || parsed.words.length === 0 || parsed.words[0] === 'help') {
-    return helpText()
+    return { text: helpText(), exitCode: 0 }
   }
   const { command, words } = findCommand(parsed)
   const notAllowed = parsed.givenOptions.find((option) => !command.options.includes(option))
@@ -68,14 +73,16 @@ function runCommand(commandLine: CommandLine): string {
     throw new OptionNotAllowedError(notAllowed, command.usage)
   }
   const home = (): string => scratchPadsHome(commandLine.environment)
-  return command.run({
+  const output = command.run({
     words,
     options: parsed.options,
     usage: command.usage,
+    environment: commandLine.environment,
     home,
     folder: () =>
       chooseScratchPad(home(), parsed.options.pad ?? commandLine.environment['SCRATCH_PAD']),
   })
+  return typeof output === 'string' ? { text: output, exitCode: 0 } : output
 }
 
 interface FoundCommand {
@@ -97,12 +104,16 @@ function startsText(wordsBefore: readonly string[]): boolean {
 }
 
 function matchCommand(words: readonly string[]): FoundCommand | undefined {
-  const [first, second] = words
-  const twoWordCommand = scratchPadCommands.get(`${first} ${second}`)
-  if (twoWordCommand !== undefined) {
-    return { command: twoWordCommand, words: words.slice(2) }
+  const [first, second, ...rest] = words
+  if (first === undefined) {
+    return undefined
   }
-  const oneWordCommand = scratchPadCommands.get(String(first))
+  const twoWordCommand =
+    second === undefined ? undefined : scratchPadCommands.get(`${first} ${second}`)
+  if (twoWordCommand !== undefined) {
+    return { command: twoWordCommand, words: rest }
+  }
+  const oneWordCommand = scratchPadCommands.get(first)
   return oneWordCommand === undefined
     ? undefined
     : { command: oneWordCommand, words: words.slice(1) }

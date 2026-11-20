@@ -9,6 +9,7 @@ import {
   finishedTaskText,
   startedTaskText,
   taskLine,
+  taskListText,
 } from '../progress-tracker/progress-tracker-text'
 import { type EventKind } from '../events/scratch-pad-event'
 import { type PadDb } from '../scratch-pad-folder/pad-db'
@@ -44,6 +45,10 @@ export function finishTaskInTracker(folder: ScratchPadFolder, number: number): s
     save(pad, finish.tracker, 'task-done', number)
     return finishedTaskText(finish)
   })
+}
+
+export function listTasks(folder: ScratchPadFolder): string {
+  return folder.read((pad) => taskListText(pad.readProgressTracker()))
 }
 
 function save(

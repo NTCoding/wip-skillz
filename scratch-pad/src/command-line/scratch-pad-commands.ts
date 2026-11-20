@@ -1,15 +1,19 @@
+import { checkPages } from '../agent-commands/check-commands'
 import { readAgentInbox, scratchPadStatus } from '../agent-commands/inbox-commands'
 import { logDecisionFromChat } from '../agent-commands/decision-log-commands'
 import { listPages, outlinePage } from '../agent-commands/page-commands'
 import {
   addTaskToTracker,
   finishTaskInTracker,
+  listTasks,
   setGoalOfScratchPad,
   startTaskInTracker,
 } from '../agent-commands/progress-tracker-commands'
 import { finishNoteThread, replyToThread, showItem } from '../agent-commands/thread-commands'
 import { type ScratchPadFolder } from '../scratch-pad-folder/scratch-pad-folder'
-import { createScratchPad } from '../scratch-pads-home/scratch-pads-home'
+import { proseCheckFrom } from '../prose-check/prose-check'
+import { createScratchPad, type Environment } from '../scratch-pads-home/scratch-pads-home'
+import { scratchPadCreatedText } from '../scratch-pads-home/scratch-pads-home-text'
 import {
   inboxTypes,
   requiredWord,
@@ -23,6 +27,7 @@ export interface CommandInput {
   readonly words: readonly string[]
   readonly options: CommandOptions
   readonly usage: string
+  readonly environment: Environment
   readonly home: () => string
   readonly folder: () => ScratchPadFolder
 }
@@ -32,7 +37,12 @@ export interface ScratchPadCommand {
   readonly summary: string
   readonly options: readonly OptionName[]
   readonly wordsBeforeText?: number
-  readonly run: (input: CommandInput) => string
+  readonly run: (input: CommandInput) => string | CommandOutput
+}
+
+export interface CommandOutput {
+  readonly text: string
+  readonly exitCode: number
 }
 
 const pad: readonly OptionName[] = ['pad']
@@ -47,8 +57,7 @@ export const scratchPadCommands: ReadonlyMap<string, ScratchPadCommand> = new Ma
       wordsBeforeText: 0,
       run: (input: CommandInput) => {
         const topic = restOfWords(input.words, 0, 'topic', input.usage)
-        const folder = createScratchPad(input.home(), topic, new Date())
-        return `created ${folder.path}\nselect it with --pad ${folder.name} or SCRATCH_PAD=${folder.name}`
+        return scratchPadCreatedText(createScratchPad(input.home(), topic, new Date()))
       },
     },
   ],
@@ -125,6 +134,22 @@ export const scratchPadCommands: ReadonlyMap<string, ScratchPadCommand> = new Ma
     },
   ],
   [
+    'check',
+    {
+      usage: 'check [page]',
+      summary: 'print the broken links, ids and blocks of one page or of every page',
+      options: pad,
+      run: (input: CommandInput) => {
+        const result = checkPages(
+          input.folder(),
+          input.words[0],
+          proseCheckFrom(input.environment['SCRATCH_PAD_PROSE_CHECK']),
+        )
+        return { text: result.text, exitCode: result.problemCount === 0 ? 0 : 1 }
+      },
+    },
+  ],
+  [
     'outline',
     {
       usage: 'outline <page>',
@@ -143,6 +168,15 @@ export const scratchPadCommands: ReadonlyMap<string, ScratchPadCommand> = new Ma
       wordsBeforeText: 0,
       run: (input: CommandInput) =>
         setGoalOfScratchPad(input.folder(), restOfWords(input.words, 0, 'goal', input.usage)),
+    },
+  ],
+  [
+    'tasks',
+    {
+      usage: 'tasks',
+      summary: 'list every task with its number, state and title',
+      options: pad,
+      run: (input: CommandInput) => listTasks(input.folder()),
     },
   ],
   [

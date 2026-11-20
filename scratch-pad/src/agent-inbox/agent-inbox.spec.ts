@@ -76,6 +76,16 @@ describe('selectAgentInbox', () => {
     expect(selectAgentInbox(request).sideNotes).toStrictEqual([{ type: 'grammar', count: 1 }])
   })
 
+  it('counts the decisions as other items when only comments are requested', () => {
+    const selection = selectAgentInbox({ ...request, types: ['comment'] })
+
+    expect(selection.otherItems).toStrictEqual([{ type: 'decision', count: 1 }])
+  })
+
+  it('counts no other items when the comments and the decisions are requested', () => {
+    expect(selectAgentInbox(request).otherItems).toStrictEqual([])
+  })
+
   it('records the latest event for the requested types only', () => {
     expect(selectAgentInbox(request).lastPrinted).toStrictEqual({
       comment: 3,

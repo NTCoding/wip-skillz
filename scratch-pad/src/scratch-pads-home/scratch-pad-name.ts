@@ -1,4 +1,6 @@
 import { ScratchPadError } from '../scratch-pad-error'
+import { localDate } from '../local-time'
+import { slugOf } from '../slug'
 
 const longestSlug = 60
 
@@ -11,12 +13,7 @@ export class EmptyTopicError extends ScratchPadError {
 }
 
 export function scratchPadFolderName(topic: string, today: Date): string {
-  const slug = topic
-    .toLowerCase()
-    .replaceAll(/[^a-z0-9]+/g, '-')
-    .replaceAll(/^-|-$/g, '')
-    .slice(0, longestSlug)
-    .replace(/-$/, '')
+  const slug = slugOf(topic).slice(0, longestSlug).replace(/-$/, '')
   if (slug === '') {
     throw new EmptyTopicError(topic)
   }
@@ -26,10 +23,4 @@ export function scratchPadFolderName(topic: string, today: Date): string {
 export function scratchPadTitle(topic: string): string {
   const text = topic.trim()
   return `${text.charAt(0).toUpperCase()}${text.slice(1)}`
-}
-
-function localDate(today: Date): string {
-  const month = String(today.getMonth() + 1).padStart(2, '0')
-  const day = String(today.getDate()).padStart(2, '0')
-  return `${today.getFullYear()}-${month}-${day}`
 }

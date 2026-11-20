@@ -10,6 +10,10 @@ describe('scratchPadFolderName', () => {
     )
   })
 
+  it('keeps each letter without its accent when the topic has accented letters', () => {
+    expect(scratchPadFolderName('Café menü', today)).toBe('2026-03-04-cafe-menu')
+  })
+
   it('cuts the topic to 60 characters when the topic is longer', () => {
     expect(scratchPadFolderName('x'.repeat(264), today)).toBe(`2026-03-04-${'x'.repeat(60)}`)
   })

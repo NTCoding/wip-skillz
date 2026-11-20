@@ -1,4 +1,5 @@
 import { countedNoun } from '../counted-noun'
+import { localTime } from '../local-time'
 import { itemTypeNoun } from '../items/item-id'
 import { numberedLines } from '../pages/page-text'
 import { sectionAt } from '../pages/page-markdown'
@@ -92,8 +93,7 @@ function blockLines(
 }
 
 function timedMessageLine(entry: Message): string {
-  const time = entry.time.slice(0, 16).replace('T', ' ')
-  return `  ${authorNames[entry.author]} (${time}): ${indented(entry.text)}`
+  return `  ${authorNames[entry.author]} (${localTime(entry.time)}): ${indented(entry.text)}`
 }
 
 function lineRange(anchor: Anchor): string {

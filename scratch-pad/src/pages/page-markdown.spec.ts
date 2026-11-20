@@ -3,7 +3,6 @@ import {
   UnknownPageError,
   findPage,
   isPagePath,
-  pageHeadings,
   pagesInOrder,
   pageTitle,
   sectionAt,
@@ -21,29 +20,11 @@ const page = [
   'text',
 ]
 
-describe('pageHeadings', () => {
-  it('returns the headings with their lines and levels', () => {
-    expect(pageHeadings(['# Export job', '', '## Retry policy', '### Limits ##'])).toStrictEqual([
-      { line: 1, level: 1, text: 'Export job' },
-      { line: 3, level: 2, text: 'Retry policy' },
-      { line: 4, level: 3, text: 'Limits' },
-    ])
-  })
-
-  it('skips the lines in a fence', () => {
-    expect(pageHeadings(page).map((heading) => heading.text)).toStrictEqual([
-      'Export job',
-      'Retry policy',
-      'Limits',
-    ])
-  })
-
-  it('ignores a hash without a space after it', () => {
-    expect(pageHeadings(['#hashtag', '####### seven'])).toStrictEqual([])
-  })
-})
-
 describe('pageTitle', () => {
+  it('ignores a hash line in a code block when the code block comes first', () => {
+    expect(pageTitle(['```bash', '# not a heading', '```', '# Export job'])).toBe('Export job')
+  })
+
   it('returns the first level 1 heading', () => {
     expect(pageTitle(['## Intro', '# Invoice template'])).toBe('Invoice template')
   })

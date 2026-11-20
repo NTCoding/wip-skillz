@@ -14,6 +14,7 @@ const empty: AgentInboxSelection = {
   printed: [],
   seenBefore: 0,
   sideNotes: [],
+  otherItems: [],
   lastPrinted: nothingPrinted,
 }
 
@@ -105,6 +106,34 @@ describe('agentInboxText', () => {
 
     expect(agentInboxText(selection, context).split('\n')[1]).toBe(
       '1 improvement note waits for a subagent',
+    )
+  })
+})
+
+describe('the summary line of agentInboxText', () => {
+  it('prints the other items that wait for the agent and how to print them when a type was not requested', () => {
+    const selection: AgentInboxSelection = {
+      ...empty,
+      otherItems: [{ type: 'decision', count: 1 }],
+    }
+
+    expect(agentInboxText(selection, context).split('\n')[1]).toBe(
+      '1 decision waits for the agent (scratch-pad inbox --type decision)',
+    )
+  })
+
+  it('prints the other items and the side notes on one line when both wait', () => {
+    const selection: AgentInboxSelection = {
+      ...empty,
+      otherItems: [
+        { type: 'comment', count: 2 },
+        { type: 'decision', count: 1 },
+      ],
+      sideNotes: [{ type: 'grammar', count: 1 }],
+    }
+
+    expect(agentInboxText(selection, context).split('\n')[1]).toBe(
+      '2 comments and 1 decision wait for the agent (scratch-pad inbox --type comment,decision) · 1 grammar note waits for a subagent',
     )
   })
 })

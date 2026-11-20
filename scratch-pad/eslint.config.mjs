@@ -7,6 +7,57 @@ import unicorn from 'eslint-plugin-unicorn'
 import vitest from '@vitest/eslint-plugin'
 import noGenericNames from './.eslint-rules/no-generic-names.js'
 
+// Ban generic folder imports (not lib - that's NX convention)
+const genericFolderPatterns = [
+  {
+    group: ['*/utils/*', '*/utils', '*/utilities'],
+    message: 'No utils folders. Use domain-specific names.',
+  },
+  {
+    group: ['*/helpers/*', '*/helpers'],
+    message: 'No helpers folders. Use domain-specific names.',
+  },
+  {
+    group: ['*/common/*', '*/common'],
+    message: 'No common folders. Use domain-specific names.',
+  },
+  {
+    group: ['*/shared/*', '*/shared'],
+    message: 'No shared folders. Use domain-specific names.',
+  },
+  {
+    group: ['*/core/*', '*/core'],
+    message: 'No core folders. Use domain-specific names.',
+  },
+  {
+    group: ['*/src/lib/*', '*/src/lib', './lib/*', './lib', '../lib/*', '../lib'],
+    message: 'No lib folders in projects. Use domain-specific names.',
+  },
+]
+
+// The domain folders decide things. Files, SQLite and processes belong to the storage code.
+const domainFiles = [
+  'src/agent-inbox/**/*.ts',
+  'src/decisions/**/*.ts',
+  'src/events/**/*.ts',
+  'src/items/**/*.ts',
+  'src/nick-inbox/**/*.ts',
+  'src/page-check/**/*.ts',
+  'src/pages/**/*.ts',
+  'src/progress-tracker/**/*.ts',
+  'src/rendered-page/**/*.ts',
+  'src/status/**/*.ts',
+  'src/threads/**/*.ts',
+  'src/counted-noun.ts',
+  'src/local-time.ts',
+  'src/scratch-pad-error.ts',
+  'src/slug.ts',
+]
+
+const storageImports = ['node:sqlite', 'node:fs', 'node:fs/promises', 'node:child_process'].map(
+  (name) => ({ name, message: 'Domain code never touches files, SQLite or processes.' }),
+)
+
 const customRules = {
   plugins: {
     custom: {
@@ -108,37 +159,7 @@ export default tseslint.config(
       'import/no-duplicates': 'error',
 
       // Ban generic folder imports (not lib - that's NX convention)
-      'no-restricted-imports': [
-        'error',
-        {
-          patterns: [
-            {
-              group: ['*/utils/*', '*/utils', '*/utilities'],
-              message: 'No utils folders. Use domain-specific names.',
-            },
-            {
-              group: ['*/helpers/*', '*/helpers'],
-              message: 'No helpers folders. Use domain-specific names.',
-            },
-            {
-              group: ['*/common/*', '*/common'],
-              message: 'No common folders. Use domain-specific names.',
-            },
-            {
-              group: ['*/shared/*', '*/shared'],
-              message: 'No shared folders. Use domain-specific names.',
-            },
-            {
-              group: ['*/core/*', '*/core'],
-              message: 'No core folders. Use domain-specific names.',
-            },
-            {
-              group: ['*/src/lib/*', '*/src/lib', './lib/*', './lib', '../lib/*', '../lib'],
-              message: 'No lib folders in projects. Use domain-specific names.',
-            },
-          ],
-        },
-      ],
+      'no-restricted-imports': ['error', { patterns: genericFolderPatterns }],
 
       // Complexity limits
       'max-lines': ['error', { max: 400, skipBlankLines: true, skipComments: true }],
@@ -208,6 +229,25 @@ export default tseslint.config(
     plugins: { unicorn },
     rules: {
       'unicorn/prefer-string-replace-all': 'error',
+    },
+  },
+  {
+    files: domainFiles,
+    ignores: ['**/*.spec.ts'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          paths: storageImports,
+          patterns: [
+            ...genericFolderPatterns,
+            {
+              group: ['**/scratch-pad-folder/*', '**/scratch-pads-home/*', '**/prose-check/*'],
+              message: 'Domain code never imports the storage code.',
+            },
+          ],
+        },
+      ],
     },
   },
   {

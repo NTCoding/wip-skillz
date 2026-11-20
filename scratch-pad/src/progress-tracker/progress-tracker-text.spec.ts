@@ -6,6 +6,7 @@ import {
   finishedTaskText,
   startedTaskText,
   taskLine,
+  taskListText,
 } from './progress-tracker-text'
 
 describe('taskLine', () => {
@@ -71,5 +72,21 @@ describe('currentTaskLine', () => {
     expect(currentTaskLine(trackerWithTasks(['done', 'to-do']))).toBe(
       'no task in progress · 1 of 2 tasks done',
     )
+  })
+})
+
+describe('taskListText', () => {
+  it('prints one aligned line per task with its number, state and title when there are tasks', () => {
+    const tracker = trackerWithTasks(['done', 'in-progress', ...Array<'to-do'>(8).fill('to-do')])
+
+    expect(taskListText(tracker).split('\n').slice(0, 3)).toStrictEqual([
+      ' 1  done         Task about retry 1',
+      ' 2  in progress  Task about retry 2',
+      ' 3  to do        Task about retry 3',
+    ])
+  })
+
+  it('prints that there are no tasks when the progress tracker is empty', () => {
+    expect(taskListText(trackerWithTasks([]))).toBe("there aren't any tasks yet")
   })
 })
