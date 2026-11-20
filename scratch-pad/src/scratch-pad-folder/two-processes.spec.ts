@@ -22,7 +22,7 @@ function exitsOf(outputs: readonly WriterOutput[]) {
   return outputs.map((output) => ({ exitCode: output.exitCode, errors: output.errors }))
 }
 
-describe('an agent that adds tasks while Nick writes comments', () => {
+describe('two processes that add tasks and comments at the same time', () => {
   const folder = exportJobScratchPad(temporaryHome())
   const outputs: WriterOutput[] = []
 
@@ -36,30 +36,30 @@ describe('an agent that adds tasks while Nick writes comments', () => {
     )
   }, timeout)
 
-  it('lets both writers finish without an error', () => {
+  it('lets both writers finish without an error when the agent adds tasks while Nick writes comments', () => {
     expect(exitsOf(outputs)).toStrictEqual(finishedWithoutErrors)
   })
 
-  it('keeps every task that the agent added', () => {
+  it('keeps every task that the agent added when Nick writes comments at the same time', () => {
     expect(
       folder.read((pad) => pad.readProgressTracker().tasks.map((task) => task.title)),
     ).toStrictEqual(numbered('Export batch ', count))
   })
 
-  it('keeps every comment that Nick wrote', () => {
+  it('keeps every comment that Nick wrote when the agent adds tasks at the same time', () => {
     expect(folder.read((pad) => pad.readThreads().map((thread) => thread.id))).toStrictEqual(
       numbered('c-', count),
     )
   })
 
-  it('gives every event its own number', () => {
+  it('gives every event its own number when 2 processes append events at the same time', () => {
     expect(folder.read((pad) => pad.readEvents().map((event) => event.number))).toStrictEqual(
       Array.from({ length: 2 * count }, (_, index) => index + 1),
     )
   })
 })
 
-describe('an agent that reads its inbox while Nick writes comments', () => {
+describe('two processes that read the inbox and add comments at the same time', () => {
   const folder = exportJobScratchPad(temporaryHome())
   const outputs: WriterOutput[] = []
 
@@ -73,16 +73,16 @@ describe('an agent that reads its inbox while Nick writes comments', () => {
     )
   }, timeout)
 
-  it('lets both writers finish without an error', () => {
+  it('lets both writers finish without an error when the agent reads its inbox while Nick writes comments', () => {
     expect(exitsOf(outputs)).toStrictEqual(finishedWithoutErrors)
   })
 
-  it('prints every comment to the agent exactly once', () => {
+  it('prints every comment to the agent exactly once when Nick writes comments while the agent reads', () => {
     expect(inTextOrder(outputs[0]?.lines ?? [])).toStrictEqual(inTextOrder(numbered('c-', count)))
   })
 })
 
-describe('an agent that replies to a comment while Nick replies to it', () => {
+describe('two processes that reply to the same comment at the same time', () => {
   const folder = exportJobScratchPad(temporaryHome())
   const outputs: WriterOutput[] = []
 
@@ -102,11 +102,11 @@ describe('an agent that replies to a comment while Nick replies to it', () => {
     )
   }, timeout)
 
-  it('lets both writers finish without an error', () => {
+  it('lets both writers finish without an error when the agent and Nick reply to c-1 at the same time', () => {
     expect(exitsOf(outputs)).toStrictEqual(finishedWithoutErrors)
   })
 
-  it('keeps every reply of both', () => {
+  it('keeps every reply of both when the agent and Nick reply to c-1 at the same time', () => {
     expect(
       inTextOrder(
         folder.read((pad) => pad.readThread('c-1').messages.map((message) => message.text)),
@@ -121,7 +121,7 @@ describe('an agent that replies to a comment while Nick replies to it', () => {
   })
 })
 
-describe('an agent that reads its inbox while Nick changes his answers to decisions', () => {
+describe('two processes that read the inbox and change answers at the same time', () => {
   const folder = exportJobScratchPad(temporaryHome())
   const decisions = 100
   const outputs: WriterOutput[] = []
@@ -136,17 +136,17 @@ describe('an agent that reads its inbox while Nick changes his answers to decisi
     )
   }, timeout)
 
-  it('lets both writers finish without an error', () => {
+  it('lets both writers finish without an error when the agent reads its inbox while Nick changes his answers', () => {
     expect(exitsOf(outputs)).toStrictEqual(finishedWithoutErrors)
   })
 
-  it('keeps the second answer of every decision', () => {
+  it('keeps the second answer of every decision when the agent reads its inbox at the same time', () => {
     expect(
       folder.read((pad) => pad.readDecisionAnswers().map((decision) => decision.answer)),
     ).toStrictEqual(Array.from({ length: decisions }, () => ({ choice: 'second' })))
   })
 
-  it('prints the second answer of every decision to the agent exactly once', () => {
+  it('prints the second answer of every decision to the agent exactly once when Nick changes his answers while the agent reads', () => {
     expect(
       inTextOrder(outputs[0]?.lines.filter((line) => line.endsWith(': second')) ?? []),
     ).toStrictEqual(inTextOrder(numbered('d-', decisions).map((id) => `${id}: second`)))

@@ -1,24 +1,15 @@
 import { spawn } from 'node:child_process'
 import { once } from 'node:events'
-import { writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { createInterface } from 'node:readline'
 import { text } from 'node:stream/consumers'
 import { buildSync } from 'esbuild'
 import { type ScratchPadFolder } from './scratch-pad-folder'
 import { temporaryHome } from './scratch-pad-folder-fixtures'
+import { type WriterName } from './two-processes-writers'
 
-type Writer =
-  | 'agent-adds-tasks'
-  | 'agent-replies'
-  | 'agent-reads-inbox'
-  | 'agent-reads-decisions'
-  | 'nick-comments'
-  | 'nick-replies'
-  | 'nick-answers-twice'
-
-interface WriterRun {
-  readonly writer: Writer
+interface WriterProcess {
+  readonly writer: WriterName
   readonly count: number
 }
 
@@ -30,13 +21,14 @@ export interface WriterOutput {
 
 interface StartedWriter {
   readonly ready: Promise<unknown>
+  readonly go: () => void
   readonly finished: Promise<WriterOutput>
 }
 
 export async function runTwoWriters(
   folder: ScratchPadFolder,
-  first: WriterRun,
-  second: WriterRun,
+  first: WriterProcess,
+  second: WriterProcess,
 ): Promise<readonly [WriterOutput, WriterOutput]> {
   const processFolder = temporaryHome()
   const bundle = join(processFolder, 'writer-process.mjs')
@@ -48,27 +40,23 @@ export async function runTwoWriters(
     outfile: bundle,
     logLevel: 'silent',
   })
-  const goFile = join(processFolder, 'go')
-  const firstWriter = startWriter(bundle, folder.path, first, goFile)
-  const secondWriter = startWriter(bundle, folder.path, second, goFile)
+  const firstWriter = startWriter(bundle, folder.path, first)
+  const secondWriter = startWriter(bundle, folder.path, second)
   await Promise.all([firstWriter.ready, secondWriter.ready])
-  writeFileSync(goFile, '')
+  firstWriter.go()
+  secondWriter.go()
   return Promise.all([firstWriter.finished, secondWriter.finished])
 }
 
-function startWriter(
-  bundle: string,
-  padPath: string,
-  run: WriterRun,
-  goFile: string,
-): StartedWriter {
-  const child = spawn(process.execPath, [bundle, run.writer, padPath, String(run.count), goFile])
+function startWriter(bundle: string, padPath: string, run: WriterProcess): StartedWriter {
+  const child = spawn(process.execPath, [bundle, run.writer, padPath, String(run.count)])
   const lines: string[] = []
   const errors = text(child.stderr)
   const stdout = createInterface({ input: child.stdout })
   stdout.on('line', (line) => lines.push(line))
   return {
     ready: once(stdout, 'line'),
+    go: () => child.stdin.end('go\n'),
     finished: Promise.all([errors, once(child, 'close')]).then(([errorText]) => ({
       exitCode: child.exitCode,
       lines: lines.slice(1),

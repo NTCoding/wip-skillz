@@ -29,14 +29,6 @@ export class UnknownScratchPadError extends ScratchPadError {
   }
 }
 
-export class ScratchPadExistsError extends ScratchPadError {
-  constructor(name: string, home: string) {
-    super(
-      `${name} already exists in ${home}. Pick another topic or work in the existing scratch pad.`,
-    )
-  }
-}
-
 export function scratchPadsHome(environment: Environment): string {
   const home = environment['SCRATCH_PADS_HOME']
   if (home !== undefined && home !== '') {
@@ -52,7 +44,7 @@ export function scratchPadsHome(environment: Environment): string {
 export function scratchPadNames(home: string): string[] {
   return existsSync(home)
     ? readdirSync(home)
-        .filter((name) => ScratchPadFolder.isScratchPad(join(home, name)))
+        .filter((name) => !name.startsWith('.') && ScratchPadFolder.isScratchPad(join(home, name)))
         .toSorted((first, second) => first.localeCompare(second))
     : []
 }
@@ -69,22 +61,21 @@ export function chooseScratchPad(home: string, selector: string | undefined): Sc
 }
 
 export function createScratchPad(home: string, topic: string, today: Date): ScratchPadFolder {
-  const name = scratchPadFolderName(topic, today)
-  const path = join(home, name)
-  if (existsSync(path)) {
-    throw new ScratchPadExistsError(name, home)
-  }
   mkdirSync(home, { recursive: true })
   const title = scratchPadTitle(topic)
-  return ScratchPadFolder.create(path, `# ${title}\n`, (pad) => {
-    pad.writeProgressTracker(newProgressTracker(title))
-    pad.appendEvent({
-      time: today.toISOString(),
-      kind: 'scratch-pad-created',
-      by: 'agent',
-      item: undefined,
-    })
-  })
+  return ScratchPadFolder.create(
+    join(home, scratchPadFolderName(topic, today)),
+    `# ${title}\n`,
+    (pad) => {
+      pad.writeProgressTracker(newProgressTracker(title))
+      pad.appendEvent({
+        time: today.toISOString(),
+        kind: 'scratch-pad-created',
+        by: 'agent',
+        item: undefined,
+      })
+    },
+  )
 }
 
 function scratchPadPath(home: string, selector: string): string {

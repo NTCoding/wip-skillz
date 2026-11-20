@@ -1,16 +1,18 @@
-import { existsSync, mkdirSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
+import { chmodSync, existsSync, mkdirSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { DatabaseSync } from 'node:sqlite'
 import { afterEach, describe, expect, it } from 'vitest'
 import { EmptyTaskTitleError } from '../progress-tracker/progress-tracker'
-import { BrokenPadDbError } from './pad-row'
 import {
+  BrokenPadDbError,
+  BusyPadDbError,
   MissingPadDbError,
   NewerPadDbError,
   PadDbFailureError,
-  ScratchPadFolder,
-} from './scratch-pad-folder'
+} from './pad-db-errors'
+import { ScratchPadExistsError, ScratchPadFolder } from './scratch-pad-folder'
 import {
+  damageTableOfPadDb,
   exportJobIndexPage,
   exportJobScratchPad,
   removeTemporaryHomes,
@@ -34,37 +36,104 @@ function pragma(folder: ScratchPadFolder, name: string): unknown {
   }
 }
 
-describe('ScratchPadFolder', () => {
-  afterEach(() => {
-    removeTemporaryHomes()
-  })
+function eventNumbers(folder: ScratchPadFolder): unknown[] {
+  const db = new DatabaseSync(join(folder.path, 'pad.db'))
+  try {
+    return db
+      .prepare('SELECT number FROM events')
+      .all()
+      .map((event) => event['number'])
+  } finally {
+    db.close()
+  }
+}
 
-  it('creates the pages folder and pad.db', () => {
+function inTextOrder(names: readonly string[]): string[] {
+  return names.toSorted((first, second) => first.localeCompare(second))
+}
+
+afterEach(() => {
+  removeTemporaryHomes()
+})
+
+describe('ScratchPadFolder.create', () => {
+  it('creates the pages folder and pad.db when the scratch pad is created', () => {
     const folder = exportJobScratchPad(temporaryHome())
-    expect(
-      readdirSync(folder.path).toSorted((first, second) => first.localeCompare(second)),
-    ).toStrictEqual(['pad.db', 'pages'])
+    expect(inTextOrder(readdirSync(folder.path))).toStrictEqual(['pad.db', 'pages'])
   })
 
-  it('writes the index page', () => {
+  it('writes the index page when the scratch pad is created', () => {
     const folder = exportJobScratchPad(temporaryHome())
     expect(folder.readPageLines('pages/index.md')).toStrictEqual(exportJobIndexPage.split('\n'))
   })
 
-  it('creates pad.db in WAL mode', () => {
+  it('creates pad.db in WAL mode when the scratch pad is created', () => {
     expect(pragma(exportJobScratchPad(temporaryHome()), 'journal_mode')).toBe('wal')
   })
 
-  it('stores the version of the tables in pad.db', () => {
+  it('stores the version of the tables in pad.db when the scratch pad is created', () => {
     expect(pragma(exportJobScratchPad(temporaryHome()), 'user_version')).toBe(1)
   })
 
-  it('saves what the creator writes into pad.db', () => {
+  it('saves what the creator writes into pad.db when the scratch pad is created', () => {
     const folder = exportJobScratchPad(temporaryHome())
     expect(folder.read((pad) => pad.readProgressTracker())).toStrictEqual(exportJobTracker)
   })
 
-  it('is recognised as a scratch pad because it has a pad.db', () => {
+  it("doesn't show the scratch pad in the home folder when the creator is still writing", () => {
+    const home = temporaryHome()
+    const shownWhileWriting: string[][] = []
+    ScratchPadFolder.create(join(home, '2026-03-14-export-job'), exportJobIndexPage, () => {
+      shownWhileWriting.push(readdirSync(home).filter((name) => !name.startsWith('.')))
+    })
+
+    expect(shownWhileWriting).toStrictEqual([[]])
+  })
+
+  it('leaves nothing in the home folder when the creator throws', () => {
+    const home = temporaryHome()
+    const create = () =>
+      ScratchPadFolder.create(join(home, '2026-03-14-export-job'), exportJobIndexPage, () => {
+        throw new EmptyTaskTitleError()
+      })
+
+    expect(create).toThrow(EmptyTaskTitleError)
+    expect(readdirSync(home)).toStrictEqual([])
+  })
+
+  it('throws PadDbFailureError and leaves nothing behind when SQLite refuses what the creator writes', () => {
+    const home = temporaryHome()
+    const task = { number: 0, title: 'Write the retry policy', state: 'to-do' } as const
+    const create = () =>
+      ScratchPadFolder.create(join(home, '2026-03-14-export-job'), exportJobIndexPage, (pad) =>
+        pad.writeProgressTracker({ ...exportJobTracker, tasks: [task] }),
+      )
+
+    expect(create).toThrow(PadDbFailureError)
+    expect(create).toThrow(
+      'failed: CHECK constraint failed: number >= 1. Nothing was saved. Tell Nick.',
+    )
+    expect(readdirSync(home)).toStrictEqual([])
+  })
+
+  it('throws ScratchPadExistsError when another process created the scratch pad first', () => {
+    const home = temporaryHome()
+    const path = join(home, '2026-03-14-export-job')
+    const create = () =>
+      ScratchPadFolder.create(path, exportJobIndexPage, () => {
+        mkdirSync(join(path, 'pages'), { recursive: true })
+      })
+
+    expect(create).toThrow(ScratchPadExistsError)
+    expect(create).toThrow(
+      `2026-03-14-export-job already exists in ${home}. Pick another topic or work in the existing scratch pad.`,
+    )
+    expect(readdirSync(home)).toStrictEqual(['2026-03-14-export-job'])
+  })
+})
+
+describe('ScratchPadFolder', () => {
+  it('is recognised as a scratch pad when it has a pad.db but no pages', () => {
     const folder = exportJobScratchPad(temporaryHome())
     rmSync(join(folder.path, 'pages'), { recursive: true })
 
@@ -82,24 +151,24 @@ describe('ScratchPadFolder', () => {
     expect(ScratchPadFolder.isScratchPad(temporaryHome())).toBe(false)
   })
 
-  it('is named after its folder', () => {
+  it('has the name of its folder when it is created', () => {
     const folder = exportJobScratchPad(temporaryHome())
     expect(folder.name).toBe('2026-03-14-export-job')
   })
 
-  it('returns the result of a change', () => {
+  it('returns the result of the work when a change succeeds', () => {
     const folder = exportJobScratchPad(temporaryHome())
     expect(folder.change((pad) => pad.appendEvent(goalSet).number)).toBe(1)
   })
 
-  it('reads what an earlier change saved', () => {
+  it('reads the saved events when an earlier change appended them', () => {
     const folder = exportJobScratchPad(temporaryHome())
     folder.change((pad) => pad.appendEvent(goalSet))
 
     expect(folder.read((pad) => pad.readEvents())).toStrictEqual([{ number: 1, ...goalSet }])
   })
 
-  it('saves nothing of a change that throws', () => {
+  it('saves nothing when a change throws', () => {
     const folder = exportJobScratchPad(temporaryHome())
     const change = () =>
       folder.change((pad) => {
@@ -115,7 +184,7 @@ describe('ScratchPadFolder', () => {
     ])
   })
 
-  it('throws PadDbFailureError when SQLite refuses a change', () => {
+  it('throws PadDbFailureError that tells the agent to tell Nick when SQLite refuses a change', () => {
     const folder = exportJobScratchPad(temporaryHome())
     const task = { number: 0, title: 'Write the retry policy', state: 'to-do' } as const
     const change = () =>
@@ -123,18 +192,36 @@ describe('ScratchPadFolder', () => {
 
     expect(change).toThrow(PadDbFailureError)
     expect(change).toThrow(
-      'pad.db in 2026-03-14-export-job failed: CHECK constraint failed: number >= 1. Nothing was saved, so you can run the command again.',
+      'pad.db in 2026-03-14-export-job failed: CHECK constraint failed: number >= 1. Nothing was saved. Tell Nick.',
     )
   })
 
-  it('throws PadDbFailureError when pad.db cannot be created', () => {
-    const path = join(temporaryHome(), '2026-03-14-export-job')
-    mkdirSync(join(path, 'pad.db'), { recursive: true })
-    const create = () => ScratchPadFolder.create(path, exportJobIndexPage, () => undefined)
+  it('throws PadDbFailureError that tells the agent to tell Nick when pad.db is read-only', () => {
+    const folder = exportJobScratchPad(temporaryHome())
+    chmodSync(join(folder.path, 'pad.db'), 0o444)
+    const change = () => folder.change((pad) => pad.appendEvent(goalSet))
 
-    expect(create).toThrow(PadDbFailureError)
-    expect(create).toThrow(
-      'pad.db in 2026-03-14-export-job failed: unable to open database file. Nothing was saved, so you can run the command again.',
+    expect(change).toThrow(PadDbFailureError)
+    expect(change).toThrow(
+      'pad.db in 2026-03-14-export-job failed: attempt to write a readonly database. Nothing was saved. Tell Nick.',
+    )
+  })
+
+  it('throws BusyPadDbError that tells the agent to run the command again when another process wrote first', () => {
+    const folder = exportJobScratchPad(temporaryHome())
+    const change = () =>
+      folder.read((pad) => {
+        pad.readEvents()
+        runSqlOnPadDb(
+          folder,
+          `INSERT INTO events (time, kind, author) VALUES ('${time}', 'goal-set', 'nick')`,
+        )
+        return pad.appendEvent(goalSet)
+      })
+
+    expect(change).toThrow(BusyPadDbError)
+    expect(change).toThrow(
+      'pad.db in 2026-03-14-export-job is busy: database is locked. Nothing was saved, so you can run the command again.',
     )
   })
 
@@ -168,6 +255,40 @@ describe('ScratchPadFolder', () => {
     )
   })
 
+  it('throws BrokenPadDbError when a page of pad.db is damaged', () => {
+    const folder = exportJobScratchPad(temporaryHome())
+    damageTableOfPadDb(folder, 'progress_tracker')
+    const read = () => folder.read((pad) => pad.readEvents())
+
+    expect(read).toThrow(BrokenPadDbError)
+    expect(read).toThrow(
+      `pad.db in 2026-03-14-export-job is broken: database disk image is malformed. ${brokenMessage}`,
+    )
+  })
+
+  it("throws BrokenPadDbError and doesn't save the change when the change doesn't read the damaged table", () => {
+    const folder = exportJobScratchPad(temporaryHome())
+    damageTableOfPadDb(folder, 'threads')
+
+    expect(() => folder.change((pad) => pad.appendEvent(goalSet))).toThrow(BrokenPadDbError)
+    expect(eventNumbers(folder)).toStrictEqual([])
+  })
+
+  it('throws BrokenPadDbError with the result of the check when a row breaks a rule of its table', () => {
+    const folder = exportJobScratchPad(temporaryHome())
+    runSqlOnPadDb(
+      folder,
+      `PRAGMA ignore_check_constraints = ON;
+       INSERT INTO tasks (number, title, state) VALUES (0, 'Write the retry policy', 'to-do')`,
+    )
+    const read = () => folder.read((pad) => pad.readEvents())
+
+    expect(read).toThrow(BrokenPadDbError)
+    expect(read).toThrow(
+      `pad.db in 2026-03-14-export-job is broken: CHECK constraint failed in tasks. ${brokenMessage}`,
+    )
+  })
+
   it('throws BrokenPadDbError when pad.db does not contain the tables', () => {
     const folder = exportJobScratchPad(temporaryHome())
     writeFileSync(join(folder.path, 'pad.db'), '')
@@ -176,6 +297,17 @@ describe('ScratchPadFolder', () => {
     expect(read).toThrow(BrokenPadDbError)
     expect(read).toThrow(
       `pad.db in 2026-03-14-export-job is broken: it doesn't contain the tables of a scratch pad. ${brokenMessage}`,
+    )
+  })
+
+  it('throws BrokenPadDbError that names the table when a table of pad.db was dropped', () => {
+    const folder = exportJobScratchPad(temporaryHome())
+    runSqlOnPadDb(folder, 'DROP TABLE tasks')
+    const read = () => folder.read((pad) => pad.readEvents())
+
+    expect(read).toThrow(BrokenPadDbError)
+    expect(read).toThrow(
+      `pad.db in 2026-03-14-export-job is broken: it doesn't contain the table tasks. ${brokenMessage}`,
     )
   })
 
@@ -196,7 +328,7 @@ describe('ScratchPadFolder', () => {
       writeFileInPad(folder, `pages/${file}`, '# x'),
     )
 
-    expect(folder.pages().toSorted((first, second) => first.localeCompare(second))).toStrictEqual([
+    expect(inTextOrder(folder.pages())).toStrictEqual([
       'pages/audit.md',
       'pages/index.md',
       'pages/retry.md',

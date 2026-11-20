@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest'
-import { PadDbFailureError } from '../scratch-pad-folder/scratch-pad-folder'
+import { PadDbFailureError } from '../scratch-pad-folder/pad-db-errors'
 import {
   exportJobScratchPad,
   freezeClockAt,
@@ -88,7 +88,9 @@ describe('replyToThread', () => {
     expect(() => replyToThread(folder, 'c-1', 'I raised the limit to 8.')).toThrow(
       PadDbFailureError,
     )
-    expect(folder.read((pad) => pad.readThread('c-1').messages)).toHaveLength(1)
+    expect(folder.read((pad) => pad.readThread('c-1').messages)).toStrictEqual([
+      { author: 'nick', text: 'Is 5 retries enough on a slow network?', time },
+    ])
   })
 
   it('throws DecisionReplyError when the id is a decision', () => {

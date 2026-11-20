@@ -1,38 +1,35 @@
-import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
-import { basename, join } from 'node:path'
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  renameSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs'
+import { basename, dirname, join } from 'node:path'
 import { DatabaseSync } from 'node:sqlite'
 import { isPagePath } from '../pages/page-markdown'
 import { ScratchPadError } from '../scratch-pad-error'
 import { PadDb } from './pad-db'
-import { BrokenPadDbError } from './pad-row'
-import { padSchema, padSchemaVersion } from './pad-schema'
+import {
+  BrokenPadDbError,
+  MissingPadDbError,
+  NewerPadDbError,
+  padDbErrorFrom,
+} from './pad-db-errors'
+import { padSchema, padSchemaVersion, padTables } from './pad-schema'
+import { readSavedValues } from './saved-values'
 
 const padDbFile = 'pad.db'
 const pagesFolder = 'pages'
 const busyTimeoutMilliseconds = 5000
-const sqliteNotADatabase = 26
-const sqliteCorrupt = 11
 
-export class MissingPadDbError extends ScratchPadError {
-  constructor(padName: string) {
+export class ScratchPadExistsError extends ScratchPadError {
+  constructor(path: string) {
     super(
-      `${padName} doesn't have a pad.db, so its threads, decisions and progress tracker can't be read. Tell Nick.`,
-    )
-  }
-}
-
-export class NewerPadDbError extends ScratchPadError {
-  constructor(padName: string, version: number) {
-    super(
-      `pad.db in ${padName} has the tables of version ${version}, but this scratch-pad only knows version ${padSchemaVersion}. Update scratch-pad.`,
-    )
-  }
-}
-
-export class PadDbFailureError extends ScratchPadError {
-  constructor(padName: string, problem: string) {
-    super(
-      `pad.db in ${padName} failed: ${problem}. Nothing was saved, so you can run the command again.`,
+      `${basename(path)} already exists in ${dirname(path)}. Pick another topic or work in the existing scratch pad.`,
     )
   }
 }
@@ -45,17 +42,19 @@ export class ScratchPadFolder {
   }
 
   static create(path: string, indexPage: string, fill: (pad: PadDb) => void): ScratchPadFolder {
-    const folder = new ScratchPadFolder(path)
-    mkdirSync(join(path, pagesFolder), { recursive: true })
-    writeFileSync(join(path, pagesFolder, 'index.md'), indexPage)
-    folder.usePadDb((db) => {
-      db.exec('PRAGMA journal_mode = WAL')
-      folder.inTransaction(db, 'BEGIN IMMEDIATE', (pad) => {
-        db.exec(padSchema)
-        fill(pad)
-      })
-    })
-    return folder
+    if (existsSync(path)) {
+      throw new ScratchPadExistsError(path)
+    }
+    const building = new ScratchPadFolder(mkdtempSync(join(dirname(path), `.${basename(path)}-`)))
+    try {
+      building.build(indexPage, fill)
+      renameSync(building.path, path)
+    } catch (error) {
+      throw existsSync(path) ? new ScratchPadExistsError(path) : error
+    } finally {
+      rmSync(building.path, { recursive: true, force: true })
+    }
+    return new ScratchPadFolder(path)
   }
 
   get name(): string {
@@ -84,12 +83,24 @@ export class ScratchPadFolder {
     return isPagePath(page) && existsSync(path) ? readFileSync(path, 'utf8').split('\n') : []
   }
 
+  private build(indexPage: string, fill: (pad: PadDb) => void): void {
+    mkdirSync(join(this.path, pagesFolder))
+    writeFileSync(join(this.path, pagesFolder, 'index.md'), indexPage)
+    this.usePadDb((db) => {
+      db.exec('PRAGMA journal_mode = WAL')
+      this.inTransaction(db, 'BEGIN IMMEDIATE', (pad) => {
+        db.exec(padSchema)
+        fill(pad)
+      })
+    })
+  }
+
   private withPadDb<T>(use: (db: DatabaseSync) => T): T {
     if (!existsSync(join(this.path, padDbFile))) {
       throw new MissingPadDbError(this.name)
     }
     return this.usePadDb((db) => {
-      this.checkSchemaVersion(db)
+      this.checkPadDb(db)
       return use(db)
     })
   }
@@ -103,22 +114,44 @@ export class ScratchPadFolder {
         db.close()
       }
     } catch (error) {
-      throw scratchPadErrorFrom(error, this.name)
+      throw padDbErrorFrom(error, this.name)
     }
   }
 
-  private checkSchemaVersion(db: DatabaseSync): void {
-    const version = Math.max(
-      ...db
-        .prepare('PRAGMA user_version')
-        .all()
-        .map((row) => Number(row['user_version'])),
+  private checkPadDb(db: DatabaseSync): void {
+    const [damage] = readSavedValues(
+      db,
+      this.name,
+      'pragma_quick_check',
+      'SELECT quick_check FROM pragma_quick_check()',
     )
-    if (version > padSchemaVersion) {
-      throw new NewerPadDbError(this.name, version)
+      .map((result) => result.text('quick_check'))
+      .filter((result) => result !== 'ok')
+    if (damage !== undefined) {
+      throw new BrokenPadDbError(this.name, damage)
     }
-    if (version < padSchemaVersion) {
+    const versions = readSavedValues(
+      db,
+      this.name,
+      'pragma_user_version',
+      'SELECT user_version FROM pragma_user_version()',
+    ).map((result) => result.wholeNumber('user_version'))
+    const newer = versions.find((version) => version > padSchemaVersion)
+    if (newer !== undefined) {
+      throw new NewerPadDbError(this.name, newer)
+    }
+    if (!versions.includes(padSchemaVersion)) {
       throw new BrokenPadDbError(this.name, "it doesn't contain the tables of a scratch pad")
+    }
+    const tables = readSavedValues(
+      db,
+      this.name,
+      'sqlite_schema',
+      "SELECT name FROM sqlite_schema WHERE type = 'table'",
+    ).map((table) => table.text('name'))
+    const missing = padTables.find((table) => !tables.includes(table))
+    if (missing !== undefined) {
+      throw new BrokenPadDbError(this.name, `it doesn't contain the table ${missing}`)
     }
   }
 
@@ -137,18 +170,4 @@ function rolledBackOnError<T>(db: DatabaseSync, work: () => T): T {
     db.exec('ROLLBACK')
     throw error
   }
-}
-
-function scratchPadErrorFrom(error: unknown, padName: string): unknown {
-  if (!isSqliteError(error)) {
-    return error
-  }
-  const primaryCode = error.errcode % 256
-  return primaryCode === sqliteNotADatabase || primaryCode === sqliteCorrupt
-    ? new BrokenPadDbError(padName, error.message)
-    : new PadDbFailureError(padName, error.message)
-}
-
-function isSqliteError(error: unknown): error is Error & { readonly errcode: number } {
-  return error instanceof Error && 'errcode' in error && typeof error.errcode === 'number'
 }

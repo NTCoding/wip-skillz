@@ -96,11 +96,34 @@ describe('runCommandLine', () => {
     expect(lastMessageOfComment(environment)).toBe('Run the export job with --help')
   })
 
-  it('takes the scratch pad from --pad before SCRATCH_PAD', () => {
+  it('saves a reply and exits with 0 when the text starts with --help', () => {
+    const environment = environmentWithScratchPad(commentOnRetryPolicy)
+
+    expect(
+      runScratchPad(['reply', 'c-1', '--help', 'prints', 'the', 'usage'], environment),
+    ).toStrictEqual({ exitCode: 0, stdout: 'c-1 now waits for Nick\n', stderr: '' })
+    expect(lastMessageOfComment(environment)).toBe('--help prints the usage')
+  })
+
+  it('prints the help when --help is the last word after the id', () => {
+    const environment = environmentWithScratchPad(commentOnRetryPolicy)
+
+    expect(runScratchPad(['reply', 'c-1', '--help'], environment).stdout).toBe(`${helpText()}\n`)
+  })
+
+  it('prints the status of the scratch pad of --pad when SCRATCH_PAD names another one', () => {
     const environment = environmentWithScratchPad()
     const other = exportJobScratchPad(temporaryHome())
 
-    expect(runScratchPad(['status', '--pad', other.path], environment).stdout).toContain(other.path)
+    expect(runScratchPad(['status', '--pad', other.path], environment).stdout).toBe(
+      [
+        `2026-03-14-export-job · ${other.path}`,
+        'no tasks yet',
+        'waiting for the agent: nothing',
+        'waiting for Nick: nothing',
+        '',
+      ].join('\n'),
+    )
   })
 
   it('lists the scratch pads when no scratch pad is selected', () => {
@@ -124,7 +147,7 @@ describe('runCommandLine', () => {
     })
   })
 
-  it('prints that pad.db is broken without telling the agent to delete anything', () => {
+  it('prints that pad.db is broken without telling the agent to delete anything when pad.db is not a database', () => {
     const environment = environmentWithScratchPad()
     const padDb = join(environment.SCRATCH_PADS_HOME, environment.SCRATCH_PAD, 'pad.db')
     writeFileSync(padDb, 'The export job retries 5 times.\n'.repeat(40))

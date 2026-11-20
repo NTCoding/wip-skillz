@@ -1,6 +1,7 @@
-import { existsSync, mkdirSync, readFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, renameSync } from 'node:fs'
 import { join, relative } from 'node:path'
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { ScratchPadExistsError } from '../scratch-pad-folder/scratch-pad-folder'
 import {
   exportJobScratchPad,
   removeTemporaryHomes,
@@ -9,7 +10,6 @@ import {
 import {
   MissingHomeError,
   NoScratchPadSelectedError,
-  ScratchPadExistsError,
   UnknownScratchPadError,
   chooseScratchPad,
   createScratchPad,
@@ -46,7 +46,15 @@ describe('scratchPadsHome', () => {
 })
 
 describe('scratchPadNames', () => {
-  it('lists the folders that have a pad.db in alphabetical order', () => {
+  it('leaves out a scratch pad when its folder name starts with a dot', () => {
+    const home = temporaryHome()
+    exportJobScratchPad(home)
+    renameSync(join(home, '2026-03-14-export-job'), join(home, '.2026-03-14-export-job-a1B2c3'))
+
+    expect(scratchPadNames(home)).toStrictEqual([])
+  })
+
+  it('lists the folders in alphabetical order when they have a pad.db', () => {
     const home = temporaryHome()
     createScratchPad(home, 'retry limit', today)
     exportJobScratchPad(home)

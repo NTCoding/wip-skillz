@@ -38,3 +38,7 @@ export function itemTypeOf(id: string): ItemType {
 export function itemTypeNoun(type: ItemType): string {
   return type === 'comment' || type === 'decision' ? type : `${type} note`
 }
+
+export function byItemNumber(first: string, second: string): number {
+  return first.localeCompare(second, 'en', { numeric: true })
+}

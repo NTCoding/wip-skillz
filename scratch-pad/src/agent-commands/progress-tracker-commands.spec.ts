@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest'
-import { PadDbFailureError } from '../scratch-pad-folder/scratch-pad-folder'
+import { PadDbFailureError } from '../scratch-pad-folder/pad-db-errors'
 import {
   acceptNewEvents,
   exportJobScratchPad,
@@ -82,7 +82,7 @@ describe('addTaskToTracker', () => {
     const folder = exportJobScratchPad(temporaryHome())
     refuseNewEvents(folder)
     expect(() => addTaskToTracker(folder, 'Write the retry policy')).toThrow(
-      'pad.db in 2026-03-14-export-job failed: the disk is full. Nothing was saved, so you can run the command again.',
+      'pad.db in 2026-03-14-export-job failed: the disk is full. Nothing was saved. Tell Nick.',
     )
     acceptNewEvents(folder)
 

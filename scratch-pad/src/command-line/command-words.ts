@@ -143,10 +143,12 @@ function indexOfText(argv: readonly string[], startsText: StartsText): number {
   })
   const wordsBefore = (end: number): string[] =>
     tokens.slice(0, end).flatMap((token) => (token.kind === 'positional' ? [token.value] : []))
+  const isOption = (token: (typeof tokens)[number], position: number): boolean =>
+    token.kind === 'option' &&
+    knownOptions.includes(token.name) &&
+    (token.name !== 'help' || position === tokens.length - 1)
   const first = tokens.find(
-    (token, position) =>
-      !(token.kind === 'option' && knownOptions.includes(token.name)) &&
-      startsText(wordsBefore(position)),
+    (token, position) => !isOption(token, position) && startsText(wordsBefore(position)),
   )
   if (first === undefined) {
     return argv.length

@@ -5,6 +5,17 @@ import { authors, threadTypes, waitingParties } from '../threads/thread'
 
 export const padSchemaVersion = 1
 
+export const padTables = [
+  'progress_tracker',
+  'tasks',
+  'threads',
+  'messages',
+  'decisions',
+  'decision_log',
+  'events',
+  'agent_inbox',
+] as const
+
 function oneOf(column: string, values: readonly string[]): string {
   const quoted = values.map((value) => "'" + value + "'").join(', ')
   return `CHECK (${column} IN (${quoted}))`

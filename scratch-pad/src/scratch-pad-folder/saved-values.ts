@@ -1,15 +1,7 @@
-import { type SQLOutputValue } from 'node:sqlite'
-import { ScratchPadError } from '../scratch-pad-error'
+import { type DatabaseSync, type SQLInputValue, type SQLOutputValue } from 'node:sqlite'
+import { BrokenPadDbError } from './pad-db-errors'
 
-export class BrokenPadDbError extends ScratchPadError {
-  constructor(padName: string, problem: string) {
-    super(
-      `pad.db in ${padName} is broken: ${problem}. Nothing was saved. Tell Nick, because the threads, the decisions and the progress tracker of the scratch pad are in pad.db.`,
-    )
-  }
-}
-
-export class PadRow {
+export class SavedValues {
   constructor(
     private readonly values: Readonly<Record<string, SQLOutputValue>>,
     private readonly table: string,
@@ -59,4 +51,17 @@ export class PadRow {
       `the column ${column} of the table ${this.table} must be ${expected}`,
     )
   }
+}
+
+export function readSavedValues(
+  db: DatabaseSync,
+  padName: string,
+  table: string,
+  sql: string,
+  ...parameters: SQLInputValue[]
+): SavedValues[] {
+  return db
+    .prepare(sql)
+    .all(...parameters)
+    .map((values) => new SavedValues(values, table, padName))
 }

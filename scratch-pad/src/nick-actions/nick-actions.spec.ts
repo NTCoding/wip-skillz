@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest'
 import { UnknownPageError } from '../pages/page-markdown'
-import { PadDbFailureError } from '../scratch-pad-folder/scratch-pad-folder'
+import { PadDbFailureError } from '../scratch-pad-folder/pad-db-errors'
 import {
   exportJobScratchPad,
   freezeClockAt,

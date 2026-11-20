@@ -65,6 +65,25 @@ describe('parseCommandWords', () => {
     })
   })
 
+  it('treats --help as the first word of the text when more words follow it', () => {
+    expect(
+      parseCommandWords(['reply', 'c-1', '--help', 'prints', 'the', 'usage'], textAfterReplyId),
+    ).toStrictEqual({
+      words: ['reply', 'c-1', '--help', 'prints', 'the', 'usage'],
+      options: { pad: undefined, type: undefined, all: false },
+      givenOptions: [],
+      help: false,
+    })
+  })
+
+  it('reads --help as an option when it is the last word at the start of the text', () => {
+    expect(parseCommandWords(['reply', 'c-1', '--help'], textAfterReplyId).help).toBe(true)
+  })
+
+  it('reads --help as an option when it comes before the text', () => {
+    expect(parseCommandWords(['reply', '--help', 'c-1', 'Done'], textAfterReplyId).help).toBe(true)
+  })
+
   it('reads a known option before the text as an option', () => {
     expect(
       parseCommandWords(['reply', '--pad', 'export', 'c-1', 'Done'], textAfterReplyId),
