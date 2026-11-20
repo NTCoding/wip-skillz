@@ -367,3 +367,21 @@ describe('ScratchPadFolder', () => {
     expect(exportJobScratchPad(temporaryHome()).readCustomFile('pages/index.md')).toBeUndefined()
   })
 })
+
+describe('ScratchPadFolder.pageVersions', () => {
+  it('returns a new version of a page when the page file was written again', () => {
+    const folder = exportJobScratchPad(temporaryHome())
+    writeFileInPad(folder, 'pages/queue.md', '# Queue\n')
+    const before = folder.pageVersions()
+
+    writeFileInPad(folder, 'pages/queue.md', '# Queue of exports\n')
+
+    expect(folder.pageVersions().get('pages/queue.md')).not.toBe(before.get('pages/queue.md'))
+  })
+
+  it('returns the same versions when no page file was written', () => {
+    const folder = exportJobScratchPad(temporaryHome())
+
+    expect(folder.pageVersions()).toStrictEqual(folder.pageVersions())
+  })
+})

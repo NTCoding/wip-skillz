@@ -1,12 +1,16 @@
 import { describe, expect, it } from 'vitest'
 import {
+  InvalidPortError,
+  InvalidSecondsError,
   InvalidTaskNumberError,
   MissingArgumentError,
   OptionValueError,
   UnknownItemTypeError,
   UnknownOptionError,
   inboxTypes,
+  milliseconds,
   parseCommandWords,
+  portNumber,
   requiredWord,
   restOfWords,
   taskNumber,
@@ -22,7 +26,14 @@ describe('parseCommandWords', () => {
       parseCommandWords(['inbox', '--pad', 'export', '--type', 'grammar', '--all'], noText),
     ).toStrictEqual({
       words: ['inbox'],
-      options: { pad: 'export', type: 'grammar', all: true },
+      options: {
+        pad: 'export',
+        type: 'grammar',
+        all: true,
+        port: undefined,
+        quiet: undefined,
+        timeout: undefined,
+      },
       givenOptions: ['pad', 'type', 'all'],
       help: false,
     })
@@ -31,7 +42,14 @@ describe('parseCommandWords', () => {
   it('returns no options when none are given', () => {
     expect(parseCommandWords(['reply', 'c-1', 'Done', 'now'], noText)).toStrictEqual({
       words: ['reply', 'c-1', 'Done', 'now'],
-      options: { pad: undefined, type: undefined, all: false },
+      options: {
+        pad: undefined,
+        type: undefined,
+        all: false,
+        port: undefined,
+        quiet: undefined,
+        timeout: undefined,
+      },
       givenOptions: [],
       help: false,
     })
@@ -59,7 +77,14 @@ describe('parseCommandWords', () => {
       parseCommandWords(['reply', 'c-1', 'Run it with', '--help', '--all'], textAfterReplyId),
     ).toStrictEqual({
       words: ['reply', 'c-1', 'Run it with', '--help', '--all'],
-      options: { pad: undefined, type: undefined, all: false },
+      options: {
+        pad: undefined,
+        type: undefined,
+        all: false,
+        port: undefined,
+        quiet: undefined,
+        timeout: undefined,
+      },
       givenOptions: [],
       help: false,
     })
@@ -70,7 +95,14 @@ describe('parseCommandWords', () => {
       parseCommandWords(['reply', 'c-1', '--help', 'prints', 'the', 'usage'], textAfterReplyId),
     ).toStrictEqual({
       words: ['reply', 'c-1', '--help', 'prints', 'the', 'usage'],
-      options: { pad: undefined, type: undefined, all: false },
+      options: {
+        pad: undefined,
+        type: undefined,
+        all: false,
+        port: undefined,
+        quiet: undefined,
+        timeout: undefined,
+      },
       givenOptions: [],
       help: false,
     })
@@ -89,7 +121,14 @@ describe('parseCommandWords', () => {
       parseCommandWords(['reply', '--pad', 'export', 'c-1', 'Done'], textAfterReplyId),
     ).toStrictEqual({
       words: ['reply', 'c-1', 'Done'],
-      options: { pad: 'export', type: undefined, all: false },
+      options: {
+        pad: 'export',
+        type: undefined,
+        all: false,
+        port: undefined,
+        quiet: undefined,
+        timeout: undefined,
+      },
       givenOptions: ['pad'],
       help: false,
     })
@@ -181,6 +220,51 @@ describe('inboxTypes', () => {
     expect(() => inboxTypes('grammar,typo')).toThrow(UnknownItemTypeError)
     expect(() => inboxTypes('grammar,typo')).toThrow(
       '"typo" isn\'t a type. The types are: comment, decision, grammar, improvement',
+    )
+  })
+})
+
+describe('portNumber', () => {
+  it('returns the default port when no port is given', () => {
+    expect(portNumber(undefined, 4747)).toBe(4747)
+  })
+
+  it.each([
+    ['0', 0],
+    ['8080', 8080],
+    ['65535', 65_535],
+  ])('returns the port when the port is %s', (text, port) => {
+    expect(portNumber(text, 4747)).toBe(port)
+  })
+
+  it.each(['65536', '-1', 'web', '123456'])(
+    'throws InvalidPortError when the port is %s',
+    (text) => {
+      expect(() => portNumber(text, 4747)).toThrow(InvalidPortError)
+      expect(() => portNumber(text, 4747)).toThrow(
+        `"${text}" isn't a port. A port is a whole number from 0 to 65535.`,
+      )
+    },
+  )
+})
+
+describe('milliseconds', () => {
+  it('returns undefined when the option is not given', () => {
+    expect(milliseconds('timeout', undefined)).toBeUndefined()
+  })
+
+  it.each([
+    ['10', 10_000],
+    ['0', 0],
+    ['0.5', 500],
+  ])('returns the milliseconds when the seconds are %s', (text, result) => {
+    expect(milliseconds('quiet', text)).toBe(result)
+  })
+
+  it.each(['ten', '-1', '1e3'])('throws InvalidSecondsError when the seconds are %s', (text) => {
+    expect(() => milliseconds('quiet', text)).toThrow(InvalidSecondsError)
+    expect(() => milliseconds('quiet', text)).toThrow(
+      `--quiet needs a number of seconds, like 10. "${text}" isn't a number of seconds.`,
     )
   })
 })

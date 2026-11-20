@@ -1,7 +1,7 @@
 import { countedNoun } from '../counted-noun'
 import { type Heading } from '../rendered-page/page-headings'
 
-interface PageSummary {
+export interface PageSummary {
   readonly page: string
   readonly title: string | undefined
   readonly openThreads: number

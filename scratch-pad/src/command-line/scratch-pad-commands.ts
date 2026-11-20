@@ -10,12 +10,22 @@ import {
   startTaskInTracker,
 } from '../agent-commands/progress-tracker-commands'
 import { finishNoteThread, replyToThread, showItem } from '../agent-commands/thread-commands'
+import { waitForAgentInbox } from '../agent-commands/wait-commands'
 import { type ScratchPadFolder } from '../scratch-pad-folder/scratch-pad-folder'
 import { proseCheckFrom } from '../prose-check/prose-check'
 import { createScratchPad, type Environment } from '../scratch-pads-home/scratch-pads-home'
 import { scratchPadCreatedText } from '../scratch-pads-home/scratch-pads-home-text'
 import {
+  serveInThisProcess,
+  startServerProcess,
+  stopServerProcess,
+  type ToolCommand,
+} from '../server-process/server-process'
+import { servingText, startedServerText, stoppedServerText } from '../server-process/server-text'
+import {
   inboxTypes,
+  milliseconds,
+  portNumber,
   requiredWord,
   restOfWords,
   taskNumber,
@@ -30,6 +40,10 @@ export interface CommandInput {
   readonly environment: Environment
   readonly home: () => string
   readonly folder: () => ScratchPadFolder
+  readonly selectedFolder: () => ScratchPadFolder | undefined
+  readonly toolCommand: ToolCommand
+  readonly stopSignal: AbortSignal
+  readonly log: (text: string) => void
 }
 
 export interface ScratchPadCommand {
@@ -37,8 +51,10 @@ export interface ScratchPadCommand {
   readonly summary: string
   readonly options: readonly OptionName[]
   readonly wordsBeforeText?: number
-  readonly run: (input: CommandInput) => string | CommandOutput
+  readonly run: (input: CommandInput) => CommandResult | Promise<CommandResult>
 }
+
+type CommandResult = string | CommandOutput
 
 export interface CommandOutput {
   readonly text: string
@@ -46,6 +62,11 @@ export interface CommandOutput {
 }
 
 const pad: readonly OptionName[] = ['pad']
+const defaultPort = 4747
+const checkMilliseconds = 250
+const startMilliseconds = 5000
+const stopMilliseconds = 5000
+const defaultQuietMilliseconds = 10_000
 
 export const scratchPadCommands: ReadonlyMap<string, ScratchPadCommand> = new Map([
   [
@@ -58,6 +79,54 @@ export const scratchPadCommands: ReadonlyMap<string, ScratchPadCommand> = new Ma
       run: (input: CommandInput) => {
         const topic = restOfWords(input.words, 0, 'topic', input.usage)
         return scratchPadCreatedText(createScratchPad(input.home(), topic, new Date()))
+      },
+    },
+  ],
+  [
+    'start',
+    {
+      usage: 'start [--port <port>]',
+      summary: 'start the server of every scratch pad in the background and print the address',
+      options: ['pad', 'port'],
+      run: async (input: CommandInput) => {
+        const padName = input.selectedFolder()?.name
+        const started = await startServerProcess({
+          home: input.home(),
+          port: portNumber(input.options.port, defaultPort),
+          toolCommand: input.toolCommand,
+          environment: input.environment,
+          startMilliseconds,
+        })
+        return startedServerText(started, padName)
+      },
+    },
+  ],
+  [
+    'stop',
+    {
+      usage: 'stop',
+      summary: 'stop the server',
+      options: [],
+      run: async (input: CommandInput) =>
+        stoppedServerText(await stopServerProcess(input.home(), stopMilliseconds)),
+    },
+  ],
+  [
+    'serve',
+    {
+      usage: 'serve [--port <port>]',
+      summary: 'run the server in the foreground (start runs this command in the background)',
+      options: ['port'],
+      run: async (input: CommandInput) => {
+        const home = input.home()
+        const port = await serveInThisProcess({
+          home,
+          port: portNumber(input.options.port, defaultPort),
+          checkMilliseconds,
+          stopSignal: input.stopSignal,
+          log: input.log,
+        })
+        return servingText(home, port)
       },
     },
   ],
@@ -81,6 +150,23 @@ export const scratchPadCommands: ReadonlyMap<string, ScratchPadCommand> = new Ma
         readAgentInbox(input.folder(), {
           types: inboxTypes(input.options.type),
           includeSeen: input.options.all,
+        }),
+    },
+  ],
+  [
+    'wait',
+    {
+      usage: 'wait [--quiet <seconds>] [--timeout <seconds>]',
+      summary:
+        'print the new items like inbox once Nick has been quiet for 10 seconds (--type works as for inbox)',
+      options: ['pad', 'type', 'quiet', 'timeout'],
+      run: (input: CommandInput) =>
+        waitForAgentInbox(input.folder(), {
+          types: inboxTypes(input.options.type),
+          quietMilliseconds: milliseconds('quiet', input.options.quiet) ?? defaultQuietMilliseconds,
+          timeoutMilliseconds: milliseconds('timeout', input.options.timeout),
+          checkMilliseconds,
+          stopSignal: input.stopSignal,
         }),
     },
   ],

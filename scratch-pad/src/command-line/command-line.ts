@@ -1,4 +1,5 @@
 import { ScratchPadError } from '../scratch-pad-error'
+import { type ToolCommand } from '../server-process/server-process'
 import {
   chooseScratchPad,
   scratchPadsHome,
@@ -20,6 +21,8 @@ interface CommandLine {
   readonly environment: Environment
   readonly stdout: OutputStream
   readonly stderr: OutputStream
+  readonly toolCommand: ToolCommand
+  readonly stopSignal: AbortSignal
 }
 
 class UnknownCommandError extends ScratchPadError {
@@ -34,9 +37,9 @@ class OptionNotAllowedError extends ScratchPadError {
   }
 }
 
-export function runCommandLine(commandLine: CommandLine): number {
+export async function runCommandLine(commandLine: CommandLine): Promise<number> {
   try {
-    const output = runCommand(commandLine)
+    const output = await runCommand(commandLine)
     commandLine.stdout.write(`${output.text}\n`)
     return output.exitCode
   } catch (error) {
@@ -62,7 +65,7 @@ export function helpText(): string {
   ].join('\n')
 }
 
-function runCommand(commandLine: CommandLine): CommandOutput {
+async function runCommand(commandLine: CommandLine): Promise<CommandOutput> {
   const parsed = parseCommandWords(commandLine.argv, startsText)
   if (parsed.help || parsed.words.length === 0 || parsed.words[0] === 'help') {
     return { text: helpText(), exitCode: 0 }
@@ -73,14 +76,19 @@ function runCommand(commandLine: CommandLine): CommandOutput {
     throw new OptionNotAllowedError(notAllowed, command.usage)
   }
   const home = (): string => scratchPadsHome(commandLine.environment)
-  const output = command.run({
+  const selector = parsed.options.pad ?? commandLine.environment['SCRATCH_PAD']
+  const output = await command.run({
     words,
     options: parsed.options,
     usage: command.usage,
     environment: commandLine.environment,
     home,
-    folder: () =>
-      chooseScratchPad(home(), parsed.options.pad ?? commandLine.environment['SCRATCH_PAD']),
+    folder: () => chooseScratchPad(home(), selector),
+    selectedFolder: () =>
+      selector === undefined || selector === '' ? undefined : chooseScratchPad(home(), selector),
+    toolCommand: commandLine.toolCommand,
+    stopSignal: commandLine.stopSignal,
+    log: (text) => commandLine.stderr.write(`${text}\n`),
   })
   return typeof output === 'string' ? { text: output, exitCode: 0 } : output
 }

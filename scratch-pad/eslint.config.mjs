@@ -42,6 +42,7 @@ const domainFiles = [
   'src/events/**/*.ts',
   'src/items/**/*.ts',
   'src/nick-inbox/**/*.ts',
+  'src/pad-changes/**/*.ts',
   'src/page-check/**/*.ts',
   'src/pages/**/*.ts',
   'src/progress-tracker/**/*.ts',

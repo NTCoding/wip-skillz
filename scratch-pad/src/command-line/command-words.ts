@@ -3,7 +3,7 @@ import { mainAgentTypes } from '../agent-inbox/agent-inbox'
 import { itemTypes, type ItemType } from '../items/item-id'
 import { ScratchPadError } from '../scratch-pad-error'
 
-export const optionNames = ['pad', 'type', 'all'] as const
+export const optionNames = ['pad', 'type', 'all', 'port', 'quiet', 'timeout'] as const
 export type OptionName = (typeof optionNames)[number]
 
 const knownOptions: readonly string[] = [...optionNames, 'help']
@@ -12,6 +12,9 @@ const parserOptions = {
   pad: { type: 'string' },
   type: { type: 'string' },
   all: { type: 'boolean' },
+  port: { type: 'string' },
+  quiet: { type: 'string' },
+  timeout: { type: 'string' },
   help: { type: 'boolean' },
 } as const
 
@@ -21,6 +24,9 @@ export interface CommandOptions {
   readonly pad: string | undefined
   readonly type: string | undefined
   readonly all: boolean
+  readonly port: string | undefined
+  readonly quiet: string | undefined
+  readonly timeout: string | undefined
 }
 
 export interface CommandWords {
@@ -62,6 +68,18 @@ export class UnknownItemTypeError extends ScratchPadError {
   }
 }
 
+export class InvalidPortError extends ScratchPadError {
+  constructor(text: string) {
+    super(`"${text}" isn't a port. A port is a whole number from 0 to 65535.`)
+  }
+}
+
+export class InvalidSecondsError extends ScratchPadError {
+  constructor(name: string, text: string) {
+    super(`--${name} needs a number of seconds, like 10. "${text}" isn't a number of seconds.`)
+  }
+}
+
 export function parseCommandWords(argv: readonly string[], startsText: StartsText): CommandWords {
   const textIndex = indexOfText(argv, startsText)
   const { values, positionals } = parseArgs({
@@ -80,6 +98,9 @@ export function parseCommandWords(argv: readonly string[], startsText: StartsTex
       pad: textOption(values, 'pad'),
       type: textOption(values, 'type'),
       all: flagOption(values, 'all'),
+      port: textOption(values, 'port'),
+      quiet: textOption(values, 'quiet'),
+      timeout: textOption(values, 'timeout'),
     },
     givenOptions: optionNames.filter((name) => values[name] !== undefined),
     help: flagOption(values, 'help'),
@@ -131,6 +152,26 @@ export function inboxTypes(typeOption: string | undefined): readonly ItemType[] 
     }
     return type
   })
+}
+
+export function portNumber(text: string | undefined, defaultPort: number): number {
+  if (text === undefined) {
+    return defaultPort
+  }
+  if (!/^\d{1,5}$/.test(text) || Number(text) > 65_535) {
+    throw new InvalidPortError(text)
+  }
+  return Number(text)
+}
+
+export function milliseconds(name: string, text: string | undefined): number | undefined {
+  if (text === undefined) {
+    return undefined
+  }
+  if (!/^\d+(\.\d+)?$/.test(text)) {
+    throw new InvalidSecondsError(name, text)
+  }
+  return Number(text) * 1000
 }
 
 function indexOfText(argv: readonly string[], startsText: StartsText): number {

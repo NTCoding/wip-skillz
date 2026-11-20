@@ -6,14 +6,17 @@ import {
   readFileSync,
   renameSync,
   rmSync,
+  statSync,
   writeFileSync,
 } from 'node:fs'
 import { basename, dirname, join } from 'node:path'
 import { DatabaseSync } from 'node:sqlite'
+import { type PageVersions } from '../pad-changes/pad-change'
 import { isPagePath } from '../pages/page-markdown'
 import { isCustomHtmlPath } from '../rendered-page/html-block'
 import { ScratchPadError } from '../scratch-pad-error'
 import { PadDb } from './pad-db'
+import { PadDbWatch } from './pad-db-watch'
 import {
   BrokenPadDbError,
   MissingPadDbError,
@@ -77,6 +80,23 @@ export class ScratchPadFolder {
           .filter((name) => name.endsWith('.md'))
           .map((name) => `${pagesFolder}/${name}`)
       : []
+  }
+
+  pageVersions(): PageVersions {
+    return new Map(
+      this.pages().map((page) => {
+        const stats = statSync(join(this.path, page))
+        return [page, `${stats.mtimeMs}-${stats.size}`]
+      }),
+    )
+  }
+
+  watchPadDb(): PadDbWatch {
+    this.read(() => undefined)
+    return new PadDbWatch(
+      new DatabaseSync(join(this.path, padDbFile), { timeout: busyTimeoutMilliseconds }),
+      this.name,
+    )
   }
 
   readPageLines(page: string): readonly string[] {
