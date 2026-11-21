@@ -11,7 +11,7 @@ You must now collaborate in scratch pad mode. The main chat window is only used 
 
 This skill turns an AI conversation into collaboration on an HTML scratch pad. You write the pages in Markdown. Nick reads them in his browser and comments on the text.
 
-A small server on Nick's machine shows the pages in his browser and saves his comments in the scratch pad's folder. You read those comments and reply to them with the scratch-pad command.
+A small server on Nick's machine shows the pages in his browser and saves his comments in the scratch pad's folder. You read those comments and reply to them with the scratch-pad tool.
 
 The tool only needs Node 24. Run it like this:
 
@@ -21,19 +21,21 @@ node ${CLAUDE_PLUGIN_ROOT}/scratch-pad/dist/scratch-pad <command>
 
 In this file, `scratch-pad <command>` is short for that line. The hints that the tool prints are written in the same short form. If you aren't running in Claude Code, replace `${CLAUDE_PLUGIN_ROOT}` with the root folder of this repo, which is the folder above this skill's folder.
 
-You'll find the details in [reference.md](reference.md), like each command's options and what each command prints. The same file also describes what's in a scratch pad's folder and lists the design tokens for an `:::html` block.
+[reference.md](reference.md) has the details, like each command's options and what each command prints. The same file also describes what's in a scratch pad's folder and lists the design tokens for an `:::html` block.
 
 ## How Nick starts the skill
 
-Nick has invoked this skill. Your first action is therefore a scratch pad rather than a reply in the chat.
+Nick has invoked this skill so you begin with the scratch pad rather than with a reply in the chat.
 
-From now on, everything that you'd write to Nick goes on the pages of the scratch pad. That includes your replies, your analysis, your questions, your proposals and the decisions that Nick has to make. The chat is only for short status updates, such as the address of the scratch pad or a link to the page that you've just changed. Never put the content itself in the chat. A question for Nick appears in the chat only as its title with a link to its page. Everything else about the question stays on the page, even if another instruction asks for a sentence about the problem in the chat.
+From now on, write everything for Nick on the pages of the scratch pad. That includes your replies, your analysis, your questions, your proposals and the decisions that Nick has to make.
+
+The chat is only for short status updates, such as the address of the scratch pad or a link to the page that you've just changed. Never put the content itself in the chat. A question for Nick appears in the chat only as its title with a link to its page. Everything else about the question stays on the page, even if another instruction asks for a sentence about the problem in the chat.
 
 Nick starts the skill himself in one of these 3 ways:
 
 - **A new scratch pad at the start of a session.** Run `new` with the topic that Nick gives. Then run `start` and give Nick the address.
-- **The current session as a scratch pad.** Run `new` and `start`. Then write the pages from what you and Nick have said so far. The goal and the tasks go in the progress tracker.
-- **An existing scratch pad.** Nick gives you its folder. Run `start`, `status` and `inbox --all`, then continue with the current task of the progress tracker.
+- **The current session as a scratch pad.** Run `new` and `start`. Then write the pages from what you and Nick have said so far. Set the goal and the tasks in the progress tracker.
+- **An existing scratch pad.** Nick gives you its folder. Run `start`, `status` and `inbox --all`, then continue with the current task in the progress tracker.
 
 ### Link to everything that you mention in the chat
 
@@ -149,7 +151,7 @@ Nick writes 3 kinds of thread on the text:
 - a grammar note
 - an improvement note
 
-You deal with Nick's comments and his decisions yourself. You hand both kinds of note to a subagent so that they don't fill your context.
+You deal with Nick's comments and his decisions yourself, but you hand both kinds of note to a subagent so that they don't fill your context.
 
 ### Wait for Nick
 
@@ -189,9 +191,7 @@ link: http://127.0.0.1:4747/2026-11-21-invoice-export/#c-1
 
 ### Follow Nick's decision
 
-When Nick has decided, rewrite the text under the question so that it describes his choice. Leave the `:::decision` block where it is, because the block shows his choice on the page. Then close the decision with `done` and one line about the change. Until then, the decision waits for you.
-
-Don't run `reply` or `decide` for a decision, because a decision can't be replied to and the server has already logged Nick's choice. If Nick has written his own reply and it leaves something open, write the open point as a new question with a new `:::decision` block under the question. This is an example of how you close a decision:
+When Nick has decided, rewrite the text under the question so that it describes his choice. Leave the `:::decision` block where it is, because the block shows his choice on the page. The decision waits for you until you close it with `done` and one line about the change. This is an example of how you close a decision:
 
 ```text
 $ scratch-pad show --pad 2026-11-21-invoice-export d-1
@@ -203,6 +203,8 @@ $ scratch-pad done --pad 2026-11-21-invoice-export d-1 "Raised the retry limit t
 d-1 is done
 link: http://127.0.0.1:4747/2026-11-21-invoice-export/#d-1
 ```
+
+Don't run `reply` or `decide` for a decision, because a decision can't be replied to and the server has already logged Nick's choice. If Nick has written his own reply and it leaves something open, write the open point as a new question below the old one. Put a new `:::decision` block under the new question.
 
 ### Hand the notes to a subagent
 
@@ -233,7 +235,7 @@ g-1 is done
 link: http://127.0.0.1:4747/2026-11-21-invoice-export/#g-1
 ```
 
-Nick still sees a closed note on the page, together with the line about the change.
+Nick still sees the closed note on the page. The note includes the line about the change.
 
 ### Log a decision
 
@@ -268,5 +270,7 @@ exported 3 pages and 4 threads to /Users/nick/scratch-pads/2026-11-21-invoice-ex
 ```
 
 Pass `--out <file>` to write the file somewhere else.
+
+## Leave the server running when you finish
 
 When you've finished, leave the server running, because another session might still be waiting for Nick on another scratch pad. So don't run `stop` unless you started the server yourself on purpose, for example to test the tool. Even after the server has been stopped, every scratch pad is kept in `~/scratch-pads` so the next session can continue it with `start` and `inbox --all`.

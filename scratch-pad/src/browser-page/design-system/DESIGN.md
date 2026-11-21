@@ -2,7 +2,7 @@
 
 The browser page is the React page in `src/browser-page` that shows a scratch pad in the Medium theme. We want every part of the page to look consistent, including every part that's added later. So every part of the page is built from the components in this folder rather than styled on its own.
 
-This file describes the rules of the design system first. The sections after the rules describe how to change the page, like adding a component or a token.
+This file describes the folders and the rules of the design system first. Some of the sections after the rules explain how a part of the page works, like the layout in a narrow window or the frame of an html block. The other sections describe how to change the page, like adding a component or a token.
 
 ## The folders
 
@@ -60,7 +60,7 @@ The rule recognises every colour format that's defined in CSS Color 4 and 5. The
 
 `no-restricted-imports` and `react/forbid-dom-props` make sure that a feature only uses the public components.
 
-The lint rules are in `.token-lint/` at the root of the project. The rules in that folder need 100% test coverage, the same as `src`.
+The custom lint rules `tokens/value-from-token` and `tokens/no-colour-in-string` are in `.token-lint/` at the root of the project. The rules in that folder need 100% test coverage, like the code in `src`.
 
 Run `pnpm build` after every change to `src`, because the built tool in `dist/scratch-pad` is committed and the skill runs that file. The last step of `pnpm verify` will fail if `dist/scratch-pad` isn't the bundle of the current source.
 
@@ -68,7 +68,7 @@ Run `pnpm build` after every change to `src`, because the built tool in `dist/sc
 
 In a window that's narrower than 900px, an open sidebar would squeeze the text too much. So these 2 things change below 900px:
 
-- The sidebar has a separate state for a narrow window, which is never saved. The sidebar is collapsed when the page opens, after every navigation and every time the window crosses 900px. So the choice that Nick saved in a wide window doesn't change. The code for this state is in `sidebar-state.ts`.
+- In a narrow window, the sidebar has a separate state that is never saved so the choice that Nick saved in a wide window doesn't change. The sidebar will be collapsed whenever the page opens and after every navigation. It will be collapsed every time the window crosses 900px too. The code for this state is in `sidebar-state.ts`.
 - An open sidebar is shown on top of the page rather than beside the page. The page behind the sidebar is faded. If Nick clicks the faded page, the sidebar will collapse.
 
 `narrowAppFrameQuery` in `app-frame.tsx` is `(width < 900px)`. The same width is written out in `app-frame.css`, because a media query can't read a custom property. `app-frame.spec.tsx` will fail if the 2 widths differ.
@@ -82,7 +82,9 @@ The widths are written out in `reading-column.css` and `margin-lane.css`, becaus
 
 ## Positions that are measured at runtime
 
-The position of the selection tools and of the cards in the margin is only known in the browser, because they're placed beside text. Only a design system component places an element like that, by measuring the page in a layout effect and setting the position as a custom property through a ref. A component uses a ref for this rather than a `style` prop, because the ESLint rule `react/forbid-dom-props` bans `style` in every file of the browser page apart from the tests. That ban includes the components of the design system as well as the features.
+The position of the selection tools and of the cards in the margin is only known in the browser, because they're placed beside text. Only a design system component is allowed to place an element like that. The design system component measures the page in a layout effect and then sets the position as a custom property through a ref.
+
+A component uses a ref for this rather than a `style` prop, because the ESLint rule `react/forbid-dom-props` bans `style` in every file of the browser page apart from the tests. That ban includes the components of the design system as well as the features.
 
 ```tsx
 // src/browser-page/design-system/components/selection-tools/selection-tools.tsx
@@ -100,17 +102,21 @@ element?.style.setProperty(
 }
 ```
 
-`MarginLane` looks for each card's anchor inside the closest element with `data-margin-scope`, which `ReadingColumn` sets when it has a margin. The anchor is the thread's `Highlight`, which has the thread id in `data-highlight`. If a thread's text doesn't have a highlight, the card will be anchored to the block whose `data-lines` is the same as the card's `anchorLines`.
+Each card in the margin is placed beside its anchor. The anchor is the thread's `Highlight`, which has the thread id in `data-highlight`. If a thread's text doesn't have a highlight, the card will be anchored to the block whose `data-lines` is the same as the card's `anchorLines`. `MarginLane` looks for both kinds of anchor inside the closest element with `data-margin-scope`, which `ReadingColumn` sets when the column has a margin.
+
+A component that measures the page can't be tested in a real layout, because the browser page's tests run in jsdom. jsdom doesn't have `ResizeObserver`, `Range.getBoundingClientRect`, `showPopover` or `HTMLDialogElement.showModal`. `browser-page-test-setup.ts` stubs all 4 of them so a component can use them without checking for jsdom.
 
 ## The frame of an html block
 
-`HtmlBlock` shows the HTML in an `:::html` block in an iframe with `sandbox="allow-scripts"` and without `allow-same-origin`, because the agent writes that HTML and the page has to treat the HTML as untrusted. The scripts and the styles of the block still work inside the frame, but they can't read or change anything outside the frame or call the API. The page and the frame talk to each other in these steps:
+`HtmlBlock` shows the HTML of an `:::html` block in an iframe. The agent writes that HTML so the page has to treat the HTML as untrusted. That's why the iframe has `sandbox="allow-scripts"` but doesn't have `allow-same-origin`. The scripts and the styles of the block still work inside the frame, but they can't read or change anything outside the frame or call the API.
+
+The page and the frame talk to each other in these steps:
 
 1. The server returns a small frame document at `/browser-page/html-block-frame.html`. The frame document has its own content security policy, because the browser page's policy doesn't allow the block's inline scripts. The frame's policy allows inline scripts and inline styles, but it only allows a connection to an `https:` address. It doesn't allow a form to be sent either.
 2. The frame sends a ready message and a `MessagePort` to the page.
 3. `connectHtmlBlockFrame` sends the block's HTML through the `MessagePort`. The HTML is wrapped in a document with a `:root` rule, which contains the page's tokens.
 4. The frame sends its content's height through the `MessagePort` and `HtmlBlock` sets that height as `--html-block-height`.
-5. If Nick clicks a link in the frame, the frame will send the link's address through the `MessagePort` rather than open the link itself. `followLink` then opens a page of the scratch pad in the browser page or a web address in a new tab. Every other address is ignored.
+5. If Nick clicks a link in the frame, the frame will send the link's address through the `MessagePort` rather than open the link itself. If the address is a page of the scratch pad, `followLink` will open that page in the browser page. It opens an `http:`, `https:` or `mailto:` address in a new tab and ignores every other address.
 
 `HtmlBlock` has a comment button beside the full size control, because the page can't see a selection inside the frame. Nick uses that button to comment on the block as a whole.
 
@@ -233,26 +239,24 @@ Import the theme's CSS file in `design-system.ts` and then set `data-theme` on `
 
 The comments feature is made of these files:
 
-| File                    | What it does                                                                                                                                                                      |
-| ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `selected-block.ts`     | Turns Nick's selection into the selected text and the lines of its block. It also adds the text before and after the selection.                                                   |
-| `visible-text.ts`       | Builds a block's text in the same way as the server does, with a space between table cells and between list items. It leaves out a code block's bar and the text of every button. |
-| `thread-anchors.ts`     | Shows each card beside the block where the server found its text, or near the old lines if it's detached                                                                          |
-| `text-highlights.tsx`   | Finds the selected text in a block and splits the text nodes into `Highlight` components                                                                                          |
-| `page-with-threads.tsx` | Shows the page with its cards in the margin. It also shows the draft of a new thread and the selection tools.                                                                     |
-| `missing-page-view.tsx` | Shows the threads that are waiting for Nick on a page that the agent has deleted. Nick can still reply to those threads or resolve them there.                                    |
+| File                    | What it does                                                                                                                                                                         |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `selected-block.ts`     | Turns Nick's selection into the selected text and the lines of its block. It also adds the text before and after the selection.                                                      |
+| `visible-text.ts`       | Builds a block's text in the same way as the server does. It puts a space between table cells and between list items. It leaves out a code block's bar and the text of every button. |
+| `thread-anchors.ts`     | Shows each card beside the block where the server found the thread's text. If the thread is detached, the card will be shown near the thread's old lines.                            |
+| `text-highlights.tsx`   | Finds the selected text in a block and splits the text nodes into `Highlight` components                                                                                             |
+| `page-with-threads.tsx` | Shows the page with its cards in the margin. It also shows the draft of a new thread and the selection tools.                                                                        |
+| `missing-page-view.tsx` | Shows the threads that are waiting for Nick on a page that the agent has deleted. Nick can still reply to those threads or resolve them there.                                       |
 
-The server builds the same text from the Markdown in `src/rendered-page/page-blocks.ts`. `visible-text.ts` and `page-blocks.ts` are both tested against `visible-text-fixtures.ts`. If you change how one of them builds the text, a test will fail until the other one builds the same text again.
+The server builds a block's text from the Markdown in the same way as `visible-text.ts` does in the browser. The server's code for this is in `src/rendered-page/page-blocks.ts`. `visible-text.ts` and `page-blocks.ts` are both tested against `visible-text-fixtures.ts`. If you change how one of them builds the text, a test will fail until the other one builds the same text again.
 
 Nick comments on an `:::html` block with its comment button. The draft of that comment has an empty `selectedText` so the server stores the whole block's text as the selected text.
 
 A change to how the server finds a thread's text again belongs in `src/threads/thread-position.ts` rather than in the browser page. The server works out where each thread's text is now and returns that as the `position` of every thread from the API. `thread-anchors.ts` only turns that position into a block on the page.
 
-The browser page's tests run in jsdom, which doesn't have `ResizeObserver`, `Range.getBoundingClientRect`, `showPopover` or `HTMLDialogElement.showModal`. `browser-page-test-setup.ts` stubs all 4 of them so a component can use them without checking for jsdom.
-
 ## How the export uses the same page
 
-`scratch-pad export` writes one HTML file that contains the same bundle that the server sends to the browser, together with the scratch pad's data in a `<script id="scratch-pad-export">` element. If that element is there, `start-browser-page.tsx` reads it and starts the page in its read-only mode:
+`scratch-pad export` writes one HTML file, which contains the same bundle that the server sends to the browser. It also contains the scratch pad's data in a `<script id="scratch-pad-export">` element. If that element is there, `start-browser-page.tsx` reads the element and starts the page in its read-only mode. The export differs from the page from the server in these 4 ways:
 
 | The page from the server                         | The export                                      |
 | ------------------------------------------------ | ----------------------------------------------- |

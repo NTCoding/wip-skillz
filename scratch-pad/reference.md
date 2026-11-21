@@ -4,7 +4,7 @@ This file describes the details that aren't in [SKILL.md](SKILL.md), such as the
 
 ## The commands
 
-Every command prints a few short lines. If a command fails, it will print a message to the error stream that describes how to fix the problem. Then it will exit with a code that isn't zero.
+Every command prints a few short lines. If a command fails, it will exit with a code that isn't zero. Before it exits, it will print a message to the error stream so that you know how to fix the problem.
 
 | Command                  | What it does                                                                                                                                          |
 | ------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -14,26 +14,26 @@ Every command prints a few short lines. If a command fails, it will print a mess
 | `serve [--port <port>]`  | Runs the server in the foreground. `start` runs this command in the background.                                                                       |
 | `status`                 | Prints the current task and what's waiting for the agent and for Nick. It will also print the scratch pad's address if the server is running.         |
 | `inbox [--type <types>]` | Prints the new items that are waiting for the agent. `--all` also prints the items that were printed before.                                          |
-| `wait`                   | Prints the new items like `inbox` once Nick has been quiet for 10 seconds                                                                             |
+| `wait`                   | Waits until Nick has been quiet for 10 seconds and then prints the new items in the same way as `inbox`                                               |
 | `show <id>`              | Prints one whole thread or decision                                                                                                                   |
 | `reply <id> <text>`      | Adds your reply to a thread, which then waits for Nick                                                                                                |
-| `done <id> <outcome>`    | Closes a note or a decision with one line about the change                                                                                            |
+| `done <id> <outcome>`    | Closes a note or a decision with one line about what you changed                                                                                      |
 | `pages`                  | Lists the pages with their titles and their open threads, in the order of their numbers                                                               |
 | `outline <page>`         | Prints the headings of a page with their line numbers                                                                                                 |
-| `check [page...]`        | Prints the problems in the given pages or in every page, such as a broken link                                                                        |
+| `check [page...]`        | Prints each problem in the given pages or in every page. A broken link is one example of a problem.                                                   |
 | `goal <text>`            | Sets the progress tracker's goal                                                                                                                      |
 | `tasks`                  | Lists the tasks with their states                                                                                                                     |
 | `task add <title>`       | Adds a task to the progress tracker                                                                                                                   |
 | `task start <number>`    | Starts a task                                                                                                                                         |
 | `task done <number>`     | Finishes a task and starts the next task that's still to do                                                                                           |
 | `decide <text>`          | Adds a decision from the chat to the log of decisions                                                                                                 |
-| `export [--out <file>]`  | Writes one HTML file that opens without the server. The default file is `export.html` in the scratch pad.                                             |
+| `export [--out <file>]`  | Writes one HTML file that a reader can open without the server. The default file is `export.html` in the scratch pad.                                 |
 
-You can pass a page to a command with or without its number. So `1.1-retry-limit.md`, `retry-limit.md` and `retry-limit` are the same page for every command. The tool's own output always has the full file name, like `pages/1.1-retry-limit.md:3` for line 3 of that page.
+You can pass a page to a command with or without its number. So `1.1-retry-limit.md`, `retry-limit.md` and `retry-limit` are the same page for every command. But the tool's own output always shows the full file name, like `pages/1.1-retry-limit.md:3` for line 3 of that page.
 
-The types for `--type` are `comment`, `decision`, `grammar` and `improvement`. You can pass several of them with a comma between them. Without `--type`, `inbox` and `wait` print the comments and the decisions in full but only one line for the notes, because the notes are read by a subagent.
+The types for `--type` are `comment`, `decision`, `grammar` and `improvement`. You can pass several of them with a comma between them. Without `--type`, `inbox` and `wait` print the comments and the decisions in full but only one line for the grammar notes and the improvement notes, because those notes are read by a subagent.
 
-A thread waits for you until you reply to it or close it with `done`, whereas a decision waits for you until you close it with `done`. Until then, `--all` prints the item again.
+`--all` prints an item again for as long as the item waits for you. A thread waits for you until you reply to it or close it with `done`, whereas a decision waits for you until you close it with `done`.
 
 `wait` takes 2 more options:
 
@@ -60,7 +60,7 @@ link: http://127.0.0.1:4747/2026-11-21-invoice-export/#c-1
 
 ### The links
 
-A command prints the address of each thing in its output that Nick can open in the browser. The address of a decision or a thread ends with its id after a `#`, like `http://127.0.0.1:4747/2026-11-21-invoice-export/#d-1`. This table lists where each command prints the links:
+When a command's output includes something that Nick can open in the browser, the command will also print the address of that thing. The address of a decision or a thread ends with its id after a `#`, like `http://127.0.0.1:4747/2026-11-21-invoice-export/#d-1`. This table lists where each command prints the links:
 
 | Command                                                | Where the link is                                                                                              |
 | ------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------- |
@@ -105,7 +105,7 @@ $ scratch-pad show --pad 2026-11-21-invoice-export c-1
   Nick (2026-11-21 09:12): Can a shop pick another time?
 ```
 
-An item whose text was deleted from the page is detached. For a detached item, the tool prints the line that the text was on rather than its block:
+If the text that an item is attached to is deleted from the page, the item will be detached. For a detached item, the tool prints the line that the text was on rather than its block:
 
 ```text
 [c-2] comment · pages/index.md · detached from line 3
@@ -115,7 +115,7 @@ An item whose text was deleted from the page is detached. For a detached item, t
   block: (the selected text isn't in pages/index.md any more)
 ```
 
-`pages` and `outline` help you to read one section rather than a whole page:
+`pages` and `outline` help you to read one section rather than a whole page. In the output of `pages`, the first column is the number of each page. Here is what both commands print:
 
 ```text
 $ scratch-pad pages --pad 2026-11-21-invoice-export
@@ -129,8 +129,6 @@ $ scratch-pad outline --pad 2026-11-21-invoice-export index.md
 2  ## How the job runs  http://127.0.0.1:4747/2026-11-21-invoice-export/#how-the-job-runs
 5  ## Will the export job retry 8 times?  http://127.0.0.1:4747/2026-11-21-invoice-export/#will-the-export-job-retry-8-times
 ```
-
-`pages` prints the number of each page in its first column.
 
 `check` prints one line for each problem:
 
@@ -185,7 +183,7 @@ A named block starts with a line like `:::decision d-1` and ends with a `:::` li
 
 ### The decision block
 
-A decision block needs an id like `d-1` and the 3 lines below. Each of the 3 entries can run over several lines of the file and can contain inline Markdown.
+A decision block needs an id like `d-1` and the 3 entries below. Each entry can run over several lines of the file and can contain inline Markdown.
 
 ```markdown
 :::decision d-2
@@ -226,10 +224,8 @@ The file shows:
 - the progress tracker and the log of decisions
 - each thread beside its block
 
-A reader can follow every link between the pages.
+A reader can follow every link between the pages. But inside an `:::html` block, a link to another page of the scratch pad doesn't work, whereas a link to another site still works.
 
 The file doesn't have any reply boxes or decision buttons, because a reader can't change anything in the file. The Inbox isn't shown either.
-
-In the export, a link to another page of the scratch pad doesn't work inside an `:::html` block, but a link to another site still works.
 
 The export doesn't contain any images. But an image with a full URL will still be loaded from that URL when the reader opens the file.
