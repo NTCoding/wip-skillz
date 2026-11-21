@@ -37,7 +37,13 @@ describe('scratchPadConnection', () => {
   it('reads the pages with null turned into undefined when the server returns them', async () => {
     const network = networkReturning(
       jsonResponse({
-        pages: pageSummaries.map((page) => ({ ...page, title: page.title ?? null })),
+        pages: pageSummaries.map((page) => ({
+          ...page,
+          number: page.number ?? null,
+          parent: page.parent ?? null,
+          title: page.title ?? null,
+          description: page.description ?? null,
+        })),
       }),
     )
     await expect(scratchPadConnection(exportPad, network).pages()).resolves.toStrictEqual(

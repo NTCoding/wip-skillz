@@ -5,10 +5,18 @@ const optionalText = z
   .nullable()
   .transform((text) => text ?? undefined)
 
+const waitingForNick = z.object({ decisions: z.number(), replies: z.number() })
+
 const pageSummary = z.object({
   page: z.string(),
+  file: z.string(),
+  number: optionalText,
+  parent: optionalText,
   title: optionalText,
+  description: optionalText,
   openThreads: z.number(),
+  waitingForNick,
+  waitingForNickWithSubPages: waitingForNick,
 })
 
 export const pagesResponse = z.object({ pages: z.array(pageSummary) })

@@ -32,3 +32,9 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+.sidebar-link__sub-pages {
+  margin: var(--space-0);
+  padding: var(--space-0) var(--space-0) var(--space-0) var(--sidebar-indent);
+  list-style: none;
+}

@@ -10,10 +10,11 @@ interface SidebarLinkProps {
   readonly current: boolean
   readonly onNavigate: Navigate
   readonly children?: ReactNode
+  readonly subPages?: ReactNode
 }
 
 export function SidebarLink(props: SidebarLinkProps) {
-  const { href, icon = 'page', title, current, onNavigate, children } = props
+  const { href, icon = 'page', title, current, onNavigate, children, subPages } = props
   return (
     <li className="sidebar-link">
       <a
@@ -26,6 +27,7 @@ export function SidebarLink(props: SidebarLinkProps) {
         <span className="sidebar-link__title">{title}</span>
       </a>
       {current && children}
+      {subPages !== undefined && <ul className="sidebar-link__sub-pages">{subPages}</ul>}
     </li>
   )
 }

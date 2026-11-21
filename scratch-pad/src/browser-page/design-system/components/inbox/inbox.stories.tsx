@@ -36,6 +36,7 @@ const meta = {
         <TopBar
           title="Invoice export"
           titleHref="/2026-11-20-invoice-export/"
+          parents={[]}
           current="Retry limit"
           onNavigate={() => undefined}
           actions={story()}

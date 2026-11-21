@@ -256,6 +256,7 @@
   --mark-size: 26px;
   --control-h: 32px;
   --sidebar-item-h: 34px;
+  --sidebar-indent: 8px;
   --lane-w: 320px;
   --lane-w-narrow: 280px;
   --lane-gap: 24px;

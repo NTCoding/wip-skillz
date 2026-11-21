@@ -124,10 +124,92 @@ export const invoiceTemplatePage: ViewedPage = {
   decisions: [],
 }
 
+const firstRetryPage: ViewedPage = {
+  page: 'pages/first-retry.md',
+  title: 'First retry',
+  html: [
+    '<h1 id="first-retry">First retry</h1>',
+    '<p>The first retry waits 30 seconds.</p>',
+    '<h2 id="why-30-seconds">Why 30 seconds?</h2>',
+    '<p>The storage of a shop is often back after 30 seconds.</p>',
+  ].join('\n'),
+  headings: [
+    { level: 1, text: 'First retry', id: 'first-retry' },
+    { level: 2, text: 'Why 30 seconds?', id: 'why-30-seconds' },
+  ],
+  links: [],
+  decisions: [],
+}
+
+const nothingWaits = { decisions: 0, replies: 0 }
+
 export const pageSummaries: PageSummary[] = [
-  { page: 'pages/index.md', title: 'Invoice export', openThreads: 0 },
-  { page: 'pages/invoice-template.md', title: 'Invoice template', openThreads: 0 },
-  { page: 'pages/retry-limit.md', title: undefined, openThreads: 0 },
+  {
+    page: 'pages/index.md',
+    file: 'pages/index.md',
+    number: undefined,
+    parent: undefined,
+    title: 'Invoice export',
+    description: 'The export job writes the paid invoices of each shop to a CSV file.',
+    openThreads: 2,
+    waitingForNick: { decisions: 1, replies: 1 },
+    waitingForNickWithSubPages: { decisions: 1, replies: 1 },
+  },
+  {
+    page: 'pages/invoice-template.md',
+    file: 'pages/1-invoice-template.md',
+    number: '1',
+    parent: undefined,
+    title: 'Invoice template',
+    description: 'Each invoice shows the tax number of the shop.',
+    openThreads: 0,
+    waitingForNick: nothingWaits,
+    waitingForNickWithSubPages: nothingWaits,
+  },
+  {
+    page: 'pages/retry-limit.md',
+    file: 'pages/2-retry-limit.md',
+    number: '2',
+    parent: undefined,
+    title: undefined,
+    description: undefined,
+    openThreads: 1,
+    waitingForNick: { decisions: 0, replies: 1 },
+    waitingForNickWithSubPages: { decisions: 1, replies: 2 },
+  },
+  {
+    page: 'pages/wait-between-retries.md',
+    file: 'pages/2.1-wait-between-retries.md',
+    number: '2.1',
+    parent: 'pages/retry-limit.md',
+    title: 'Wait between retries',
+    description: 'Each retry waits twice as long as the retry before it.',
+    openThreads: 0,
+    waitingForNick: nothingWaits,
+    waitingForNickWithSubPages: { decisions: 1, replies: 1 },
+  },
+  {
+    page: 'pages/first-retry.md',
+    file: 'pages/2.1.1-first-retry.md',
+    number: '2.1.1',
+    parent: 'pages/wait-between-retries.md',
+    title: 'First retry',
+    description: 'The first retry waits 30 seconds.',
+    openThreads: 1,
+    waitingForNick: { decisions: 1, replies: 1 },
+    waitingForNickWithSubPages: { decisions: 1, replies: 1 },
+  },
+  {
+    page: 'pages/shop-storage.md',
+    file: 'pages/shop-storage.md',
+    number: undefined,
+    parent: undefined,
+    title: 'Shop storage',
+    description: 'Each shop has its own storage.',
+    openThreads: 2,
+    waitingForNick: { decisions: 0, replies: 2 },
+    waitingForNickWithSubPages: { decisions: 0, replies: 2 },
+  },
 ]
 
 export const progressTracker: ProgressTracker = {
@@ -263,6 +345,7 @@ export function fakeConnection(): FakeConnection {
   const pages = new Map([
     ['index.md', indexPage],
     ['invoice-template.md', invoiceTemplatePage],
+    ['first-retry.md', firstRetryPage],
   ])
   const threads = new Map([['index.md', [retryQuestion, toneNote]]])
   const listeners = new Set<ChangeListeners>()
@@ -301,7 +384,7 @@ export function fakeConnection(): FakeConnection {
 export const exportedPadJson = JSON.stringify(
   {
     pages: pageSummaries,
-    viewedPages: [indexPage, invoiceTemplatePage],
+    viewedPages: [indexPage, invoiceTemplatePage, firstRetryPage],
     threads: [retryQuestion, toneNote],
     progressTracker,
     decisionLog,

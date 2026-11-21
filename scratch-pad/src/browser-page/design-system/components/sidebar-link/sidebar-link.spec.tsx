@@ -50,6 +50,50 @@ describe('SidebarLink', () => {
     )
   })
 
+  it('shows the sub pages under the sections whether the page is current or not', () => {
+    const subPage = (
+      <SidebarLink
+        href="/pad/tax-number.md"
+        title="Tax number"
+        current={false}
+        onNavigate={() => undefined}
+      />
+    )
+    const { rerender } = render(
+      <ul>
+        <SidebarLink
+          href="/pad/invoice-template.md"
+          title="Invoice template"
+          current
+          onNavigate={() => undefined}
+          subPages={subPage}
+        >
+          <p>Sections</p>
+        </SidebarLink>
+      </ul>,
+    )
+    const item = screen.getAllByRole('listitem')[0]
+    expect([...(item?.children ?? [])].map((child) => child.textContent)).toStrictEqual([
+      'Invoice template',
+      'Sections',
+      'Tax number',
+    ])
+    rerender(
+      <ul>
+        <SidebarLink
+          href="/pad/invoice-template.md"
+          title="Invoice template"
+          current={false}
+          onNavigate={() => undefined}
+          subPages={subPage}
+        />
+      </ul>,
+    )
+    expect(screen.getByRole('link', { name: 'Tax number' }).getAttribute('href')).toBe(
+      '/pad/tax-number.md',
+    )
+  })
+
   it('navigates to the page when Nick clicks the link', async () => {
     const onNavigate = vi.fn<(href: string) => void>()
     renderLink(false, onNavigate)

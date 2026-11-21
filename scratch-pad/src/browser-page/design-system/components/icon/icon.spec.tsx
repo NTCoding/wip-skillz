@@ -12,6 +12,6 @@ describe('Icon', () => {
 
   it('lists every icon when the names of the icons are read', () => {
     expect(iconNames).toContain('full-size')
-    expect(iconNames).toHaveLength(15)
+    expect(iconNames).toHaveLength(16)
   })
 })

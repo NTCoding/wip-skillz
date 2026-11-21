@@ -2,6 +2,7 @@ import './icon.css'
 
 const paths = {
   check: 'M3.5 8.5l3 3 6-7',
+  chevron: 'M6 3.5l4.5 4.5-4.5 4.5',
   comment:
     'M3 3.5h10a.5.5 0 0 1 .5.5v6.5a.5.5 0 0 1-.5.5H7l-3 2.5V11H3a.5.5 0 0 1-.5-.5V4a.5.5 0 0 1 .5-.5z',
   close: 'M4 4l8 8M12 4l-8 8',

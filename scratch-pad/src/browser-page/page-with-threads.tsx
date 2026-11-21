@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type RefObject } from 'react'
+import { useEffect, useMemo, useRef, useState, type ReactNode, type RefObject } from 'react'
 import { createPortal } from 'react-dom'
 import { type Answer, type Thread, type ViewedPage } from './api-responses'
 import {
@@ -45,6 +45,8 @@ interface PageWithThreadsProps {
   readonly context: PageContext
   readonly actions: PageActions | undefined
   readonly address: PageAddress
+  // What the page shows under the last block of the agent's text, like the list of pages on the index page
+  readonly children?: ReactNode
 }
 
 interface Draft {
@@ -292,6 +294,7 @@ export function PageWithThreads(props: PageWithThreadsProps) {
         }
       >
         {pageElements(elementContext, body, highlighted)}
+        {props.children}
       </ReadingColumn>
       {selected !== undefined &&
         actions !== undefined &&

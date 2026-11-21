@@ -40,6 +40,7 @@ export function revisedBy(revisions: PadRevisions, change: PadChange): PadRevisi
     case 'decision':
       return {
         ...revisions,
+        pages: revisions.pages + 1,
         decisions: revisions.decisions + 1,
         nickInbox: revisions.nickInbox + 1,
       }

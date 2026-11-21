@@ -10,11 +10,12 @@ import {
   type ViewedPage,
 } from './api-responses'
 import { scrollTargetOf, useBrowserNavigation, useScrollOnNavigation } from './browser-navigation'
-import { type BrowserRoute, type PadAddresses } from './browser-route'
+import { fileOfPage, type BrowserRoute, type PadAddresses } from './browser-route'
 import { useCurrentSection } from './current-section'
 import {
   AppFrame,
   Inbox,
+  PageList,
   StatusPill,
   TopBar,
   type Navigate,
@@ -25,6 +26,7 @@ import { MissingPageView } from './missing-page-view'
 import { nickInboxEntries } from './nick-inbox-entries'
 import { PadSidebar, sectionsOf } from './pad-sidebar'
 import { PageOutline } from './page-outline'
+import { pageListEntries, parentsOf } from './page-tree'
 import { firstRevisions, pageRevisionOf, revisedAfterReconnect, revisedBy } from './pad-revisions'
 import { pagePreview } from './page-preview'
 import { type SavedSettings } from './saved-settings'
@@ -52,22 +54,35 @@ function loadedOr<T>(loaded: LoadedValue<T>, fallback: T): T {
   return loaded.status === 'loaded' ? loaded.value : fallback
 }
 
-function currentViewOf(
+interface Breadcrumb {
+  readonly parents: readonly { readonly title: string; readonly href: string }[]
+  readonly current: string | undefined
+}
+
+function breadcrumbOf(
   route: BrowserRoute,
   viewedPage: ViewedPage | undefined,
   pageList: readonly PageSummary[],
-): string | undefined {
+  addresses: PadAddresses,
+): Breadcrumb {
   if (route.kind === 'progress-tracker') {
-    return 'Progress tracker'
+    return { parents: [], current: 'Progress tracker' }
   }
   if (route.kind === 'decision-log') {
-    return 'Decisions'
+    return { parents: [], current: 'Decisions' }
   }
   if (route.file === 'index.md') {
-    return undefined
+    return { parents: [], current: undefined }
   }
-  const summary = pageList.find((each) => each.page === `pages/${route.file}`)
-  return viewedPage?.title ?? summary?.title
+  const page = `pages/${route.file}`
+  const summary = pageList.find((each) => each.page === page)
+  return {
+    parents: parentsOf(pageList, page).map((parent) => {
+      const file = fileOfPage(parent.page)
+      return { title: parent.title ?? file, href: addresses.pageHref(file) }
+    }),
+    current: viewedPage?.title ?? summary?.title,
+  }
 }
 
 interface PageContext {
@@ -131,7 +146,15 @@ function RouteView(props: RouteViewProps) {
       context={pageContext}
       actions={actions}
       address={{ section: route.section, navigations: props.navigations }}
-    />
+    >
+      {route.file === 'index.md' && (
+        <PageList
+          label="Pages"
+          entries={pageListEntries(pageContext.addresses, loadedOr(props.pages, []))}
+          onNavigate={pageContext.onNavigate}
+        />
+      )}
+    </PageWithThreads>
   ) : (
     <LoadingView loaded={page} />
   )
@@ -227,6 +250,7 @@ export function ScratchPadApp(props: ScratchPadAppProps) {
   const actions = usePageActions(writing, changed)
   const pageList = loadedOr(pages, [])
   const inboxEntries = nickInboxEntries(addresses, loadedOr(inbox, emptyNickInbox), pageList)
+  const breadcrumb = breadcrumbOf(route, viewedPage, pageList, addresses)
 
   return (
     <AppFrame
@@ -236,7 +260,8 @@ export function ScratchPadApp(props: ScratchPadAppProps) {
         <TopBar
           title={padTitle}
           titleHref={addresses.pageHref('index.md')}
-          current={currentViewOf(route, viewedPage, pageList)}
+          parents={breadcrumb.parents}
+          current={breadcrumb.current}
           onNavigate={navigate}
           actions={
             <>

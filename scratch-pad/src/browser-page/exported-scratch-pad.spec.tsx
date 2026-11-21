@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import {
@@ -108,6 +108,34 @@ describe('ScratchPadApp in an export', () => {
     expect(`${window.location.pathname}${window.location.hash}`).toBe(
       `${exportPath}#/invoice-template.md`,
     )
+  })
+
+  it('shows the list of pages on the index page and goes to a page of the list in the hash', async () => {
+    renderExport()
+    const list = await screen.findByRole('list', { name: 'Pages' })
+    expect(
+      within(list)
+        .getAllByRole('link')
+        .map((link) => link.getAttribute('href')),
+    ).toStrictEqual(['#/invoice-template.md', '#/retry-limit.md', '#/shop-storage.md'])
+    await userEvent.click(within(list).getByText('Invoice template'))
+    await screen.findByRole('heading', { level: 1, name: 'Invoice template' })
+    expect(window.location.hash).toBe('#/invoice-template.md')
+  })
+
+  it('shows the parents of a sub page in the breadcrumb and the sidebar of the export', async () => {
+    renderExport('#/first-retry.md')
+    await screen.findByRole('heading', { level: 1, name: 'First retry' })
+    const breadcrumb = screen.getByRole('navigation', { name: 'Breadcrumb' })
+    await waitFor(() =>
+      expect(breadcrumb.textContent).toBe(
+        'Invoice export/retry-limit.md/Wait between retries/First retry',
+      ),
+    )
+    const sidebar = screen.getByRole('navigation', { name: 'Pages of the scratch pad' })
+    expect(
+      within(sidebar).getByRole('link', { name: 'Wait between retries' }).getAttribute('href'),
+    ).toBe('#/wait-between-retries.md')
   })
 
   it('shows the progress tracker when the hash of the export names it', async () => {

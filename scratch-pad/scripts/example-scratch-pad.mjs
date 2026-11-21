@@ -80,10 +80,6 @@ export const retryLimitPage = `# Retry limit
 
 The export job retries a failed shop 5 times. Each retry waits twice as long as the retry before it.
 
-## Wait between retries
-
-The first retry waits 30 seconds. The fifth retry waits 8 minutes.
-
 ## What counts as a failure
 
 A failure is a timeout of the storage of the shop or an error of the network. A shop without any invoices isn't a failure.
@@ -92,3 +88,40 @@ A failure is a timeout of the storage of the shop or an error of the network. A 
 
 The agent logs one line for each retry with the id of the shop and the number of the retry.
 `
+
+const waitBetweenRetriesPage = `# Wait between retries
+
+The first retry waits 30 seconds. The fifth retry waits 8 minutes, because each retry waits twice as long as the retry before it.
+
+## Will the wait stop at 10 minutes?
+
+A retry limit of 8 would make the last retry wait more than an hour.
+
+:::decision d-2
+proposal: Stop the wait at 10 minutes.
+alternative: Keep doubling the wait.
+pick: proposal, because the job has to finish before the shops open.
+:::
+`
+
+const firstRetryPage = `# First retry
+
+The first retry waits 30 seconds after the shop has failed.
+
+## Why 30 seconds
+
+The storage of a shop is often back after a short timeout. A wait of 30 seconds is long enough for most of them.
+
+## What the agent logs
+
+The agent logs the id of the shop and the time of the first retry.
+`
+
+// The file name of each page in the pages folder of the example
+export const examplePages = {
+  'index.md': indexPage,
+  '1-invoice-template.md': invoiceTemplatePage,
+  '2-retry-limit.md': retryLimitPage,
+  '2.1-wait-between-retries.md': waitBetweenRetriesPage,
+  '2.1.1-first-retry.md': firstRetryPage,
+}

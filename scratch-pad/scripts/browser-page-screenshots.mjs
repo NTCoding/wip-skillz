@@ -7,7 +7,12 @@ import { createServer } from 'node:http'
 import { tmpdir } from 'node:os'
 import { basename, extname, join, resolve } from 'node:path'
 import puppeteer from 'puppeteer-core'
-import { indexPage, invoiceTemplatePage, retryLimitPage } from './example-scratch-pad.mjs'
+import {
+  examplePages,
+  indexPage,
+  invoiceTemplatePage,
+  retryLimitPage,
+} from './example-scratch-pad.mjs'
 
 const chrome = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
 const tool = resolve('dist/scratch-pad')
@@ -73,10 +78,21 @@ function writePages() {
   run('decide', 'The export job runs every night.')
   run('decide', 'A guest without a company sees the word Private.')
   const pages = join(home, pad, 'pages')
+  for (const [file, markdown] of Object.entries(examplePages)) {
+    writeFileSync(join(pages, file), markdown)
+  }
+  checks.check = run('check').trim()
+}
+
+// A scratch pad from before the numbers, whose pages are all top level pages
+function writePadWithoutNumbers() {
+  const created = run('new', 'Invoice export without numbers').split('\n')[0]
+  const padWithoutNumbers = basename(created.replace(/^created /, ''))
+  const pages = join(home, padWithoutNumbers, 'pages')
   writeFileSync(join(pages, 'index.md'), indexPage)
   writeFileSync(join(pages, 'invoice-template.md'), invoiceTemplatePage)
   writeFileSync(join(pages, 'retry-limit.md'), retryLimitPage)
-  checks.check = run('check').trim()
+  return padWithoutNumbers
 }
 
 async function shoot(page, name) {
@@ -84,9 +100,36 @@ async function shoot(page, name) {
   await page.screenshot({ path: join(output, `${name}.png`) })
 }
 
-async function openPad(page, path = '') {
-  await page.goto(`${checks.address}${pad}/${path}`, { waitUntil: 'domcontentloaded' })
+async function openPad(page, path = '', shownPad = pad) {
+  await page.goto(`${checks.address}${shownPad}/${path}`, { waitUntil: 'domcontentloaded' })
   await page.waitForSelector('article h1')
+}
+
+async function showPageList(page) {
+  const list = await page.waitForSelector('ul[aria-label="Pages"]')
+  await list.evaluate((element) => element.scrollIntoView({ block: 'center' }))
+  return page.$$eval('ul[aria-label="Pages"] a', (links) => links.map((link) => link.innerText))
+}
+
+async function numberedPageShots(page, padWithoutNumbers) {
+  for (const width of [1100, 1440]) {
+    await page.setViewport({ width, height: 900 })
+    await openPad(page)
+    checks[`pageListAt${width}`] = await showPageList(page)
+    await shoot(page, `15-index-page-list-${width}`)
+    await openPad(page, 'retry-limit.md')
+    await shoot(page, `16-top-level-page-${width}`)
+    await openPad(page, 'first-retry.md')
+    checks[`breadcrumbAt${width}`] = await page.$eval(
+      'nav[aria-label="Breadcrumb"]',
+      (breadcrumb) => breadcrumb.innerText,
+    )
+    await shoot(page, `17-third-level-page-${width}`)
+  }
+  await page.setViewport({ width: 1100, height: 900 })
+  await openPad(page, '', padWithoutNumbers)
+  checks.pageListWithoutNumbers = await showPageList(page)
+  await shoot(page, '18-index-page-list-without-numbers-1100')
 }
 
 async function pageShots(page) {
@@ -218,6 +261,7 @@ async function galleryShots(page) {
 
 mkdirSync(output, { recursive: true })
 writePages()
+const padWithoutNumbers = writePadWithoutNumbers()
 const port = await freePort()
 checks.started = run('start', '--port', String(port)).trim()
 checks.address = `http://127.0.0.1:${port}/`
@@ -231,6 +275,7 @@ try {
   await liveUpdateShots(page)
   await navigationChecks(page)
   await widthShots(page)
+  await numberedPageShots(page, padWithoutNumbers)
   await galleryShots(page)
 } finally {
   await browser.close()

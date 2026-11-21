@@ -25,3 +25,25 @@ type Story = StoryObj<typeof meta>
 export const Other: Story = {}
 
 export const Current: Story = { args: { current: true } }
+
+export const WithSubPages: Story = {
+  args: {
+    current: true,
+    subPages: (
+      <SidebarLink
+        href="/2026-11-20-invoice-export/tax-number.md"
+        title="Tax number"
+        current={false}
+        onNavigate={() => undefined}
+        subPages={
+          <SidebarLink
+            href="/2026-11-20-invoice-export/company-prefix.md"
+            title="Company prefix"
+            current={false}
+            onNavigate={() => undefined}
+          />
+        }
+      />
+    ),
+  },
+}

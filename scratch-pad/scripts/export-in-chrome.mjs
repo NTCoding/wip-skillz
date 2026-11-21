@@ -9,7 +9,12 @@ import { tmpdir } from 'node:os'
 import { basename, join, resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import puppeteer from 'puppeteer-core'
-import { indexPage, invoiceTemplatePage, retryLimitPage } from './example-scratch-pad.mjs'
+import {
+  examplePages,
+  indexPage,
+  invoiceTemplatePage,
+  retryLimitPage,
+} from './example-scratch-pad.mjs'
 
 const chrome = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
 const tool = resolve('dist/scratch-pad')
@@ -82,9 +87,9 @@ async function writeScratchPad() {
   run('task', 'done', '1')
   run('decide', 'The export job runs every night.')
   const pages = join(home, pad, 'pages')
-  writeFileSync(join(pages, 'index.md'), indexPage)
-  writeFileSync(join(pages, 'invoice-template.md'), invoiceTemplatePage)
-  writeFileSync(join(pages, 'retry-limit.md'), retryLimitPage)
+  for (const [file, markdown] of Object.entries(examplePages)) {
+    writeFileSync(join(pages, file), markdown)
+  }
   const port = await freePort()
   run('start', '--port', String(port))
   const address = `http://127.0.0.1:${port}/`
@@ -150,6 +155,15 @@ async function pageChecks(page, exportUrl) {
     true,
   )
   await shoot(page, '01-index-with-thread')
+  check(
+    'pageList',
+    await page.$$eval('ul[aria-label="Pages"] a', (links) =>
+      links.map((link) => link.getAttribute('href')),
+    ),
+    ['#/invoice-template.md', '#/retry-limit.md'],
+  )
+  await page.$eval('ul[aria-label="Pages"]', (list) => list.scrollIntoView({ block: 'center' }))
+  await shoot(page, '01b-index-page-list')
   await page.evaluate(() =>
     document.querySelector('iframe[title="HTML block"]').scrollIntoView({ block: 'center' }),
   )
