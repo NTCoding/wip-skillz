@@ -1,5 +1,5 @@
 // Bundles the tool into the text of dist/scratch-pad without writing any file.
-// esbuild.config.mjs writes that text and built-tool-check.mjs compares it with the committed file.
+// esbuild.config.mjs writes that text and built-tool-check.mjs compares it with the file in dist.
 import { createHash } from 'node:crypto'
 import { resolve } from 'node:path'
 import * as esbuild from 'esbuild'

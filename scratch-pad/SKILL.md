@@ -2,7 +2,7 @@
 name: scratch-pad
 description: Turn this conversation into collaboration on an HTML scratch pad. Nick starts the skill for a new scratch pad, for the conversation so far or for an existing scratch pad.
 disable-model-invocation: true
-allowed-tools: Bash(node ${CLAUDE_PLUGIN_ROOT}/scratch-pad/dist/scratch-pad *)
+allowed-tools: Bash(scratch-pad *)
 ---
 
 # scratch-pad
@@ -13,13 +13,13 @@ This skill turns an AI conversation into collaboration on an HTML scratch pad. Y
 
 A small server on Nick's machine shows the pages in his browser and saves his comments in the scratch pad's folder. You read those comments and reply to them with the scratch-pad tool.
 
-The tool only needs Node 24. Run it like this:
+The tool is a command called `scratch-pad`, which is on the PATH. It only needs Node 24. Run it like this:
 
 ```bash
-node ${CLAUDE_PLUGIN_ROOT}/scratch-pad/dist/scratch-pad <command>
+scratch-pad <command>
 ```
 
-In this file, `scratch-pad <command>` is short for that line. The hints that the tool prints are written in the same short form. If you aren't running in Claude Code, replace `${CLAUDE_PLUGIN_ROOT}` with the root folder of this repo, which is the folder above this skill's folder.
+When the shell can't find `scratch-pad`, stop and tell Nick to run the setup command in [README.md](README.md#setup). Never search for the tool. Never run the tool from another path.
 
 [reference.md](reference.md) has the details, like each command's options and what each command prints. The same file also describes what's in a scratch pad's folder and lists the design tokens for an `:::html` block.
 
@@ -212,7 +212,7 @@ When `wait` or `inbox` prints a line like `1 grammar note waits for a subagent`,
 
 ```text
 Fix the grammar notes and the improvement notes that Nick wrote on the scratch pad 2026-11-21-invoice-export.
-Run the tool as: node ${CLAUDE_PLUGIN_ROOT}/scratch-pad/dist/scratch-pad <command>
+Run the tool as: scratch-pad <command>
 1. Run: inbox --pad 2026-11-21-invoice-export --type grammar,improvement
 2. Change the page file of each note in the way that Nick asks for. Only change the text that the note is about.
 3. Close each note with: done --pad 2026-11-21-invoice-export <id> "<one line about what you changed>"

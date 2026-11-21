@@ -156,7 +156,7 @@ async function numberedPageShots(page, padWithoutNumbers) {
   await shoot(page, '18-index-page-list-without-numbers-1100')
 }
 
-// The 3 images of README.md. Copy them from <output folder>/docs into docs/ when they change.
+// The 3 images of README.md. Copy them from <output folder>/docs into ../docs/ when they change.
 async function docsShots(page) {
   await post('threads', {
     type: 'comment',

@@ -62,7 +62,7 @@ The rule recognises every colour format that's defined in CSS Color 4 and 5. The
 
 The custom lint rules `tokens/value-from-token` and `tokens/no-colour-in-string` are in `.token-lint/` at the root of the project. The rules in that folder need 100% test coverage, like the code in `src`.
 
-Run `pnpm build` after every change to `src`, because the built tool in `dist/scratch-pad` is committed and the skill runs that file. The last step of `pnpm verify` will fail if `dist/scratch-pad` isn't the bundle of the current source.
+Run `pnpm build` after every change to `src`, because the skill runs the built tool in `dist/scratch-pad`. The last step of `pnpm verify` will fail if `dist/scratch-pad` isn't the bundle of the current source.
 
 ## The layout in a narrow window
 

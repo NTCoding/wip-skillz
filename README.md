@@ -21,3 +21,5 @@ The repo is a Claude Code plugin, which you can install from GitHub with these 2
 /plugin marketplace add NTCoding/wip-skillz
 /plugin install wip-skillz@wip-skillz
 ```
+
+`scratch-pad` also needs its tool on your PATH. Run the [setup command](scratch-pad/README.md#setup) once on each machine.
