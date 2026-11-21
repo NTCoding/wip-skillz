@@ -21,7 +21,7 @@ export function MarginMarker({ label, kind, messages, open, onClick }: MarginMar
       onClick={onClick}
     >
       <Icon name={kind} />
-      {messages > 1 && <span aria-hidden="true">{messages}</span>}
+      {kind === 'comment' && messages > 1 && <span aria-hidden="true">{messages}</span>}
     </button>
   )
 }

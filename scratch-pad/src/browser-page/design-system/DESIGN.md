@@ -68,7 +68,7 @@ Run `pnpm build` after every change to `src`, because the built tool in `dist/sc
 
 In a window that's narrower than 900px, an open sidebar would squeeze the text too much. So these 2 things change below 900px:
 
-- The page opens with the sidebar collapsed, but that choice isn't saved.
+- The sidebar has its own state, which is never saved. The sidebar is collapsed when the page opens, after every navigation and every time the window crosses 900px. So the choice that Nick saved in a wide window doesn't change. This state is kept in `sidebar-state.ts`.
 - An open sidebar is shown on top of the page rather than beside the page. The page behind the sidebar is faded by a scrim. If Nick clicks the scrim, the sidebar will collapse.
 
 `narrowAppFrameQuery` in `app-frame.tsx` is `(width < 900px)`. The same width is written out in `app-frame.css`, because a media query can't read a custom property. `app-frame.spec.tsx` will fail if the 2 widths differ.
@@ -121,7 +121,7 @@ The full size view shows the same frame in the top layer rather than rendering t
 Import the components from `design-system/design-system` and compose them, because [the rules](#the-rules) don't allow a feature to style anything itself. Plain elements like `<h1>` and `<p>` are fine inside `ReadingColumn` because `ReadingColumn` sets their fonts and spacing.
 
 ```tsx
-// src/browser-page/tab-views.tsx
+// src/browser-page/pad-views.tsx
 import { Notice, ReadingColumn, TaskList } from './design-system/design-system'
 
 export function ProgressTrackerView({ tracker }: { readonly tracker: ProgressTracker }) {

@@ -9,6 +9,7 @@ import {
   type ViewedPage,
 } from './api-responses'
 import { BrowserPageError } from './browser-page-error'
+import { type NarrowWindow } from './sidebar-state'
 import { servedAddresses } from './browser-route'
 import {
   type ChangeListeners,
@@ -17,6 +18,24 @@ import {
 } from './scratch-pad-connection'
 
 export const exportPad = '2026-11-20-invoice-export'
+
+interface FakeNarrowWindow extends NarrowWindow {
+  readonly resize: (narrow: boolean) => void
+}
+
+export function fakeNarrowWindow(narrow = false): FakeNarrowWindow {
+  const listeners = new Set<() => void>()
+  const query = {
+    matches: narrow,
+    addEventListener: (_type: 'change', listener: () => void) => listeners.add(listener),
+    removeEventListener: (_type: 'change', listener: () => void) => listeners.delete(listener),
+    resize: (next: boolean) => {
+      query.matches = next
+      listeners.forEach((listener) => listener())
+    },
+  }
+  return query
+}
 
 export const exportPadAddresses = servedAddresses(exportPad)
 

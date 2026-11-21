@@ -19,12 +19,12 @@ describe('MarginMarker', () => {
     expect(marker.querySelector('svg')).not.toBeNull()
   })
 
-  it('leaves out the number when the thread only has one message', () => {
+  it('leaves out the number when the thread is a grammar note, even with replies', () => {
     render(
       <MarginMarker
         label="Grammar / tone g-1"
         kind="grammar"
-        messages={1}
+        messages={3}
         open
         onClick={() => undefined}
       />,

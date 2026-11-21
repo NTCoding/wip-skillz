@@ -5,6 +5,7 @@ import {
   exportPad,
   exportPadAddresses,
   fakeConnection,
+  fakeNarrowWindow,
   indexPage,
   progressTracker,
   retryQuestion,
@@ -13,7 +14,11 @@ import {
 import { BrowserPageError } from './browser-page-error'
 import { ScratchPadApp } from './scratch-pad-app'
 
-function renderApp(path: string, fake: FakeConnection = fakeConnection(), narrowWindow = false) {
+function renderApp(
+  path: string,
+  fake: FakeConnection = fakeConnection(),
+  narrowWindow = fakeNarrowWindow(),
+) {
   window.history.replaceState(null, '', path)
   const rendered = render(
     <ScratchPadApp
@@ -49,7 +54,17 @@ describe('ScratchPadApp on a page', () => {
     expect(document.title).toBe('Invoice export')
   })
 
-  it('shows the outline of the page with the current section when the page has sections', async () => {
+  it('shows the outline of the page with the section above the reading line as current', async () => {
+    const tops: Readonly<Record<string, number>> = {
+      'retry-limit': -300,
+      'wait-between-retries': 60,
+      'will-the-export-job-retry-8-times': 700,
+    }
+    vi.spyOn(Element.prototype, 'getBoundingClientRect').mockImplementation(function (
+      this: Element,
+    ) {
+      return new DOMRect(0, tops[this.id] ?? 0, 100, 30)
+    })
     renderApp(`/${exportPad}/`)
     await shownPage('Invoice export')
     const outline = screen.getByRole('navigation', { name: 'Outline of Invoice export' })
@@ -61,7 +76,7 @@ describe('ScratchPadApp on a page', () => {
     await waitFor(() =>
       expect(
         within(outline)
-          .getByRole('link', { name: 'Will the export job retry 8 times?' })
+          .getByRole('link', { name: 'Wait between retries' })
           .getAttribute('aria-current'),
       ).toBe('location'),
     )
@@ -305,6 +320,24 @@ describe('ScratchPadApp on the progress tracker and the decisions', () => {
     expect(screen.queryByRole('navigation', { name: /^Outline/ })).toBeNull()
   })
 
+  it('shows the title from the list of pages in the breadcrumb while the page loads', async () => {
+    const fake = fakeConnection()
+    vi.spyOn(fake.connection, 'page').mockReturnValue(new Promise(() => undefined))
+    renderApp(`/${exportPad}/invoice-template.md`, fake)
+    const breadcrumb = screen.getByRole('navigation', { name: 'Breadcrumb' })
+    await waitFor(() => expect(breadcrumb.textContent).toBe('Invoice export/Invoice template'))
+  })
+
+  it('shows only the title of the scratch pad in the breadcrumb while a page without a title loads', async () => {
+    const fake = fakeConnection()
+    vi.spyOn(fake.connection, 'page').mockReturnValue(new Promise(() => undefined))
+    renderApp(`/${exportPad}/retry-limit.md`, fake)
+    await screen.findByRole('link', { name: 'retry-limit.md' })
+    expect(screen.getByRole('navigation', { name: 'Breadcrumb' }).textContent).toBe(
+      'Invoice export',
+    )
+  })
+
   it('shows Decisions in the breadcrumb when Nick opens the decisions', async () => {
     renderApp(`/${exportPad}/decisions`)
     await shownPage('Decisions')
@@ -356,9 +389,32 @@ describe('ScratchPadApp settings', () => {
   })
 
   it('starts with the sidebar collapsed without saving it when the window is narrow', async () => {
-    const { container } = renderApp(`/${exportPad}/`, fakeConnection(), true)
+    const { container } = renderApp(`/${exportPad}/`, fakeConnection(), fakeNarrowWindow(true))
     await shownPage('Invoice export')
     expect(container.firstElementChild?.getAttribute('data-sidebar')).toBe('collapsed')
     expect(window.localStorage.getItem('scratch-pad-sidebar')).toBeNull()
+  })
+
+  it('collapses the open sidebar of a narrow window when Nick goes to a page from the sidebar', async () => {
+    const { container } = renderApp(`/${exportPad}/`, fakeConnection(), fakeNarrowWindow(true))
+    await shownPage('Invoice export')
+    await userEvent.click(screen.getByRole('button', { name: 'Expand the sidebar' }))
+    expect(container.firstElementChild?.getAttribute('data-sidebar')).toBe('open')
+    const sidebar = screen.getByRole('navigation', { name: 'Pages of the scratch pad' })
+    await userEvent.click(within(sidebar).getByRole('link', { name: 'Progress tracker' }))
+    expect(container.firstElementChild?.getAttribute('data-sidebar')).toBe('collapsed')
+    expect(window.localStorage.getItem('scratch-pad-sidebar')).toBeNull()
+  })
+
+  it('keeps the saved choice of a wide window when Nick closes the sidebar of a narrow window', async () => {
+    const narrowWindow = fakeNarrowWindow()
+    const { container } = renderApp(`/${exportPad}/`, fakeConnection(), narrowWindow)
+    await shownPage('Invoice export')
+    act(() => narrowWindow.resize(true))
+    expect(container.firstElementChild?.getAttribute('data-sidebar')).toBe('collapsed')
+    await userEvent.click(screen.getByRole('button', { name: 'Expand the sidebar' }))
+    fireEvent.click(screen.getByLabelText('Close the sidebar'))
+    act(() => narrowWindow.resize(false))
+    expect(container.firstElementChild?.getAttribute('data-sidebar')).toBe('open')
   })
 })

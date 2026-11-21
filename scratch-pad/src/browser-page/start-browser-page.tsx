@@ -46,7 +46,7 @@ export function startBrowserPage(): void {
         pad={pad}
         {...scratchPad}
         settings={window.localStorage}
-        narrowWindow={window.matchMedia(narrowAppFrameQuery).matches}
+        narrowWindow={window.matchMedia(narrowAppFrameQuery)}
       />
     </StrictMode>,
   )

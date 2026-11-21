@@ -20,7 +20,7 @@
 
 .top-bar__crumb {
   min-width: 0;
-  padding: var(--space-2xs) var(--space-md);
+  padding: var(--crumb-padding-y) var(--space-md);
   border-radius: var(--r-pill);
   overflow: hidden;
   color: inherit;

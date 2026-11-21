@@ -88,6 +88,7 @@
   --gap-under-h2: 12px;
   --gap-under-h3: 8px;
   --indent-list: 30px;
+  --crumb-padding-y: 3px;
   --cell-padding-y: 13px;
   --cell-padding-x: 16px;
   --head-padding-y: 10px;
@@ -251,9 +252,8 @@
   --focus-ring-w: 2px;
   --focus-ring-offset: 2px;
   --decision-label-max-w: 10em;
-  --gallery-panel-min-w: 32rem;
   --quote-indent: 23px;
-  --mark-size: 28px;
+  --mark-size: 26px;
   --control-h: 32px;
   --sidebar-item-h: 34px;
   --lane-w: 320px;

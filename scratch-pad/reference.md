@@ -172,7 +172,7 @@ The heading above the block is the question. If there isn't a heading above the 
 
 An `:::html` block can contain any HTML, including its own styles and scripts. The page shows the block in a sandboxed frame so that the block can't read the page or send anything on Nick's behalf. If the block links to another site, the link will open in a new tab.
 
-Use these tokens rather than raw values, because they change with the colour mode:
+Use these tokens rather than raw values so that the block looks like the rest of the page:
 
 | Group    | Tokens                                                                                 |
 | -------- | -------------------------------------------------------------------------------------- |
@@ -197,7 +197,7 @@ The file shows:
 - the progress tracker and the log of decisions
 - each thread beside its block
 
-A reader can switch the colour mode and follow every link between the pages.
+A reader can follow every link between the pages.
 
 The file doesn't have any reply boxes or decision buttons, because a reader can't change anything in the file. The Inbox isn't shown either.
 

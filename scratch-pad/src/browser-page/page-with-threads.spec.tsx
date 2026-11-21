@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { type Thread } from './api-responses'
 import {
   exportPad,
+  fakeNarrowWindow,
   exportPadAddresses,
   fakeConnection,
   indexPage,
@@ -22,7 +23,7 @@ async function renderIndex(fake: FakeConnection = fakeConnection()) {
       connection={fake.connection}
       writing={fake.connection}
       settings={window.localStorage}
-      narrowWindow={false}
+      narrowWindow={fakeNarrowWindow()}
     />,
   )
   await screen.findByRole('region', { name: 'Comment c-1' })
@@ -245,9 +246,30 @@ describe('the markers of a narrow page', () => {
     expect(popupOf('Comment c-1')).toBe('false')
   })
 
-  it('shows the count of messages on the marker of a thread with a reply', async () => {
+  it('shows the count of messages on the marker of a comment with a reply', async () => {
     await renderIndex()
     expect(screen.getByRole('button', { name: 'Comment c-1' }).textContent).toBe('2')
+  })
+
+  it('closes the open card when Nick presses Escape or puts the pointer down outside the card', async () => {
+    await renderIndex()
+    await userEvent.click(screen.getByRole('button', { name: 'Comment c-1' }))
+    await userEvent.keyboard('{Escape}')
+    expect(popupOf('Comment c-1')).toBe('false')
+    await userEvent.click(screen.getByRole('button', { name: 'Comment c-1' }))
+    await userEvent.click(within(card('Comment c-1')).getByText('The agent replied'))
+    expect(popupOf('Comment c-1')).toBe('true')
+    fireEvent.pointerDown(screen.getByRole('heading', { level: 1 }))
+    expect(popupOf('Comment c-1')).toBe('false')
+  })
+
+  it('ignores a click on a marker while Nick writes a new thread', async () => {
+    await renderIndex()
+    selectInBlock('3-4', 4, 14)
+    await userEvent.click(screen.getByRole('button', { name: 'Comment' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Comment c-1' }))
+    await userEvent.keyboard('{Escape}')
+    expect(popupOf('Comment c-1')).toBe('false')
   })
 
   it('opens the draft rather than the active card while Nick writes a new thread', async () => {

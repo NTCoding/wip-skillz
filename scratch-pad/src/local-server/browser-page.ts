@@ -1,5 +1,3 @@
-import { createHash } from 'node:crypto'
-import { colourModes } from '../browser-page/design-system/colour-modes'
 import { pageMarkdownParser } from '../rendered-page/page-markdown-parser'
 import { type BrowserPageBundle } from './browser-page-bundle'
 
@@ -10,21 +8,9 @@ function escaped(text: string): string {
 const browserPageScriptPath = '/browser-page/scratch-pad.js'
 const browserPageStylesheetPath = '/browser-page/scratch-pad.css'
 
-const colourModeScript = [
-  `try{const modes=${JSON.stringify(colourModes)};`,
-  "const saved=localStorage.getItem('scratch-pad-colour-mode');",
-  "const dark=matchMedia('(prefers-color-scheme: dark)').matches;",
-  "document.documentElement.dataset.colourMode=modes.includes(saved)?saved:dark?'dark':'light'}",
-  "catch{document.documentElement.dataset.colourMode='light'}",
-].join('')
-
-const colourModeBeforePaint = `<script>${colourModeScript}</script>`
-
-const colourModeScriptHash = createHash('sha256').update(colourModeScript).digest('base64')
-
 export const browserPagePolicy = [
   "default-src 'self'",
-  `script-src 'self' 'sha256-${colourModeScriptHash}'`,
+  "script-src 'self'",
   "style-src 'self'",
   "style-src-attr 'unsafe-inline'",
   'img-src * data: blob:',
@@ -76,7 +62,7 @@ export function browserPageHtml(padName: string): string {
       `<div id="scratch-pad-page" data-scratch-pad="${escaped(padName)}"></div>`,
       `<script type="module" src="${browserPageScriptPath}"></script>`,
     ].join('\n'),
-    [colourModeBeforePaint, `<link rel="stylesheet" href="${browserPageStylesheetPath}">`],
+    [`<link rel="stylesheet" href="${browserPageStylesheetPath}">`],
   )
 }
 
@@ -113,6 +99,6 @@ export function exportedBrowserPageHtml(exported: ExportedBrowserPage): string {
       `<script type="application/json" id="scratch-pad-export">${json}</script>`,
       `<script type="module">${inScriptElement(exported.bundle.script)}</script>`,
     ].join('\n'),
-    [colourModeBeforePaint, `<style>${inStyleElement(exported.bundle.stylesheet)}</style>`],
+    [`<style>${inStyleElement(exported.bundle.stylesheet)}</style>`],
   )
 }

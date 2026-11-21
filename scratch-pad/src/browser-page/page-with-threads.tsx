@@ -15,6 +15,7 @@ import {
 } from './design-system/design-system'
 import { shownTime } from './message-time'
 import { pageElements, parsedPageBody, type PageElementContext } from './page-elements'
+import { type PageAddress } from './current-section'
 import { type NewThread } from './scratch-pad-connection'
 import {
   selectedBlockText,
@@ -37,13 +38,7 @@ type PageContext = Omit<
   'page' | 'onAnswerDecision' | 'onCommentOnBlock' | 'answersOnThisPage'
 >
 
-// The address is the section in the address of the page and the number of navigations so far.
 // When Nick goes to the address of a thread, for example from his Inbox, that thread becomes active.
-interface PageAddress {
-  readonly section: string | undefined
-  readonly navigations: number
-}
-
 interface PageWithThreadsProps {
   readonly page: ViewedPage
   readonly threads: readonly Thread[]
@@ -233,7 +228,11 @@ export function PageWithThreads(props: PageWithThreadsProps) {
         kind={thread.type}
         messages={thread.messages.length}
         open={draft === undefined && thread.id === active}
-        onClick={() => setActive(thread.id === active ? undefined : thread.id)}
+        onClick={() => {
+          if (draft === undefined) {
+            setActive(thread.id === active ? undefined : thread.id)
+          }
+        }}
       />
     ),
     popup: draft === undefined && thread.id === active,
@@ -284,7 +283,13 @@ export function PageWithThreads(props: PageWithThreadsProps) {
     <>
       <ReadingColumn
         textRef={pageText}
-        margin={<MarginLane label="Comments and notes" items={[...items, ...draftItems]} />}
+        margin={
+          <MarginLane
+            label="Comments and notes"
+            items={[...items, ...draftItems]}
+            onClosePopup={draft === undefined ? () => setActive(undefined) : undefined}
+          />
+        }
       >
         {pageElements(elementContext, body, highlighted)}
       </ReadingColumn>

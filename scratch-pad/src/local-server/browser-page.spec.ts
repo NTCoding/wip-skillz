@@ -1,6 +1,4 @@
-import { createHash } from 'node:crypto'
 import { describe, expect, it } from 'vitest'
-import { colourModes } from '../browser-page/design-system/colour-modes'
 import {
   browserPageHtml,
   browserPageJson,
@@ -8,31 +6,21 @@ import {
   exportedBrowserPageHtml,
 } from './browser-page'
 
-function inlineScriptOf(html: string): string {
-  return /<script>(.*?)<\/script>/su.exec(html)?.[1] ?? 'no inline script'
-}
-
 describe('browserPagePolicy', () => {
-  it('allows the inline script that sets the colour mode by its hash when the page is served', () => {
-    const script = inlineScriptOf(browserPageHtml('2026-11-20-invoice-export'))
-    const hash = createHash('sha256').update(script).digest('base64')
-
-    expect(browserPagePolicy).toContain(`script-src 'self' 'sha256-${hash}'`)
-  })
-
-  it('doesn’t allow any other inline script, any form or any other site in a frame when the page is served', () => {
+  it('doesn’t allow any inline script, any form or any other site in a frame when the page is served', () => {
     const scriptSource = browserPagePolicy.split('; ').find((part) => part.startsWith('script-src'))
-    expect(scriptSource).not.toContain('unsafe-inline')
+    expect(scriptSource).toBe("script-src 'self'")
     expect(browserPagePolicy).toContain("form-action 'none'")
     expect(browserPagePolicy).toContain("frame-src 'self'")
   })
 })
 
 describe('browserPageHtml', () => {
-  it('accepts every colour mode of the design system when the script reads the saved mode', () => {
-    expect(inlineScriptOf(browserPageHtml('2026-11-20-invoice-export'))).toContain(
-      `const modes=${JSON.stringify(colourModes)}`,
-    )
+  it('loads the bundle and the stylesheet without any inline script when the page is served', () => {
+    const html = browserPageHtml('2026-11-20-invoice-export')
+    expect(html).toContain('<script type="module" src="/browser-page/scratch-pad.js"></script>')
+    expect(html).toContain('<link rel="stylesheet" href="/browser-page/scratch-pad.css">')
+    expect(html).not.toContain('<script>')
   })
 })
 
@@ -56,7 +44,7 @@ describe('browserPageJson', () => {
 })
 
 describe('exportedBrowserPageHtml', () => {
-  it('puts the root, the data, the bundle and the colour mode script in one document when the scratch pad is exported', () => {
+  it('puts the root, the data and the bundle in one document when the scratch pad is exported', () => {
     const html = exportedHtml('startBrowserPage()', '.page{color:var(--text)}', { pages: [] })
     expect(html).toContain(
       '<div id="scratch-pad-page" data-scratch-pad="2026-11-20-invoice-export"></div>',
@@ -65,7 +53,7 @@ describe('exportedBrowserPageHtml', () => {
       '<script type="application/json" id="scratch-pad-export">{"pages":[]}</script>',
     )
     expect(moduleScriptOf(html)).toBe('startBrowserPage()')
-    expect(html).toContain(`<script>${inlineScriptOf(browserPageHtml('pad'))}</script>`)
+    expect(html).not.toContain('<script>')
   })
 
   it('escapes every < of the data when the data contains the end of a script element', () => {

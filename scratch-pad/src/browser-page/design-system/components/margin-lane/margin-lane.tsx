@@ -1,10 +1,11 @@
-import { useLayoutEffect, useState, type ReactNode } from 'react'
+import { useEffect, useLayoutEffect, useState, type ReactNode } from 'react'
 import './margin-lane.css'
 
 // The anchor of an item is the highlight of its thread or else the block with its lines.
 // Both are looked up inside the closest element with data-margin-scope.
 // In a narrow reading column, the lane is replaced by the marker of each item. Only the item
-// whose popup is true is shown then, below its anchor.
+// whose popup is true is shown then, below its anchor. onClosePopup is called when Nick presses
+// Escape or puts the pointer down outside that item and its marker.
 export interface MarginItem {
   readonly key: string
   readonly anchorLines: string | undefined
@@ -16,9 +17,11 @@ export interface MarginItem {
 interface MarginLaneProps {
   readonly label: string
   readonly items: readonly MarginItem[]
+  readonly onClosePopup?: (() => void) | undefined
 }
 
 const gapBetweenItems = 12
+const gapBetweenMarkers = 4
 const offsetAboveAnchor = 12
 const gapBelowAnchor = 8
 
@@ -56,7 +59,7 @@ function anchorBoxOf(scope: Element, laneTop: number, element: HTMLElement): Anc
   }
 }
 
-interface Placement {
+interface Stacked {
   readonly floor: number
   readonly placed: readonly WantedTop[]
 }
@@ -71,39 +74,85 @@ function childrenWith(lane: HTMLElement, attribute: string): HTMLElement[] {
   )
 }
 
+// Each element starts at the top it wants, or straight below the element above it if the 2 would
+// overlap. The elements are only pushed down.
+function stacked(wanted: readonly WantedTop[], gap: number): Stacked {
+  return wanted
+    .toSorted((first, second) => first.top - second.top)
+    .reduce<Stacked>(
+      (done, { item, top }) => {
+        const placedTop = Math.max(top, done.floor)
+        return {
+          floor: placedTop + item.offsetHeight + gap,
+          placed: [...done.placed, { item, top: placedTop }],
+        }
+      },
+      { floor: 0, placed: [] },
+    )
+}
+
 export function layOutMarginLane(lane: HTMLElement, scope: Element): void {
   const laneTop = lane.getBoundingClientRect().top
   const anchored = childrenWith(lane, 'data-key').map((item) => ({
     item,
     box: anchorBoxOf(scope, laneTop, item),
   }))
-  const wanted = anchored
-    .map(({ item, box }) => ({ item, top: Math.max(0, box.top - offsetAboveAnchor) }))
-    .toSorted((first, second) => first.top - second.top)
-  const { floor, placed } = wanted.reduce<Placement>(
-    (done, { item, top }) => {
-      const placedTop = Math.max(top, done.floor)
-      return {
-        floor: placedTop + item.offsetHeight + gapBetweenItems,
-        placed: [...done.placed, { item, top: placedTop }],
-      }
-    },
-    { floor: 0, placed: [] },
+  const cards = stacked(
+    anchored.map(({ item, box }) => ({ item, top: Math.max(0, box.top - offsetAboveAnchor) })),
+    gapBetweenItems,
   )
-  for (const { item, top } of placed) {
+  for (const { item, top } of cards.placed) {
     item.style.setProperty('--margin-item-top', px(top))
   }
   for (const { item, box } of anchored) {
     item.style.setProperty('--margin-popup-top', px(box.bottom + gapBelowAnchor))
   }
-  for (const marker of childrenWith(lane, 'data-marker')) {
-    marker.style.setProperty('--margin-marker-top', px(anchorBoxOf(scope, laneTop, marker).top))
+  const markers = stacked(
+    childrenWith(lane, 'data-marker').map((item) => ({
+      item,
+      top: Math.max(0, anchorBoxOf(scope, laneTop, item).top),
+    })),
+    gapBetweenMarkers,
+  )
+  for (const { item, top } of markers.placed) {
+    item.style.setProperty('--margin-marker-top', px(top))
   }
-  lane.style.setProperty('--margin-lane-height', px(floor - gapBetweenItems))
+  lane.style.setProperty('--margin-lane-height', px(cards.floor - gapBetweenItems))
 }
 
-export function MarginLane({ label, items }: MarginLaneProps) {
+function useClosePopup(lane: HTMLElement | null, onClosePopup: (() => void) | undefined): void {
+  useEffect(() => {
+    if (lane === null || onClosePopup === undefined) {
+      return undefined
+    }
+    const closeOnEscape = (event: KeyboardEvent): void => {
+      if (event.key === 'Escape') {
+        onClosePopup()
+      }
+    }
+    const closeOutside = (event: PointerEvent): void => {
+      const popup = lane.querySelector<HTMLElement>(':scope > [data-popup="true"]')
+      const key = popup?.dataset['key']
+      const marker = lane.querySelector(`:scope > [data-marker="${key}"]`)
+      const inside = [popup, marker].some(
+        (element) => event.target instanceof Node && element?.contains(event.target),
+      )
+      if (popup !== null && !inside) {
+        onClosePopup()
+      }
+    }
+    document.addEventListener('keydown', closeOnEscape)
+    document.addEventListener('pointerdown', closeOutside)
+    return () => {
+      document.removeEventListener('keydown', closeOnEscape)
+      document.removeEventListener('pointerdown', closeOutside)
+    }
+  }, [lane, onClosePopup])
+}
+
+export function MarginLane({ label, items, onClosePopup }: MarginLaneProps) {
   const [lane, setLane] = useState<HTMLElement | null>(null)
+  useClosePopup(lane, onClosePopup)
   useLayoutEffect(() => {
     if (lane === null) {
       return undefined
@@ -119,7 +168,17 @@ export function MarginLane({ label, items }: MarginLaneProps) {
   })
   return (
     <aside ref={setLane} className="margin-lane" aria-label={label}>
-      {items.map((item) => (
+      {items.flatMap((item) => [
+        item.marker === undefined ? null : (
+          <div
+            key={`marker ${item.key}`}
+            className="margin-lane__marker"
+            data-marker={item.key}
+            data-anchor-lines={item.anchorLines}
+          >
+            {item.marker}
+          </div>
+        ),
         <div
           key={item.key}
           className="margin-lane__item"
@@ -128,21 +187,8 @@ export function MarginLane({ label, items }: MarginLaneProps) {
           data-popup={item.popup}
         >
           {item.content}
-        </div>
-      ))}
-      {items.map(
-        (item) =>
-          item.marker !== undefined && (
-            <div
-              key={`marker ${item.key}`}
-              className="margin-lane__marker"
-              data-marker={item.key}
-              data-anchor-lines={item.anchorLines}
-            >
-              {item.marker}
-            </div>
-          ),
-      )}
+        </div>,
+      ])}
     </aside>
   )
 }

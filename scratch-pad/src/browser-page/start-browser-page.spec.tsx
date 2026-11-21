@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   exportedPadJson,
   exportPad,
+  fakeNarrowWindow,
   indexPage,
   pageSummaries,
   progressTracker,
@@ -34,7 +35,7 @@ class FakeEventSource {
 
 beforeEach(() => {
   vi.stubGlobal('EventSource', FakeEventSource)
-  vi.stubGlobal('matchMedia', () => ({ matches: false }))
+  vi.stubGlobal('matchMedia', () => fakeNarrowWindow())
   vi.spyOn(window, 'scrollTo').mockImplementation(() => undefined)
   vi.spyOn(window, 'fetch').mockImplementation((url) =>
     Promise.resolve(

@@ -4,6 +4,7 @@
   right: 0;
   z-index: 12;
   width: var(--outline-w);
+  pointer-events: none;
 }
 
 .outline__bars {
@@ -11,8 +12,11 @@
   flex-direction: column;
   align-items: flex-end;
   gap: var(--space-md);
+  width: max-content;
   max-height: calc(100vh - var(--outline-bars-reserve));
+  margin-left: auto;
   overflow: hidden;
+  pointer-events: auto;
   padding: var(--space-xl) var(--space-5xl) var(--space-xl) var(--space-0);
 }
 

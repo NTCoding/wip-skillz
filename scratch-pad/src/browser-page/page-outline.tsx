@@ -1,21 +1,25 @@
 import { type ViewedPage } from './api-responses'
 import { fileOfPage, type PadAddresses } from './browser-route'
-import { useCurrentSection } from './current-section'
+import { useCurrentSection, type PageAddress } from './current-section'
 import { Outline, type Navigate } from './design-system/design-system'
 
 interface PageOutlineProps {
   readonly addresses: PadAddresses
   readonly page: ViewedPage
   readonly onNavigate: Navigate
+  readonly address: PageAddress
 }
 
 function outlineOf(page: ViewedPage): ViewedPage['headings'] {
   return page.headings.filter((heading) => heading.level >= 2 && heading.level <= 4)
 }
 
-export function PageOutline({ addresses, page, onNavigate }: PageOutlineProps) {
+export function PageOutline({ addresses, page, onNavigate, address }: PageOutlineProps) {
   const entries = outlineOf(page)
-  const currentSection = useCurrentSection(entries.map((heading) => heading.id))
+  const currentSection = useCurrentSection(
+    entries.map((heading) => heading.id),
+    address,
+  )
   const file = fileOfPage(page.page)
   return (
     <Outline

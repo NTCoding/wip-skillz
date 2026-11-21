@@ -129,7 +129,7 @@ If you reword the question, keep the same id. Give a new decision the next free 
 
 ### Draw something that Markdown can't show
 
-Use an `:::html` block for a diagram or an animation. The block is shown in a sandboxed frame so its styles and scripts can't change the rest of the page. Use the page's design tokens rather than raw colours so that the block looks right in both the light mode and the dark mode. This is an example of a small diagram:
+Use an `:::html` block for a diagram or an animation. The block is shown in a sandboxed frame so its styles and scripts can't change the rest of the page. Use the page's design tokens rather than raw colours so that the block looks like the rest of the page. This is an example of a small diagram:
 
 ```markdown
 :::html

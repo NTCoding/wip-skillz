@@ -5,6 +5,7 @@ import {
   decisionLog,
   exportedPadJson,
   exportPad,
+  fakeNarrowWindow,
   invoiceTemplatePage,
   progressTracker,
 } from './browser-page-fixtures'
@@ -27,7 +28,7 @@ function renderExport(hash = '') {
       connection={exportedScratchPad(exportedPadJson)}
       writing={undefined}
       settings={window.localStorage}
-      narrowWindow={false}
+      narrowWindow={fakeNarrowWindow()}
     />,
   )
 }

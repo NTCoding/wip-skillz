@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import { layOutMarginLane, MarginLane } from './margin-lane'
 
@@ -67,6 +67,32 @@ describe('layOutMarginLane', () => {
     ).toStrictEqual(['112px', '0px'])
   })
 
+  it('pushes down a marker that would overlap the marker above it, including a marker without an anchor', () => {
+    const scope = document.createElement('div')
+    scope.innerHTML = [
+      '<p data-lines="3-3">The export job retries <mark data-highlight="c-1">5 times</mark>.</p>',
+      '<aside>',
+      '<span data-marker="c-1" data-anchor-lines="3-3"></span>',
+      '<span data-marker="g-1" data-anchor-lines="3-3"></span>',
+      '<span data-marker="i-1"></span>',
+      '<span data-marker="i-2"></span>',
+      '</aside>',
+    ].join('')
+    const lane = scope.querySelector('aside') ?? scope
+    placeAt(lane, 100)
+    placeAt(scope.querySelector('mark') ?? scope, 212)
+    placeAt(scope.querySelector('p') ?? scope, 200)
+    for (const marker of lane.querySelectorAll('span')) {
+      placeAt(marker, 0, 26)
+    }
+    layOutMarginLane(lane, scope)
+    expect(
+      [...lane.querySelectorAll('span')].map((marker) =>
+        marker.style.getPropertyValue('--margin-marker-top'),
+      ),
+    ).toStrictEqual(['130px', '100px', '0px', '30px'])
+  })
+
   it('makes the lane as tall as the bottom of its last item so that a card never runs past the page', () => {
     const scope = document.createElement('div')
     const lane = laneWith(scope)
@@ -103,10 +129,10 @@ describe('MarginLane', () => {
       />,
     )
     const lane = screen.getByRole('complementary', { name: 'Comments and notes' })
-    expect(lane.textContent).toBe('Is 5 retries enough?Comment c-1')
-    expect(lane.firstElementChild?.getAttribute('data-anchor-lines')).toBe('3-3')
-    expect(lane.firstElementChild?.getAttribute('data-popup')).toBe('true')
-    expect(lane.lastElementChild?.getAttribute('data-marker')).toBe('c-1')
+    expect(lane.textContent).toBe('Comment c-1Is 5 retries enough?')
+    expect(lane.lastElementChild?.getAttribute('data-anchor-lines')).toBe('3-3')
+    expect(lane.lastElementChild?.getAttribute('data-popup')).toBe('true')
+    expect(lane.firstElementChild?.getAttribute('data-marker')).toBe('c-1')
   })
 
   it('leaves out the marker of an item that doesn’t have a marker', () => {
@@ -148,5 +174,55 @@ describe('MarginLane', () => {
     )
     const item = screen.getByText('Is 5 retries enough?').parentElement
     expect(item?.style.getPropertyValue('--margin-item-top')).toBe('0px')
+  })
+
+  it('asks to close the popup when Nick presses Escape or puts the pointer down outside the popup', () => {
+    const onClosePopup = vi.fn<() => void>()
+    render(
+      <>
+        <p>The export job retries 5 times.</p>
+        <MarginLane
+          label="Comments and notes"
+          items={[
+            {
+              key: 'c-1',
+              anchorLines: '3-3',
+              content: <p>Is 5 retries enough?</p>,
+              marker: <button type="button">Comment c-1</button>,
+              popup: true,
+            },
+          ]}
+          onClosePopup={onClosePopup}
+        />
+      </>,
+    )
+    fireEvent.pointerDown(screen.getByText('Is 5 retries enough?'))
+    fireEvent.pointerDown(screen.getByRole('button', { name: 'Comment c-1' }))
+    fireEvent.keyDown(document.body, { key: 'Enter' })
+    expect(onClosePopup).not.toHaveBeenCalled()
+    fireEvent.pointerDown(screen.getByText('The export job retries 5 times.'))
+    fireEvent.keyDown(document.body, { key: 'Escape' })
+    expect(onClosePopup).toHaveBeenCalledTimes(2)
+  })
+
+  it('doesn’t ask to close anything when a pointer goes down and there isn’t a popup', () => {
+    const onClosePopup = vi.fn<() => void>()
+    render(
+      <MarginLane
+        label="Comments and notes"
+        items={[
+          {
+            key: 'c-1',
+            anchorLines: '3-3',
+            content: <p>Is 5 retries enough?</p>,
+            marker: undefined,
+            popup: false,
+          },
+        ]}
+        onClosePopup={onClosePopup}
+      />,
+    )
+    fireEvent.pointerDown(document.body)
+    expect(onClosePopup).not.toHaveBeenCalled()
   })
 })

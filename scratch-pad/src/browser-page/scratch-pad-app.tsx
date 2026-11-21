@@ -27,14 +27,15 @@ import { PadSidebar, sectionsOf } from './pad-sidebar'
 import { PageOutline } from './page-outline'
 import { firstRevisions, pageRevisionOf, revisedAfterReconnect, revisedBy } from './pad-revisions'
 import { pagePreview } from './page-preview'
-import { savedSidebarCollapsed, saveSidebarCollapsed, type SavedSettings } from './saved-settings'
+import { type SavedSettings } from './saved-settings'
 import { PageWithThreads, type PageActions } from './page-with-threads'
 import {
   type NewThread,
   type ScratchPadReading,
   type ScratchPadWriting,
 } from './scratch-pad-connection'
-import { DecisionLogView, LoadingView, ProgressTrackerView } from './tab-views'
+import { useSidebarState, type NarrowWindow } from './sidebar-state'
+import { DecisionLogView, LoadingView, ProgressTrackerView } from './pad-views'
 
 interface ScratchPadAppProps {
   readonly pad: string
@@ -42,7 +43,7 @@ interface ScratchPadAppProps {
   readonly connection: ScratchPadReading
   readonly writing: ScratchPadWriting | undefined
   readonly settings: SavedSettings
-  readonly narrowWindow: boolean
+  readonly narrowWindow: NarrowWindow
 }
 
 const emptyNickInbox: NickInbox = { threads: [], decisions: [] }
@@ -54,6 +55,7 @@ function loadedOr<T>(loaded: LoadedValue<T>, fallback: T): T {
 function currentViewOf(
   route: BrowserRoute,
   viewedPage: ViewedPage | undefined,
+  pageList: readonly PageSummary[],
 ): string | undefined {
   if (route.kind === 'progress-tracker') {
     return 'Progress tracker'
@@ -64,7 +66,8 @@ function currentViewOf(
   if (route.file === 'index.md') {
     return undefined
   }
-  return viewedPage?.title ?? route.file
+  const summary = pageList.find((each) => each.page === `pages/${route.file}`)
+  return viewedPage?.title ?? summary?.title
 }
 
 interface PageContext {
@@ -173,8 +176,8 @@ function tabTitleOf(pageTitle: string | undefined, padTitle: string): string {
 export function ScratchPadApp(props: ScratchPadAppProps) {
   const { pad, addresses, connection, writing, settings, narrowWindow } = props
   const { route, navigate, navigations } = useBrowserNavigation(addresses.routeOf)
+  const { collapsed, changeCollapsed } = useSidebarState(settings, narrowWindow, navigations)
   const [revisions, setRevisions] = useState(firstRevisions)
-  const [collapsed, setCollapsed] = useState(() => narrowWindow || savedSidebarCollapsed(settings))
   const [serverStopped, setServerStopped] = useState(false)
   const changed = useCallback(
     (change: PadChange) => setRevisions((current) => revisedBy(current, change)),
@@ -203,7 +206,11 @@ export function ScratchPadApp(props: ScratchPadAppProps) {
   const threads = useLoadedValue(file, revisions.threads, connection.threads)
   const viewedPage = route.kind === 'page' ? loadedOr(page, undefined) : undefined
   const padTitle = loadedOr(tracker, undefined)?.title ?? pad
-  const currentSection = useCurrentSection(sectionsOf(viewedPage).map((heading) => heading.id))
+  const address = { section: route.kind === 'page' ? route.section : undefined, navigations }
+  const currentSection = useCurrentSection(
+    sectionsOf(viewedPage).map((heading) => heading.id),
+    address,
+  )
   useScrollOnNavigation(
     scrollTargetOf(route, viewedPage, threads.status !== 'loading'),
     navigations,
@@ -218,10 +225,6 @@ export function ScratchPadApp(props: ScratchPadAppProps) {
     [connection, padTitle],
   )
   const actions = usePageActions(writing, changed)
-  const changeCollapsed = (next: boolean): void => {
-    setCollapsed(next)
-    saveSidebarCollapsed(settings, next)
-  }
   const pageList = loadedOr(pages, [])
   const inboxEntries = nickInboxEntries(addresses, loadedOr(inbox, emptyNickInbox), pageList)
 
@@ -233,7 +236,7 @@ export function ScratchPadApp(props: ScratchPadAppProps) {
         <TopBar
           title={padTitle}
           titleHref={addresses.pageHref('index.md')}
-          current={currentViewOf(route, viewedPage)}
+          current={currentViewOf(route, viewedPage, pageList)}
           onNavigate={navigate}
           actions={
             <>
@@ -275,7 +278,12 @@ export function ScratchPadApp(props: ScratchPadAppProps) {
         navigations={navigations}
       />
       {viewedPage !== undefined && (
-        <PageOutline addresses={addresses} page={viewedPage} onNavigate={navigate} />
+        <PageOutline
+          addresses={addresses}
+          page={viewedPage}
+          onNavigate={navigate}
+          address={address}
+        />
       )}
     </AppFrame>
   )
