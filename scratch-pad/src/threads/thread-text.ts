@@ -1,6 +1,7 @@
 import { countedNoun } from '../counted-noun'
 import { localTime } from '../local-time'
 import { itemTypeNoun } from '../items/item-id'
+import { linkLines, pageLink, type ItemLinks } from '../item-links/item-links'
 import { numberedLines } from '../pages/page-text'
 import { sectionAt } from '../pages/page-markdown'
 import { normalisedText } from '../rendered-page/page-blocks'
@@ -33,13 +34,15 @@ const waitingTexts: Readonly<Record<WaitingParty, string>> = {
 export function threadInboxLines(
   stored: Thread,
   pageLines: readonly string[],
-  padName: string,
+  links: ItemLinks,
 ): string[] {
+  const padName = links.pad
   const thread = positionedThread(stored, pageLines.join('\n'))
   const newMessages = messagesSinceAgentReply(thread)
   const earlierMessages = thread.messages.length - newMessages.length
   return [
     threadHeader(thread, pageLines),
+    ...threadLinkLines(thread, links),
     ...selectedLines(thread),
     ...(earlierMessages === 0
       ? []
@@ -51,15 +54,24 @@ export function threadInboxLines(
   ]
 }
 
-export function threadShowLines(stored: Thread, pageLines: readonly string[]): string[] {
+export function threadShowLines(
+  stored: Thread,
+  pageLines: readonly string[],
+  links: ItemLinks,
+): string[] {
   const thread = positionedThread(stored, pageLines.join('\n'))
   return [
     `${threadHeader(thread, pageLines)} · ${waitingTexts[thread.waitsFor]}`,
+    ...threadLinkLines(thread, links),
     ...selectedLines(thread),
     ...blockLines(thread, pageLines, { length: 'whole' }),
     ...thread.messages.map(timedMessageLine),
     ...(thread.outcome === undefined ? [] : [`  outcome: ${thread.outcome}`]),
   ]
+}
+
+function threadLinkLines(thread: Thread, links: ItemLinks): string[] {
+  return linkLines(pageLink(links, thread.page, thread.id), '  ')
 }
 
 function threadHeader(thread: PositionedThread, pageLines: readonly string[]): string {

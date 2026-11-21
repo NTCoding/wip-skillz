@@ -1,4 +1,10 @@
 import { afterEach, describe, expect, it } from 'vitest'
+import {
+  exportJobAddress,
+  missingLinksText,
+  servedLinks,
+  unservedLinks,
+} from '../item-links/item-links-fixtures'
 import { PadDbFailureError } from '../scratch-pad-folder/pad-db-errors'
 import {
   exportJobScratchPad,
@@ -26,9 +32,10 @@ function preparedScratchPad() {
 
 describe('showItem', () => {
   it('prints the whole thread with its block', () => {
-    expect(showItem(preparedScratchPad(), 'c-1')).toBe(
+    expect(showItem(preparedScratchPad(), 'c-1', servedLinks)).toBe(
       [
         '[c-1] comment · pages/index.md:5-6 · section "Retry policy" · waits for the agent',
+        `  link: ${exportJobAddress}#c-1`,
         '  selected: "The export job retries 5 times."',
         '  block:',
         '    5 | The export job retries 5 times.',
@@ -39,10 +46,21 @@ describe('showItem', () => {
   })
 
   it('prints a decision answer', () => {
-    expect(showItem(preparedScratchPad(), 'd-1')).toBe(
+    expect(showItem(preparedScratchPad(), 'd-1', servedLinks)).toBe(
+      [
+        '[d-1] decision · pages/index.md:9 · "Will the invoice template show the tax number?" · waits for the agent',
+        `  link: ${exportJobAddress}#d-1`,
+        '  Nick chose: proposal',
+      ].join('\n'),
+    )
+  })
+
+  it("prints that there aren't any links at the end when the server isn't running", () => {
+    expect(showItem(preparedScratchPad(), 'd-1', unservedLinks)).toBe(
       [
         '[d-1] decision · pages/index.md:9 · "Will the invoice template show the tax number?" · waits for the agent',
         '  Nick chose: proposal',
+        missingLinksText,
       ].join('\n'),
     )
   })
@@ -50,15 +68,21 @@ describe('showItem', () => {
 
 describe('replyToThread', () => {
   it('prints that the thread now waits for Nick', () => {
-    expect(replyToThread(preparedScratchPad(), 'c-1', 'I raised the limit to 8.')).toBe(
-      'c-1 now waits for Nick',
-    )
+    expect(
+      replyToThread(preparedScratchPad(), 'c-1', 'I raised the limit to 8.', servedLinks),
+    ).toBe(`c-1 now waits for Nick\nlink: ${exportJobAddress}#c-1`)
+  })
+
+  it("prints that there aren't any links when the server isn't running", () => {
+    expect(
+      replyToThread(preparedScratchPad(), 'c-1', 'I raised the limit to 8.', unservedLinks),
+    ).toBe(`c-1 now waits for Nick\n${missingLinksText}`)
   })
 
   it('saves the reply of the agent', () => {
     const folder = preparedScratchPad()
 
-    replyToThread(folder, 'c-1', 'I raised the limit to 8.')
+    replyToThread(folder, 'c-1', 'I raised the limit to 8.', servedLinks)
 
     expect(folder.read((pad) => pad.readThread('c-1')).messages.at(-1)).toStrictEqual({
       author: 'agent',
@@ -70,7 +94,7 @@ describe('replyToThread', () => {
   it('appends a thread-replied event by the agent', () => {
     const folder = preparedScratchPad()
 
-    replyToThread(folder, 'c-1', 'I raised the limit to 8.')
+    replyToThread(folder, 'c-1', 'I raised the limit to 8.', servedLinks)
 
     expect(folder.read((pad) => pad.readEvents()).at(-1)).toStrictEqual({
       number: 4,
@@ -85,7 +109,7 @@ describe('replyToThread', () => {
     const folder = preparedScratchPad()
     refuseNewEvents(folder)
 
-    expect(() => replyToThread(folder, 'c-1', 'I raised the limit to 8.')).toThrow(
+    expect(() => replyToThread(folder, 'c-1', 'I raised the limit to 8.', servedLinks)).toThrow(
       PadDbFailureError,
     )
     expect(folder.read((pad) => pad.readThread('c-1').messages)).toStrictEqual([
@@ -96,8 +120,8 @@ describe('replyToThread', () => {
   it('throws DecisionReplyError when the id is a decision', () => {
     const folder = preparedScratchPad()
 
-    expect(() => replyToThread(folder, 'd-1', 'Noted.')).toThrow(DecisionReplyError)
-    expect(() => replyToThread(folder, 'd-1', 'Noted.')).toThrow(
+    expect(() => replyToThread(folder, 'd-1', 'Noted.', servedLinks)).toThrow(DecisionReplyError)
+    expect(() => replyToThread(folder, 'd-1', 'Noted.', servedLinks)).toThrow(
       "d-1 is a decision, which can't be replied to. Change the page so that it follows Nick's answer. Then mark d-1 as done with the done command.",
     )
   })
@@ -105,13 +129,21 @@ describe('replyToThread', () => {
 
 describe('finishItem', () => {
   it('prints that the note is done', () => {
-    expect(finishItem(preparedScratchPad(), 'g-1', 'Changed the verb.')).toBe('g-1 is done')
+    expect(finishItem(preparedScratchPad(), 'g-1', 'Changed the verb.', servedLinks)).toBe(
+      `g-1 is done\nlink: ${exportJobAddress}#g-1`,
+    )
+  })
+
+  it('prints that the decision is done with the link to the decision', () => {
+    expect(finishItem(preparedScratchPad(), 'd-1', 'Rewrote the section.', servedLinks)).toBe(
+      `d-1 is done\nlink: ${exportJobAddress}#d-1`,
+    )
   })
 
   it('saves the outcome of the note', () => {
     const folder = preparedScratchPad()
 
-    finishItem(folder, 'g-1', 'Changed "waits" to "waits for".')
+    finishItem(folder, 'g-1', 'Changed "waits" to "waits for".', servedLinks)
 
     expect(folder.read((pad) => pad.readThread('g-1')).outcome).toBe(
       'Changed "waits" to "waits for".',
@@ -121,7 +153,7 @@ describe('finishItem', () => {
   it('appends a note-done event by the agent', () => {
     const folder = preparedScratchPad()
 
-    finishItem(folder, 'g-1', 'Changed the verb.')
+    finishItem(folder, 'g-1', 'Changed the verb.', servedLinks)
 
     expect(folder.read((pad) => pad.readEvents()).at(-1)?.kind).toBe('note-done')
   })
@@ -129,7 +161,7 @@ describe('finishItem', () => {
   it('saves the outcome of the decision when the id is a decision', () => {
     const folder = preparedScratchPad()
 
-    finishItem(folder, 'd-1', 'Rewrote the section for 8 retries.')
+    finishItem(folder, 'd-1', 'Rewrote the section for 8 retries.', servedLinks)
 
     expect(folder.read((pad) => pad.readDecisionAnswer('d-1')).outcome).toBe(
       'Rewrote the section for 8 retries.',
@@ -139,7 +171,7 @@ describe('finishItem', () => {
   it('appends a decision-followed event by the agent when the id is a decision', () => {
     const folder = preparedScratchPad()
 
-    finishItem(folder, 'd-1', 'Rewrote the section for 8 retries.')
+    finishItem(folder, 'd-1', 'Rewrote the section for 8 retries.', servedLinks)
 
     expect(folder.read((pad) => pad.readEvents()).at(-1)).toMatchObject({
       kind: 'decision-followed',

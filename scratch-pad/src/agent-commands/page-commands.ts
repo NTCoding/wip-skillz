@@ -1,14 +1,15 @@
 import { pageSummaries } from '../nick-views/nick-views'
+import { type ItemLinks } from '../item-links/item-links'
 import { findPage } from '../pages/page-markdown'
 import { outlineText, pageListText } from '../pages/page-text'
 import { pageHeadings } from '../rendered-page/rendered-page'
 import { type ScratchPadFolder } from '../scratch-pad-folder/scratch-pad-folder'
 
-export function listPages(folder: ScratchPadFolder): string {
-  return pageListText(pageSummaries(folder))
+export function listPages(folder: ScratchPadFolder, links: ItemLinks): string {
+  return pageListText(pageSummaries(folder), links)
 }
 
-export function outlinePage(folder: ScratchPadFolder, requested: string): string {
+export function outlinePage(folder: ScratchPadFolder, requested: string, links: ItemLinks): string {
   const page = findPage(folder.pages(), requested, folder.name)
-  return outlineText(page, pageHeadings(folder.readPageLines(page).join('\n')))
+  return outlineText(page, pageHeadings(folder.readPageLines(page).join('\n')), links)
 }

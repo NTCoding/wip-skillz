@@ -3,6 +3,7 @@ import { join } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
 import { commentAndGrammarNoteAndDecision } from '../agent-commands/agent-commands-fixtures'
 import { requestLocalServer } from '../local-server/local-request'
+import { missingLinksText } from '../item-links/item-links-fixtures'
 import {
   exportJobPadName,
   exportJobScratchPad,
@@ -45,7 +46,12 @@ describe('the scratch-pad commands', () => {
     const home = temporaryHome()
 
     expect(await output(['new', 'invoice', 'template'], { SCRATCH_PADS_HOME: home })).toBe(
-      `created ${home}/2026-03-14-invoice-template\nselect it with --pad 2026-03-14-invoice-template or SCRATCH_PAD=2026-03-14-invoice-template\n`,
+      [
+        `created ${home}/2026-03-14-invoice-template`,
+        'select it with --pad 2026-03-14-invoice-template or SCRATCH_PAD=2026-03-14-invoice-template',
+        "there aren't any links because the server isn't running (scratch-pad start --pad 2026-03-14-invoice-template)",
+        '',
+      ].join('\n'),
     )
   })
 
@@ -59,6 +65,7 @@ describe('the scratch-pad commands', () => {
     expect(await output(['status'], environment)).toBe(
       [
         `2026-03-14-export-job · ${environment.SCRATCH_PADS_HOME}/2026-03-14-export-job`,
+        missingLinksText,
         'no tasks yet',
         'waiting for the agent: 1 comment, 1 decision, 1 grammar note',
         'waiting for Nick: nothing',
@@ -96,32 +103,38 @@ describe('the scratch-pad commands', () => {
 
   it('reply prints that the thread waits for Nick', async () => {
     expect(await output(['reply', 'c-1', 'I raised the limit to 8.'])).toBe(
-      'c-1 now waits for Nick\n',
+      `c-1 now waits for Nick\n${missingLinksText}\n`,
     )
   })
 
   it('done prints that the decision is done', async () => {
     expect(await output(['done', 'd-1', 'Rewrote the section for 8 retries.'])).toBe(
-      'd-1 is done\n',
+      `d-1 is done\n${missingLinksText}\n`,
     )
   })
 
   it('done prints that the note is done', async () => {
-    expect(await output(['done', 'g-1', 'Changed the verb.'])).toBe('g-1 is done\n')
+    expect(await output(['done', 'g-1', 'Changed the verb.'])).toBe(
+      `g-1 is done\n${missingLinksText}\n`,
+    )
   })
 
   it('pages lists the pages', async () => {
-    expect(await output(['pages'])).toBe('pages/index.md  Export job  2 open threads\n')
+    expect(await output(['pages'])).toBe(
+      `pages/index.md  Export job  2 open threads\n${missingLinksText}\n`,
+    )
   })
 
   it('outline prints the headings of a page', async () => {
     expect(await output(['outline', 'pages/index.md'])).toBe(
-      '1  # Export job\n3  ## Retry policy\n',
+      `1  # Export job\n3  ## Retry policy\n${missingLinksText}\n`,
     )
   })
 
   it('goal prints the goal', async () => {
-    expect(await output(['goal', 'Ship', 'the export job.'])).toBe('goal: Ship the export job.\n')
+    expect(await output(['goal', 'Ship', 'the export job.'])).toBe(
+      `goal: Ship the export job.\n${missingLinksText}\n`,
+    )
   })
 
   it('task start prints the started task', async () => {
@@ -129,7 +142,7 @@ describe('the scratch-pad commands', () => {
     await output(['task', 'add', 'Write the retry policy'], environment)
 
     expect(await output(['task', 'start', '1'], environment)).toBe(
-      'task 1 has started: Write the retry policy\n',
+      `task 1 has started: Write the retry policy\n${missingLinksText}\n`,
     )
   })
 
@@ -138,7 +151,7 @@ describe('the scratch-pad commands', () => {
     await output(['task', 'add', 'Write the retry policy'], environment)
 
     expect(await output(['task', 'done', '1'], environment)).toBe(
-      'task 1 is done: Write the retry policy\nno task is left to do\n',
+      `task 1 is done: Write the retry policy\nno task is left to do\n${missingLinksText}\n`,
     )
   })
 
@@ -159,15 +172,19 @@ describe('the scratch-pad commands', () => {
   })
 
   it('decide prints the number of the logged decision', async () => {
-    expect(await output(['decide', 'Keep 5 retries.'])).toBe('decision 2 is logged\n')
+    expect(await output(['decide', 'Keep 5 retries.'])).toBe(
+      `decision 2 is logged\n${missingLinksText}\n`,
+    )
   })
 
   it('decide logs a decision that starts with a dash', async () => {
-    expect(await output(['decide', '-5 is too low so keep 8.'])).toBe('decision 2 is logged\n')
+    expect(await output(['decide', '-5 is too low so keep 8.'])).toBe(
+      `decision 2 is logged\n${missingLinksText}\n`,
+    )
   })
 
   it('inbox prints one line for the decision when only comments are requested and a decision waits', async () => {
-    expect((await output(['inbox', '--type', 'comment'])).split('\n').at(-2)).toBe(
+    expect((await output(['inbox', '--type', 'comment'])).split('\n').at(-4)).toBe(
       '1 decision waits for the agent (scratch-pad inbox --pad 2026-03-14-export-job --type decision) · 1 grammar note waits for a subagent',
     )
   })
@@ -178,7 +195,7 @@ describe('the scratch-pad commands', () => {
     await output(['task', 'add', 'Write the invoice template'], environment)
 
     expect(await output(['tasks'], environment)).toBe(
-      '1  to do  Write the retry policy\n2  to do  Write the invoice template\n',
+      `1  to do  Write the retry policy\n2  to do  Write the invoice template\n${missingLinksText}\n`,
     )
   })
 
@@ -298,6 +315,24 @@ describe('the server commands and wait', () => {
     ).resolves.toMatchObject({
       stdout: expect.stringContaining(`\nin the browser: ${address?.trim()}${exportJobPadName}/\n`),
     })
+  })
+
+  it('prints the link of each item when the server runs', async () => {
+    const home = exportJobHome()
+    const address = (await startServer({ SCRATCH_PADS_HOME: home })).split(': ')[1]?.trim()
+    const pad = `${address}${exportJobPadName}/`
+    const environment = { SCRATCH_PADS_HOME: home, SCRATCH_PAD: exportJobPadName }
+    const linkOf = async (argv: readonly string[]) =>
+      (await runScratchPad(argv, environment)).stdout.split('\n').at(-2)
+
+    await expect(linkOf(['pages'])).resolves.toBe(
+      `pages/index.md  Export job  no open threads  ${pad}`,
+    )
+    await expect(linkOf(['tasks'])).resolves.toBe(`link: ${pad}progress-tracker`)
+    await expect(linkOf(['decide', 'Keep 5 retries.'])).resolves.toBe(`link: ${pad}decisions`)
+    await expect(linkOf(['new', 'invoice template'])).resolves.toMatch(
+      /^link: http:\/\/127\.0\.0\.1:\d+\/\d{4}-\d{2}-\d{2}-invoice-template\/$/,
+    )
   })
 
   it("stop prints that the server isn't running when no server runs", async () => {

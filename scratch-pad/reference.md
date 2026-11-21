@@ -12,7 +12,7 @@ Every command prints a few short lines. If a command fails, it will print a mess
 | `start [--port <port>]`  | Starts the server in the background and prints the address. It never starts a second server, but it restarts a server that's running another version. |
 | `stop`                   | Stops the server, which is shared by every scratch pad. It doesn't take `--pad`.                                                                      |
 | `serve [--port <port>]`  | Runs the server in the foreground. `start` runs this command in the background.                                                                       |
-| `status`                 | Prints the current task and what's waiting for the agent and for Nick. It will also print the server's address if the server is running.              |
+| `status`                 | Prints the current task and what's waiting for the agent and for Nick. It will also print the scratch pad's address if the server is running.         |
 | `inbox [--type <types>]` | Prints the new items that are waiting for the agent. `--all` also prints the items that were printed before.                                          |
 | `wait`                   | Prints the new items like `inbox` once Nick has been quiet for 10 seconds                                                                             |
 | `show <id>`              | Prints one whole thread or decision                                                                                                                   |
@@ -43,6 +43,7 @@ Put `--pad` before the text of `new`, `goal`, `task add`, `decide`, `reply` or `
 ```text
 $ scratch-pad reply --pad 2026-11-21-invoice-export c-1 "Every shop can pick a time."
 c-1 now waits for Nick
+link: http://127.0.0.1:4747/2026-11-21-invoice-export/#c-1
 ```
 
 ## The environment variables
@@ -55,6 +56,29 @@ c-1 now waits for Nick
 
 ## What the commands print
 
+### The links
+
+Every command that mentions something Nick can open in the browser prints its address. The address of a decision or a thread ends with its id after a `#`, like `http://127.0.0.1:4747/2026-11-21-invoice-export/#d-1`. This table lists where each command prints the links:
+
+| Command                                                | Where the link is                                                                                              |
+| ------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------- |
+| `status`                                               | The scratch pad's address on the second line and a `link:` line to the progress tracker under the current task |
+| `inbox`, `wait` and `show`                             | A `link:` line under the first line of an item                                                                 |
+| `reply` and `done`                                     | A `link:` line to the thread or the decision                                                                   |
+| `pages`                                                | The address of each page at the end of its line                                                                |
+| `outline`                                              | The address of each heading at the end of its line                                                             |
+| `new`                                                  | A `link:` line to the scratch pad                                                                              |
+| `goal`, `tasks`, `task add`, `task start`, `task done` | A `link:` line to the progress tracker                                                                         |
+| `decide`                                               | A `link:` line to the log of decisions                                                                         |
+
+An address only works while the server is running. If the server isn't running, the command will print this line instead of the links:
+
+```text
+there aren't any links because the server isn't running (scratch-pad start --pad 2026-11-21-invoice-export)
+```
+
+### The output of each command
+
 If the server is running, `status` prints the scratch pad's address in the browser on its second line:
 
 ```text
@@ -62,6 +86,7 @@ $ scratch-pad status --pad 2026-11-21-invoice-export
 2026-11-21-invoice-export · /Users/nick/scratch-pads/2026-11-21-invoice-export
 in the browser: http://127.0.0.1:4747/2026-11-21-invoice-export/
 task 1 of 2: Design the export job
+link: http://127.0.0.1:4747/2026-11-21-invoice-export/progress-tracker
 waiting for the agent: 1 comment, 1 decision, 1 grammar note
 waiting for Nick: nothing
 ```
@@ -71,6 +96,7 @@ waiting for Nick: nothing
 ```text
 $ scratch-pad show --pad 2026-11-21-invoice-export c-1
 [c-1] comment · pages/index.md:3 · section "How the job runs" · waits for the agent
+  link: http://127.0.0.1:4747/2026-11-21-invoice-export/#c-1
   selected: "every night"
   block:
     3 | The export job writes the paid invoices of each shop to a CSV file every night.
@@ -81,6 +107,7 @@ An item whose text was deleted from the page is detached. For a detached item, t
 
 ```text
 [c-2] comment · pages/index.md · detached from line 3
+  link: http://127.0.0.1:4747/2026-11-21-invoice-export/#c-2
   selected: "every night"
   Nick: Can a shop pick another time?
   block: (the selected text isn't in pages/index.md any more)
@@ -90,11 +117,12 @@ An item whose text was deleted from the page is detached. For a detached item, t
 
 ```text
 $ scratch-pad pages --pad 2026-11-21-invoice-export
-pages/index.md  Invoice export  1 open thread
+pages/index.md  Invoice export  1 open thread  http://127.0.0.1:4747/2026-11-21-invoice-export/
 
 $ scratch-pad outline --pad 2026-11-21-invoice-export index.md
-1  # Invoice export
-5  ## Will the export job retry 8 times?
+1  # Invoice export  http://127.0.0.1:4747/2026-11-21-invoice-export/#invoice-export
+2  ## How the job runs  http://127.0.0.1:4747/2026-11-21-invoice-export/#how-the-job-runs
+5  ## Will the export job retry 8 times?  http://127.0.0.1:4747/2026-11-21-invoice-export/#will-the-export-job-retry-8-times
 ```
 
 `check` prints one line for each problem:

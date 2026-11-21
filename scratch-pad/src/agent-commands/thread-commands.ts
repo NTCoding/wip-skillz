@@ -1,6 +1,7 @@
 import { followDecision } from '../decisions/decision-answer'
 import { decisionShowLines } from '../decisions/decision-text'
 import { itemTypeOf } from '../items/item-id'
+import { pageLink, textWithLink, withLinksNote, type ItemLinks } from '../item-links/item-links'
 import { type PadDb } from '../scratch-pad-folder/pad-db'
 import { type ScratchPadFolder } from '../scratch-pad-folder/scratch-pad-folder'
 import { ScratchPadError } from '../scratch-pad-error'
@@ -15,35 +16,54 @@ export class DecisionReplyError extends ScratchPadError {
   }
 }
 
-export function showItem(folder: ScratchPadFolder, id: string): string {
+export function showItem(folder: ScratchPadFolder, id: string, links: ItemLinks): string {
   if (itemTypeOf(id) === 'decision') {
-    return decisionShowLines(folder.read((pad) => pad.readDecisionAnswer(id))).join('\n')
+    const decision = folder.read((pad) => pad.readDecisionAnswer(id))
+    return withLinksNote(links, decisionShowLines(decision, links).join('\n'))
   }
   const thread = folder.read((pad) => pad.readThread(id))
-  return threadShowLines(thread, folder.readPageLines(thread.page)).join('\n')
+  return withLinksNote(
+    links,
+    threadShowLines(thread, folder.readPageLines(thread.page), links).join('\n'),
+  )
 }
 
-export function replyToThread(folder: ScratchPadFolder, id: string, text: string): string {
+export function replyToThread(
+  folder: ScratchPadFolder,
+  id: string,
+  text: string,
+  links: ItemLinks,
+): string {
   const time = new Date().toISOString()
-  folder.change((pad) => {
-    pad.writeThread(addAgentMessage(readThreadToChange(pad, id), text, time))
+  const page = folder.change((pad) => {
+    const thread = addAgentMessage(readThreadToChange(pad, id), text, time)
+    pad.writeThread(thread)
     pad.appendEvent({ time, kind: 'thread-replied', by: 'agent', item: id })
+    return thread.page
   })
-  return `${id} now waits for Nick`
+  return textWithLink(links, `${id} now waits for Nick`, pageLink(links, page, id))
 }
 
-export function finishItem(folder: ScratchPadFolder, id: string, outcome: string): string {
+export function finishItem(
+  folder: ScratchPadFolder,
+  id: string,
+  outcome: string,
+  links: ItemLinks,
+): string {
   const time = new Date().toISOString()
-  folder.change((pad) => {
+  const page = folder.change((pad) => {
     if (itemTypeOf(id) === 'decision') {
-      pad.writeDecisionAnswer(followDecision(pad.readDecisionAnswer(id), outcome))
+      const decision = followDecision(pad.readDecisionAnswer(id), outcome)
+      pad.writeDecisionAnswer(decision)
       pad.appendEvent({ time, kind: 'decision-followed', by: 'agent', item: id })
-    } else {
-      pad.writeThread(finishNote(pad.readThread(id), outcome))
-      pad.appendEvent({ time, kind: 'note-done', by: 'agent', item: id })
+      return decision.page
     }
+    const thread = finishNote(pad.readThread(id), outcome)
+    pad.writeThread(thread)
+    pad.appendEvent({ time, kind: 'note-done', by: 'agent', item: id })
+    return thread.page
   })
-  return `${id} is done`
+  return textWithLink(links, `${id} is done`, pageLink(links, page, id))
 }
 
 function readThreadToChange(pad: PadDb, id: string): Thread {

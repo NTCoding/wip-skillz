@@ -7,6 +7,7 @@ import {
   temporaryHome,
 } from '../scratch-pad-folder/scratch-pad-folder-fixtures'
 import { nickComments } from '../nick-actions/nick-actions'
+import { missingLinksText } from '../item-links/item-links-fixtures'
 import { ScratchPadFolder } from '../scratch-pad-folder/scratch-pad-folder'
 import { retryAnchor } from '../threads/thread-fixtures'
 import { helpText, runCommandLine } from './command-line'
@@ -42,7 +43,7 @@ describe('runCommandLine', () => {
       ),
     ).toStrictEqual({
       exitCode: 0,
-      stdout: 'task 1 added: Write the retry policy\n',
+      stdout: `task 1 added: Write the retry policy\n${missingLinksText}\n`,
       stderr: '',
     })
   })
@@ -104,7 +105,11 @@ describe('runCommandLine', () => {
 
     expect(
       await runScratchPad(['reply', 'c-1', '--help', 'prints', 'the', 'usage'], environment),
-    ).toStrictEqual({ exitCode: 0, stdout: 'c-1 now waits for Nick\n', stderr: '' })
+    ).toStrictEqual({
+      exitCode: 0,
+      stdout: `c-1 now waits for Nick\n${missingLinksText}\n`,
+      stderr: '',
+    })
     expect(lastMessageOfComment(environment)).toBe('--help prints the usage')
   })
 
@@ -123,6 +128,7 @@ describe('runCommandLine', () => {
     expect((await runScratchPad(['status', '--pad', other.path], environment)).stdout).toBe(
       [
         `2026-03-14-export-job · ${other.path}`,
+        missingLinksText,
         'no tasks yet',
         'waiting for the agent: nothing',
         'waiting for Nick: nothing',

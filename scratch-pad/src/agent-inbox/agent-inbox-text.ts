@@ -1,11 +1,12 @@
 import { countedNoun } from '../counted-noun'
 import { decisionInboxLines } from '../decisions/decision-text'
 import { itemTypeNoun } from '../items/item-id'
+import { missingLinksLine, type ItemLinks } from '../item-links/item-links'
 import { threadInboxLines } from '../threads/thread-text'
 import { type AgentInboxItem, type AgentInboxSelection, type ItemCount } from './agent-inbox'
 
 export interface AgentInboxTextContext {
-  readonly padName: string
+  readonly links: ItemLinks
   readonly includeSeen: boolean
   readonly pageLines: (page: string) => readonly string[]
 }
@@ -18,12 +19,16 @@ export function agentInboxText(
   const summary = [
     ...(selection.otherItems.length === 0
       ? []
-      : [otherItemsText(selection.otherItems, context.padName)]),
+      : [otherItemsText(selection.otherItems, context.links.pad)]),
     ...(selection.sideNotes.length === 0 ? [] : [sideNotesText(selection.sideNotes)]),
   ]
   const summaryLines =
     summary.length === 0 ? [] : [...(items.length === 0 ? [] : ['']), summary.join(' · ')]
-  return [headerLine(selection, context), ...items, ...summaryLines].join('\n')
+  const missingLinks =
+    items.length === 0 || context.links.origin !== undefined
+      ? []
+      : ['', missingLinksLine(context.links.pad)]
+  return [headerLine(selection, context), ...items, ...summaryLines, ...missingLinks].join('\n')
 }
 
 export function itemCountText(entry: ItemCount): string {
@@ -34,21 +39,21 @@ function headerLine(selection: AgentInboxSelection, context: AgentInboxTextConte
   const count = selection.printed.length
   if (count > 0) {
     return context.includeSeen
-      ? `${countedNoun(count, 'item')} ${waitVerb(count)} for the agent in ${context.padName}`
-      : `${countedNoun(count, 'new item')} in ${context.padName}`
+      ? `${countedNoun(count, 'item')} ${waitVerb(count)} for the agent in ${context.links.pad}`
+      : `${countedNoun(count, 'new item')} in ${context.links.pad}`
   }
   if (context.includeSeen) {
-    return `nothing waits for the agent in ${context.padName}`
+    return `nothing waits for the agent in ${context.links.pad}`
   }
   return selection.seenBefore === 0
-    ? `nothing new in ${context.padName}`
-    : `nothing new in ${context.padName} · ${countedNoun(selection.seenBefore, 'item')} printed before (scratch-pad inbox --pad ${context.padName} --all)`
+    ? `nothing new in ${context.links.pad}`
+    : `nothing new in ${context.links.pad} · ${countedNoun(selection.seenBefore, 'item')} printed before (scratch-pad inbox --pad ${context.links.pad} --all)`
 }
 
 function itemLines(item: AgentInboxItem, context: AgentInboxTextContext): string[] {
   return item.kind === 'thread'
-    ? threadInboxLines(item.thread, context.pageLines(item.thread.page), context.padName)
-    : decisionInboxLines(item.decision)
+    ? threadInboxLines(item.thread, context.pageLines(item.thread.page), context.links)
+    : decisionInboxLines(item.decision, context.links)
 }
 
 function sideNotesText(sideNotes: readonly ItemCount[]): string {

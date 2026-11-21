@@ -2,6 +2,7 @@ import { setTimeout as sleep } from 'node:timers/promises'
 import { type AgentInboxSelection } from '../agent-inbox/agent-inbox'
 import { momentNickIsQuiet } from '../agent-inbox/nick-quiet'
 import { type ItemType } from '../items/item-id'
+import { type ItemLinks } from '../item-links/item-links'
 import { type PadDbWatch } from '../scratch-pad-folder/pad-db-watch'
 import { type ScratchPadFolder } from '../scratch-pad-folder/scratch-pad-folder'
 import { printedInboxText, recordAsPrinted, selectFromPadDb } from './inbox-commands'
@@ -12,6 +13,7 @@ export interface WaitRequest {
   readonly timeoutMilliseconds: number | undefined
   readonly checkMilliseconds: number
   readonly stopSignal: AbortSignal
+  readonly links: () => Promise<ItemLinks>
 }
 
 type WaitCheck =
@@ -32,7 +34,7 @@ export async function waitForAgentInbox(
       const timedOut = Date.now() >= deadline
       const check = printOnceNickIsQuiet(folder, request, timedOut)
       if (check.kind === 'printed') {
-        return printedInboxText(folder, check.selection, false)
+        return printedInboxText(folder, check.selection, false, await request.links())
       }
       if (timedOut || request.stopSignal.aborted) {
         return `the wait ended before a new item arrived in ${folder.name}`

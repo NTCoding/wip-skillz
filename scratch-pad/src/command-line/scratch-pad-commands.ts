@@ -14,6 +14,13 @@ import { finishItem, replyToThread, showItem } from '../agent-commands/thread-co
 import { waitForAgentInbox } from '../agent-commands/wait-commands'
 import { browserPageBundle } from '../local-server/browser-page-bundle'
 import { toolBuild } from '../local-server/tool-build'
+import {
+  itemLinks,
+  padLink,
+  progressTrackerLink,
+  textWithLink,
+  type ItemLinks,
+} from '../item-links/item-links'
 import { type ScratchPadFolder } from '../scratch-pad-folder/scratch-pad-folder'
 import { proseCheckFrom } from '../prose-check/prose-check'
 import { createScratchPad, type Environment } from '../scratch-pads-home/scratch-pads-home'
@@ -25,12 +32,7 @@ import {
   stopServerProcess,
   type ToolCommand,
 } from '../server-process/server-process'
-import {
-  serverAddress,
-  servingText,
-  startedServerText,
-  stoppedServerText,
-} from '../server-process/server-text'
+import { servingText, startedServerText, stoppedServerText } from '../server-process/server-text'
 import {
   inboxTypes,
   milliseconds,
@@ -77,6 +79,21 @@ const startMilliseconds = 5000
 const stopMilliseconds = 5000
 const defaultQuietMilliseconds = 10_000
 
+async function linksOf(input: CommandInput, folder: ScratchPadFolder): Promise<ItemLinks> {
+  const running = await runningServer(input.home())
+  return itemLinks(folder.name, running?.port)
+}
+
+async function withTrackerLink(
+  input: CommandInput,
+  change: (folder: ScratchPadFolder) => string,
+): Promise<string> {
+  const folder = input.folder()
+  const text = change(folder)
+  const links = await linksOf(input, folder)
+  return textWithLink(links, text, progressTrackerLink(links))
+}
+
 export const scratchPadCommands: ReadonlyMap<string, ScratchPadCommand> = new Map([
   [
     'new',
@@ -85,9 +102,11 @@ export const scratchPadCommands: ReadonlyMap<string, ScratchPadCommand> = new Ma
       summary: 'create a scratch pad with an index page and a progress tracker',
       options: [],
       wordsBeforeText: 0,
-      run: (input: CommandInput) => {
+      run: async (input: CommandInput) => {
         const topic = restOfWords(input.words, 0, 'topic', input.usage)
-        return scratchPadCreatedText(createScratchPad(input.home(), topic, new Date()))
+        const folder = createScratchPad(input.home(), topic, new Date())
+        const links = await linksOf(input, folder)
+        return textWithLink(links, scratchPadCreatedText(folder), padLink(links))
       },
     },
   ],
@@ -150,11 +169,7 @@ export const scratchPadCommands: ReadonlyMap<string, ScratchPadCommand> = new Ma
       options: pad,
       run: async (input: CommandInput) => {
         const folder = input.folder()
-        const running = await runningServer(input.home())
-        return scratchPadStatus(
-          folder,
-          running === undefined ? undefined : serverAddress(running.port, folder.name),
-        )
+        return scratchPadStatus(folder, await linksOf(input, folder))
       },
     },
   ],
@@ -165,11 +180,11 @@ export const scratchPadCommands: ReadonlyMap<string, ScratchPadCommand> = new Ma
       summary:
         'print the new items that wait for the agent (types: comment,decision,grammar,improvement)',
       options: ['pad', 'type', 'all'],
-      run: (input: CommandInput) =>
-        readAgentInbox(input.folder(), {
-          types: inboxTypes(input.options.type),
-          includeSeen: input.options.all,
-        }),
+      run: async (input: CommandInput) => {
+        const folder = input.folder()
+        const request = { types: inboxTypes(input.options.type), includeSeen: input.options.all }
+        return readAgentInbox(folder, request, await linksOf(input, folder))
+      },
     },
   ],
   [
@@ -179,14 +194,17 @@ export const scratchPadCommands: ReadonlyMap<string, ScratchPadCommand> = new Ma
       summary:
         'print the new items like inbox once Nick has been quiet for 10 seconds (--type works as for inbox)',
       options: ['pad', 'type', 'quiet', 'timeout'],
-      run: (input: CommandInput) =>
-        waitForAgentInbox(input.folder(), {
+      run: (input: CommandInput) => {
+        const folder = input.folder()
+        return waitForAgentInbox(folder, {
           types: inboxTypes(input.options.type),
           quietMilliseconds: milliseconds('quiet', input.options.quiet) ?? defaultQuietMilliseconds,
           timeoutMilliseconds: milliseconds('timeout', input.options.timeout),
           checkMilliseconds,
           stopSignal: input.stopSignal,
-        }),
+          links: () => linksOf(input, folder),
+        })
+      },
     },
   ],
   [
@@ -195,8 +213,11 @@ export const scratchPadCommands: ReadonlyMap<string, ScratchPadCommand> = new Ma
       usage: 'show <id>',
       summary: 'print one whole thread or decision',
       options: pad,
-      run: (input: CommandInput) =>
-        showItem(input.folder(), requiredWord(input.words, 0, 'id', input.usage)),
+      run: async (input: CommandInput) => {
+        const folder = input.folder()
+        const id = requiredWord(input.words, 0, 'id', input.usage)
+        return showItem(folder, id, await linksOf(input, folder))
+      },
     },
   ],
   [
@@ -206,12 +227,12 @@ export const scratchPadCommands: ReadonlyMap<string, ScratchPadCommand> = new Ma
       summary: 'add the reply of the agent to a thread, which then waits for Nick',
       options: pad,
       wordsBeforeText: 1,
-      run: (input: CommandInput) =>
-        replyToThread(
-          input.folder(),
-          requiredWord(input.words, 0, 'id', input.usage),
-          restOfWords(input.words, 1, 'text', input.usage),
-        ),
+      run: async (input: CommandInput) => {
+        const folder = input.folder()
+        const id = requiredWord(input.words, 0, 'id', input.usage)
+        const text = restOfWords(input.words, 1, 'text', input.usage)
+        return replyToThread(folder, id, text, await linksOf(input, folder))
+      },
     },
   ],
   [
@@ -222,12 +243,12 @@ export const scratchPadCommands: ReadonlyMap<string, ScratchPadCommand> = new Ma
         'close a grammar note, an improvement note or a decision with one line about the change',
       options: pad,
       wordsBeforeText: 1,
-      run: (input: CommandInput) =>
-        finishItem(
-          input.folder(),
-          requiredWord(input.words, 0, 'id', input.usage),
-          restOfWords(input.words, 1, 'outcome', input.usage),
-        ),
+      run: async (input: CommandInput) => {
+        const folder = input.folder()
+        const id = requiredWord(input.words, 0, 'id', input.usage)
+        const outcome = restOfWords(input.words, 1, 'outcome', input.usage)
+        return finishItem(folder, id, outcome, await linksOf(input, folder))
+      },
     },
   ],
   [
@@ -236,7 +257,10 @@ export const scratchPadCommands: ReadonlyMap<string, ScratchPadCommand> = new Ma
       usage: 'pages',
       summary: 'list the pages with their titles and open threads',
       options: pad,
-      run: (input: CommandInput) => listPages(input.folder()),
+      run: async (input: CommandInput) => {
+        const folder = input.folder()
+        return listPages(folder, await linksOf(input, folder))
+      },
     },
   ],
   [
@@ -261,8 +285,11 @@ export const scratchPadCommands: ReadonlyMap<string, ScratchPadCommand> = new Ma
       usage: 'outline <page>',
       summary: 'print the headings of a page with their line numbers',
       options: pad,
-      run: (input: CommandInput) =>
-        outlinePage(input.folder(), requiredWord(input.words, 0, 'page', input.usage)),
+      run: async (input: CommandInput) => {
+        const folder = input.folder()
+        const page = requiredWord(input.words, 0, 'page', input.usage)
+        return outlinePage(folder, page, await linksOf(input, folder))
+      },
     },
   ],
   [
@@ -273,7 +300,9 @@ export const scratchPadCommands: ReadonlyMap<string, ScratchPadCommand> = new Ma
       options: pad,
       wordsBeforeText: 0,
       run: (input: CommandInput) =>
-        setGoalOfScratchPad(input.folder(), restOfWords(input.words, 0, 'goal', input.usage)),
+        withTrackerLink(input, (folder) =>
+          setGoalOfScratchPad(folder, restOfWords(input.words, 0, 'goal', input.usage)),
+        ),
     },
   ],
   [
@@ -282,7 +311,7 @@ export const scratchPadCommands: ReadonlyMap<string, ScratchPadCommand> = new Ma
       usage: 'tasks',
       summary: 'list every task with its number, state and title',
       options: pad,
-      run: (input: CommandInput) => listTasks(input.folder()),
+      run: (input: CommandInput) => withTrackerLink(input, listTasks),
     },
   ],
   [
@@ -293,7 +322,9 @@ export const scratchPadCommands: ReadonlyMap<string, ScratchPadCommand> = new Ma
       options: pad,
       wordsBeforeText: 0,
       run: (input: CommandInput) =>
-        addTaskToTracker(input.folder(), restOfWords(input.words, 0, 'title', input.usage)),
+        withTrackerLink(input, (folder) =>
+          addTaskToTracker(folder, restOfWords(input.words, 0, 'title', input.usage)),
+        ),
     },
   ],
   [
@@ -303,7 +334,9 @@ export const scratchPadCommands: ReadonlyMap<string, ScratchPadCommand> = new Ma
       summary: 'start a task',
       options: pad,
       run: (input: CommandInput) =>
-        startTaskInTracker(input.folder(), taskNumber(input.words, 0, input.usage)),
+        withTrackerLink(input, (folder) =>
+          startTaskInTracker(folder, taskNumber(input.words, 0, input.usage)),
+        ),
     },
   ],
   [
@@ -313,7 +346,9 @@ export const scratchPadCommands: ReadonlyMap<string, ScratchPadCommand> = new Ma
       summary: 'finish a task and start the next task that is to do',
       options: pad,
       run: (input: CommandInput) =>
-        finishTaskInTracker(input.folder(), taskNumber(input.words, 0, input.usage)),
+        withTrackerLink(input, (folder) =>
+          finishTaskInTracker(folder, taskNumber(input.words, 0, input.usage)),
+        ),
     },
   ],
   [
@@ -323,8 +358,11 @@ export const scratchPadCommands: ReadonlyMap<string, ScratchPadCommand> = new Ma
       summary: 'add a decision from the chat to the log of decisions',
       options: pad,
       wordsBeforeText: 0,
-      run: (input: CommandInput) =>
-        logDecisionFromChat(input.folder(), restOfWords(input.words, 0, 'decision', input.usage)),
+      run: async (input: CommandInput) => {
+        const folder = input.folder()
+        const decision = restOfWords(input.words, 0, 'decision', input.usage)
+        return logDecisionFromChat(folder, decision, await linksOf(input, folder))
+      },
     },
   ],
   [

@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { readAgentInbox } from '../agent-commands/inbox-commands'
 import { addTaskToTracker } from '../agent-commands/progress-tracker-commands'
 import { nickComments } from '../nick-actions/nick-actions'
+import { unservedLinks } from '../item-links/item-links-fixtures'
 import {
   exportJobPadName,
   exportJobScratchPad,
@@ -91,7 +92,7 @@ describe('PadChangeStreams', () => {
     const { folder, server } = await serverWithExportJob()
     const changes = await openChanges(server, changesPath)
 
-    readAgentInbox(folder, { types: ['comment'], includeSeen: false })
+    readAgentInbox(folder, { types: ['comment'], includeSeen: false }, unservedLinks)
     await new Promise((resolve) => setTimeout(resolve, 50))
     agentEditsIndexPage(folder)
 

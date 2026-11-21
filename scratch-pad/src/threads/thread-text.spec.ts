@@ -1,8 +1,7 @@
 import { describe, expect, it } from 'vitest'
+import { exportJobAddress, servedLinks, unservedLinks } from '../item-links/item-links-fixtures'
 import { aThread, retryAnchor } from './thread-fixtures'
 import { threadInboxLines, threadShowLines } from './thread-text'
-
-const padName = '2026-03-14-export-job'
 
 const indexPage = [
   '# Export job',
@@ -20,7 +19,7 @@ const longPage = [
 
 describe('threadInboxLines', () => {
   it('prints the id, the lines, the section, the selected text, the message and the block', () => {
-    expect(threadInboxLines(aThread({}), indexPage, padName)).toStrictEqual([
+    expect(threadInboxLines(aThread({}), indexPage, unservedLinks)).toStrictEqual([
       '[c-1] comment · pages/index.md:5-6 · section "Retry policy"',
       '  selected: "The export job retries 5 times."',
       '  Nick: Is 5 retries enough on a slow network?',
@@ -41,7 +40,7 @@ describe('threadInboxLines', () => {
       },
     })
 
-    expect(threadInboxLines(thread, indexPage.slice(0, 5), padName)[0]).toBe(
+    expect(threadInboxLines(thread, indexPage.slice(0, 5), unservedLinks)[0]).toBe(
       '[c-1] comment · pages/index.md:5 · section "Retry policy"',
     )
   })
@@ -51,7 +50,7 @@ describe('threadInboxLines', () => {
       anchor: { firstLine: 1, lastLine: 1, selectedText: 'retries', prefix: 'plain', suffix: '' },
     })
 
-    expect(threadInboxLines(thread, ['plain retries'], padName)[0]).toBe(
+    expect(threadInboxLines(thread, ['plain retries'], unservedLinks)[0]).toBe(
       '[c-1] comment · pages/index.md:1',
     )
   })
@@ -59,7 +58,7 @@ describe('threadInboxLines', () => {
   it('prints the current lines and block when the agent added lines above the text', () => {
     const page = [...indexPage.slice(0, 4), 'A new paragraph.', '', ...indexPage.slice(4)]
 
-    expect(threadInboxLines(aThread({}), page, padName)).toStrictEqual([
+    expect(threadInboxLines(aThread({}), page, unservedLinks)).toStrictEqual([
       '[c-1] comment · pages/index.md:7-8 · section "Retry policy"',
       '  selected: "The export job retries 5 times."',
       '  Nick: Is 5 retries enough on a slow network?',
@@ -72,7 +71,7 @@ describe('threadInboxLines', () => {
   it('prints the text that is there now when the agent changed a word of the selected text', () => {
     const page = indexPage.map((line) => line.replace('5 times', '8 times'))
 
-    expect(threadInboxLines(aThread({}), page, padName).slice(1, 3)).toStrictEqual([
+    expect(threadInboxLines(aThread({}), page, unservedLinks).slice(1, 3)).toStrictEqual([
       '  selected: "The export job retries 5 times."',
       '  now: "The export job retries 8 times."',
     ])
@@ -81,7 +80,7 @@ describe('threadInboxLines', () => {
   it('prints only the page when an improvement note has no anchor', () => {
     const thread = aThread({ id: 'i-1', type: 'improvement', anchor: undefined })
 
-    expect(threadInboxLines(thread, indexPage, padName)).toStrictEqual([
+    expect(threadInboxLines(thread, indexPage, unservedLinks)).toStrictEqual([
       '[i-1] improvement note · pages/index.md',
       '  Nick: Is 5 retries enough on a slow network?',
     ])
@@ -98,7 +97,7 @@ describe('threadInboxLines', () => {
       },
     })
 
-    expect(threadInboxLines(thread, longPage, padName).slice(-6)).toStrictEqual([
+    expect(threadInboxLines(thread, longPage, unservedLinks).slice(-6)).toStrictEqual([
       '     2 | Line 2',
       '     3 | Line 3',
       '     4 | Line 4',
@@ -111,7 +110,7 @@ describe('threadInboxLines', () => {
   it('prints that the thread is detached with the old lines when the selected text was deleted', () => {
     const page = indexPage.map((line) => line.replace('The export job retries 5 times.', ''))
 
-    expect(threadInboxLines(aThread({}), page, padName)).toStrictEqual([
+    expect(threadInboxLines(aThread({}), page, unservedLinks)).toStrictEqual([
       '[c-1] comment · pages/index.md · detached from lines 5-6',
       '  selected: "The export job retries 5 times."',
       '  Nick: Is 5 retries enough on a slow network?',
@@ -120,7 +119,7 @@ describe('threadInboxLines', () => {
   })
 
   it('prints that the page doesn’t exist any more when the agent deleted the page of the thread', () => {
-    expect(threadInboxLines(aThread({}), [], padName).at(-1)).toBe(
+    expect(threadInboxLines(aThread({}), [], unservedLinks).at(-1)).toBe(
       "  block: (pages/index.md doesn't exist any more)",
     )
   })
@@ -128,7 +127,7 @@ describe('threadInboxLines', () => {
   it('prints the one old line when a thread of one line is detached', () => {
     const thread = aThread({ anchor: { ...retryAnchor, lastLine: 5 } })
 
-    expect(threadInboxLines(thread, ['# Export job'], padName)[0]).toBe(
+    expect(threadInboxLines(thread, ['# Export job'], unservedLinks)[0]).toBe(
       '[c-1] comment · pages/index.md · detached from line 5',
     )
   })
@@ -139,7 +138,7 @@ describe('threadInboxLines', () => {
       anchor: { firstLine: 5, lastLine: 5, selectedText, prefix: '', suffix: '' },
     })
 
-    const selectedLine = threadInboxLines(thread, [selectedText], padName)[1]
+    const selectedLine = threadInboxLines(thread, [selectedText], unservedLinks)[1]
     const joined = 'retry '.repeat(20) + 'wait '.repeat(20)
 
     expect(selectedLine).toBe(`  selected: "${joined.slice(0, 159)}…"`)
@@ -154,10 +153,25 @@ describe('threadInboxLines', () => {
       ],
     })
 
-    expect(threadInboxLines(thread, indexPage, padName).slice(2, 4)).toStrictEqual([
+    expect(threadInboxLines(thread, indexPage, unservedLinks).slice(2, 4)).toStrictEqual([
       '  earlier: 2 messages (scratch-pad show --pad 2026-03-14-export-job c-1)',
       '  Nick: What about\n    a slow network?',
     ])
+  })
+})
+
+describe('the link of a thread', () => {
+  it('prints the link under the header in the inbox when the server is running', () => {
+    expect(threadInboxLines(aThread({}), indexPage, servedLinks).slice(0, 2)).toStrictEqual([
+      '[c-1] comment · pages/index.md:5-6 · section "Retry policy"',
+      `  link: ${exportJobAddress}#c-1`,
+    ])
+  })
+
+  it('prints the link under the header of the whole thread when the server is running', () => {
+    expect(threadShowLines(aThread({}), indexPage, servedLinks)[1]).toBe(
+      `  link: ${exportJobAddress}#c-1`,
+    )
   })
 })
 
@@ -171,7 +185,7 @@ describe('threadShowLines', () => {
       ],
     })
 
-    expect(threadShowLines(thread, indexPage)).toStrictEqual([
+    expect(threadShowLines(thread, indexPage, unservedLinks)).toStrictEqual([
       '[c-1] comment · pages/index.md:5-6 · section "Retry policy" · waits for Nick',
       '  selected: "The export job retries 5 times."',
       '  block:',
@@ -193,7 +207,7 @@ describe('threadShowLines', () => {
       },
     })
 
-    expect(threadShowLines(thread, longPage)).toStrictEqual([
+    expect(threadShowLines(thread, longPage, unservedLinks)).toStrictEqual([
       '[c-1] comment · pages/index.md:2-13 · section "Invoice template" · waits for the agent',
       '  selected: "Line 2"',
       '  block:',
@@ -213,7 +227,7 @@ describe('threadShowLines', () => {
       outcome: 'Removed the comma.',
     })
 
-    const lines = threadShowLines(thread, indexPage)
+    const lines = threadShowLines(thread, indexPage, unservedLinks)
 
     expect([lines[0], lines.at(-1)]).toStrictEqual([
       '[g-1] grammar note · pages/index.md:5-6 · section "Retry policy" · closed',
@@ -222,7 +236,7 @@ describe('threadShowLines', () => {
   })
 
   it('prints waits for the agent when the thread waits for the agent', () => {
-    expect(threadShowLines(aThread({}), indexPage)[0]).toBe(
+    expect(threadShowLines(aThread({}), indexPage, unservedLinks)[0]).toBe(
       '[c-1] comment · pages/index.md:5-6 · section "Retry policy" · waits for the agent',
     )
   })

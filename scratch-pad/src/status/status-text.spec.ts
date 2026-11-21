@@ -1,13 +1,18 @@
 import { describe, expect, it } from 'vitest'
 import { aDecisionAnswer } from '../decisions/decision-answer-fixtures'
+import {
+  exportJobAddress,
+  missingLinksText,
+  servedLinks,
+  unservedLinks,
+} from '../item-links/item-links-fixtures'
 import { trackerWithTasks } from '../progress-tracker/progress-tracker-fixtures'
 import { aThread } from '../threads/thread-fixtures'
 import { statusText } from './status-text'
 
 const scratchPad = {
-  padName: '2026-03-14-export-job',
   padPath: '/pads/2026-03-14-export-job',
-  pageAddress: undefined,
+  links: servedLinks,
   tracker: trackerWithTasks(['done', 'in-progress', 'to-do']),
   nickInbox: { threads: [], decisions: [] },
 }
@@ -36,29 +41,34 @@ describe('statusText', () => {
     ).toBe(
       [
         '2026-03-14-export-job · /pads/2026-03-14-export-job',
+        `in the browser: ${exportJobAddress}`,
         'task 2 of 3: Task about retry 2',
+        `link: ${exportJobAddress}progress-tracker`,
         'waiting for the agent: 1 comment, 1 decision, 2 grammar notes',
         'waiting for Nick: 1 reply',
       ].join('\n'),
     )
   })
 
-  it('prints the address of the scratch pad in the browser when the server runs', () => {
-    const address = 'http://127.0.0.1:4747/2026-03-14-export-job/'
+  it("prints that there aren't any links instead of both links when the server isn't running", () => {
     const lines = statusText({
       ...scratchPad,
-      pageAddress: address,
+      links: unservedLinks,
       threads: [],
       decisions: [],
     }).split('\n')
 
-    expect(lines[1]).toBe(`in the browser: ${address}`)
+    expect(lines.slice(1, 4)).toStrictEqual([
+      missingLinksText,
+      'task 2 of 3: Task about retry 2',
+      'waiting for the agent: nothing',
+    ])
   })
 
   it('prints nothing for both inboxes when nothing waits', () => {
     const lines = statusText({ ...scratchPad, threads: [], decisions: [] }).split('\n')
 
-    expect(lines.slice(2)).toStrictEqual([
+    expect(lines.slice(4)).toStrictEqual([
       'waiting for the agent: nothing',
       'waiting for Nick: nothing',
     ])
@@ -71,7 +81,7 @@ describe('statusText', () => {
     ]
     const nickInbox = { threads, decisions: [] }
 
-    expect(statusText({ ...scratchPad, threads, decisions: [], nickInbox }).split('\n')[3]).toBe(
+    expect(statusText({ ...scratchPad, threads, decisions: [], nickInbox }).split('\n')[5]).toBe(
       'waiting for Nick: 2 replies',
     )
   })
@@ -83,7 +93,7 @@ describe('statusText', () => {
     }
 
     expect(
-      statusText({ ...scratchPad, threads: [], decisions: [], nickInbox }).split('\n')[3],
+      statusText({ ...scratchPad, threads: [], decisions: [], nickInbox }).split('\n')[5],
     ).toBe('waiting for Nick: 2 decisions, 1 reply')
   })
 })

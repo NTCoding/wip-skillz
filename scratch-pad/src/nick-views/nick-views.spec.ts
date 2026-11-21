@@ -5,6 +5,7 @@ import { replyToThread } from '../agent-commands/thread-commands'
 import { logDecisionFromChat } from '../agent-commands/decision-log-commands'
 import { addTaskToTracker } from '../agent-commands/progress-tracker-commands'
 import { nickAnswersDecision, nickComments, nickResolves } from '../nick-actions/nick-actions'
+import { unservedLinks } from '../item-links/item-links-fixtures'
 import { UnknownPageError } from '../pages/page-markdown'
 import {
   exportJobScratchPad,
@@ -170,7 +171,7 @@ describe('nickInboxItems', () => {
     const folder = folderWithDecisions()
     commentOnRetryPolicy(folder, 'Is 5 retries enough?')
     commentOnRetryPolicy(folder, 'Is 30 seconds enough?')
-    replyToThread(folder, 'c-2', 'I have raised the wait to 60 seconds.')
+    replyToThread(folder, 'c-2', 'I have raised the wait to 60 seconds.', unservedLinks)
     nickAnswersRetryQuestion(folder)
 
     const inbox = nickInboxItems(folder)
@@ -227,7 +228,7 @@ describe('progressTrackerOf', () => {
 describe('decisionLogOf', () => {
   it('returns the decisions from the chat and from the pages in the order they were logged', () => {
     const folder = folderWithDecisions()
-    logDecisionFromChat(folder, 'The export job runs every night.')
+    logDecisionFromChat(folder, 'The export job runs every night.', unservedLinks)
     nickAnswersRetryQuestion(folder)
 
     expect(decisionLogOf(folder)).toStrictEqual([

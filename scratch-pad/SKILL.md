@@ -27,13 +27,44 @@ You'll find the details in [reference.md](reference.md), like each command's opt
 
 Nick has invoked this skill. Your first action is therefore a scratch pad rather than a reply in the chat.
 
-From now on, everything that you'd write to Nick goes on the pages of the scratch pad. That includes your replies, your analysis, your questions, your proposals and the decisions that Nick has to make. The chat is only for short status updates, such as the address of the scratch pad or the name of the page that you've just changed. Never put the content itself in the chat. A question for Nick appears in the chat only as its title with a link to its page. Everything else about the question stays on the page, even if another instruction asks for a sentence about the problem in the chat.
+From now on, everything that you'd write to Nick goes on the pages of the scratch pad. That includes your replies, your analysis, your questions, your proposals and the decisions that Nick has to make. The chat is only for short status updates, such as the address of the scratch pad or a link to the page that you've just changed. Never put the content itself in the chat. A question for Nick appears in the chat only as its title with a link to its page. Everything else about the question stays on the page, even if another instruction asks for a sentence about the problem in the chat.
 
 Nick starts the skill himself in one of these 3 ways:
 
 - **A new scratch pad at the start of a session.** Run `new` with the topic that Nick gives. Then run `start` and give Nick the address.
 - **The current session as a scratch pad.** Run `new` and `start`. Then write the pages from what you and Nick have said so far. The goal and the tasks go in the progress tracker.
 - **An existing scratch pad.** Nick gives you its folder. Run `start`, `status` and `inbox --all`, then continue with the current task of the progress tracker.
+
+### Link to everything that you mention in the chat
+
+Nick can't open anything on the scratch pad from the chat. So every time you mention a page in the chat, write the mention as a Markdown link to its address in the browser. Do the same every time you mention one of these things:
+
+- a heading
+- a decision
+- a thread
+- the progress tracker
+- the log of decisions
+
+Never mention any of them without its link, even if you only write its id.
+
+Copy each address from the output of the tool rather than build it yourself. This list shows which command prints which link:
+
+- `status` prints the address of the scratch pad and the address of the progress tracker.
+- `pages` prints the address of each page.
+- `outline` prints the address of each heading.
+- `wait`, `inbox` and `show` print a `link:` line under each decision and each thread.
+- `reply` and `done` print the link of the thread or the decision that they've changed.
+- `new` prints the address of the scratch pad.
+- `goal`, `tasks`, `task add`, `task start` and `task done` print the address of the progress tracker.
+- `decide` prints the address of the log of decisions.
+
+If the server isn't running, the tool will print a line that tells you to run `start` instead of the links. In that case, run `start` first. Then copy the address from a command that doesn't change anything, like `show`, `pages`, `outline`, `tasks` or `status`. Never run `decide`, `reply` or `done` a second time only to get a link, because each run adds another entry to the scratch pad.
+
+This is an example of a status update in the chat, with invented content. Every mention of a page or an item in it is a link:
+
+```markdown
+I've replied to [your comment on "every night"](http://127.0.0.1:4747/2026-11-21-invoice-export/#c-1). I've also rewritten [How the job runs](http://127.0.0.1:4747/2026-11-21-invoice-export/#how-the-job-runs) because you picked the proposal in [Will the export job retry 8 times?](http://127.0.0.1:4747/2026-11-21-invoice-export/#d-1).
+```
 
 ## Start a scratch pad
 
@@ -43,6 +74,7 @@ Create the scratch pad and start the server, then give Nick the address that `st
 $ scratch-pad new "Invoice export"
 created /Users/nick/scratch-pads/2026-11-21-invoice-export
 select it with --pad 2026-11-21-invoice-export or SCRATCH_PAD=2026-11-21-invoice-export
+there aren't any links because the server isn't running (scratch-pad start --pad 2026-11-21-invoice-export)
 
 $ scratch-pad start --pad 2026-11-21-invoice-export
 started the server: http://127.0.0.1:4747/2026-11-21-invoice-export/
@@ -129,12 +161,14 @@ $ scratch-pad wait --pad 2026-11-21-invoice-export
 2 new items in 2026-11-21-invoice-export
 
 [c-1] comment · pages/index.md:3 · section "How the job runs"
+  link: http://127.0.0.1:4747/2026-11-21-invoice-export/#c-1
   selected: "every night"
   Nick: Can a shop pick another time?
   block:
     3 | The export job writes the paid invoices of each shop to a CSV file every night.
 
 [d-1] decision · pages/index.md:9 · "Will the export job retry 8 times?"
+  link: http://127.0.0.1:4747/2026-11-21-invoice-export/#d-1
   Nick chose: proposal
 
 1 grammar note waits for a subagent
@@ -151,6 +185,7 @@ If Nick has asked for a change in his comment, change the page first and then re
 ```text
 $ scratch-pad reply --pad 2026-11-21-invoice-export c-1 "No. Every shop exports at 02:00, which I've added to the page."
 c-1 now waits for Nick
+link: http://127.0.0.1:4747/2026-11-21-invoice-export/#c-1
 ```
 
 ### Follow Nick's decision
@@ -162,10 +197,12 @@ Don't run `reply` or `decide` for a decision, because a decision can't be replie
 ```text
 $ scratch-pad show --pad 2026-11-21-invoice-export d-1
 [d-1] decision · pages/index.md:9 · "Will the export job retry 8 times?" · waits for the agent
+  link: http://127.0.0.1:4747/2026-11-21-invoice-export/#d-1
   Nick chose: proposal
 
 $ scratch-pad done --pad 2026-11-21-invoice-export d-1 "Raised the retry limit to 8 on the page."
 d-1 is done
+link: http://127.0.0.1:4747/2026-11-21-invoice-export/#d-1
 ```
 
 ### Hand the notes to a subagent
@@ -186,6 +223,7 @@ This is an example of what the subagent runs and what it sees:
 ```text
 $ scratch-pad inbox --pad 2026-11-21-invoice-export --type grammar,improvement
 [g-1] grammar note · pages/index.md:7 · section "Will the export job retry 8 times?"
+  link: http://127.0.0.1:4747/2026-11-21-invoice-export/#g-1
   selected: "can be slow"
   Nick: Write when it is slow.
   block:
@@ -193,6 +231,7 @@ $ scratch-pad inbox --pad 2026-11-21-invoice-export --type grammar,improvement
 
 $ scratch-pad done --pad 2026-11-21-invoice-export g-1 "Wrote that the network is slow in the evening."
 g-1 is done
+link: http://127.0.0.1:4747/2026-11-21-invoice-export/#g-1
 ```
 
 Nick still sees a closed note on the page, together with the line about the change.
@@ -204,6 +243,7 @@ The server logs every decision that Nick makes on a page, whether he clicks a bu
 ```text
 $ scratch-pad decide --pad 2026-11-21-invoice-export "The export job runs at 02:00 for every shop."
 decision 2 is logged
+link: http://127.0.0.1:4747/2026-11-21-invoice-export/decisions
 ```
 
 ### Check a page before you tell Nick

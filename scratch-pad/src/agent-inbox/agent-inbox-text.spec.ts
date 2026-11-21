@@ -1,11 +1,17 @@
 import { describe, expect, it } from 'vitest'
 import { aDecisionAnswer } from '../decisions/decision-answer-fixtures'
+import {
+  exportJobAddress,
+  missingLinksText,
+  servedLinks,
+  unservedLinks,
+} from '../item-links/item-links-fixtures'
 import { aThread } from '../threads/thread-fixtures'
 import { nothingPrinted, type AgentInboxSelection } from './agent-inbox'
 import { agentInboxText, itemCountText, type AgentInboxTextContext } from './agent-inbox-text'
 
 const context: AgentInboxTextContext = {
-  padName: '2026-03-14-export-job',
+  links: servedLinks,
   includeSeen: false,
   pageLines: () => ['# Export job', '', '## Retry policy', '', 'The export job retries 5 times.'],
 }
@@ -45,16 +51,30 @@ describe('agentInboxText', () => {
         '2 new items in 2026-03-14-export-job',
         '',
         '[c-1] comment · pages/index.md:5 · section "Retry policy"',
+        `  link: ${exportJobAddress}#c-1`,
         '  selected: "retries"',
         '  Nick: Is 5 retries enough on a slow network?',
         '  block:',
         '    5 | The export job retries 5 times.',
         '',
         '[d-1] decision · pages/index.md:9 · "Will the invoice template show the tax number?"',
+        `  link: ${exportJobAddress}#d-1`,
         '  Nick chose: proposal',
         '',
         '2 grammar notes wait for a subagent',
       ].join('\n'),
+    )
+  })
+
+  it("prints that there aren't any links instead of each link when the server isn't running", () => {
+    const lines = agentInboxText(twoItems, { ...context, links: unservedLinks }).split('\n')
+
+    expect([lines[3], lines.at(-1)]).toStrictEqual(['  selected: "retries"', missingLinksText])
+  })
+
+  it("doesn't print the line about the links when nothing is printed and the server isn't running", () => {
+    expect(agentInboxText(empty, { ...context, links: unservedLinks })).toBe(
+      'nothing new in 2026-03-14-export-job',
     )
   })
 

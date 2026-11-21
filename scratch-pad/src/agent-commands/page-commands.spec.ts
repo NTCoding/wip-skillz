@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest'
 import { nickComments, nickResolves } from '../nick-actions/nick-actions'
+import { exportJobAddress, servedLinks } from '../item-links/item-links-fixtures'
 import { UnknownPageError } from '../pages/page-markdown'
 import {
   exportJobScratchPad,
@@ -23,10 +24,10 @@ describe('listPages', () => {
     nickComments(folder, { ...note, page: 'pages/retry-policy.md' })
     nickResolves(folder, 'i-3')
 
-    expect(listPages(folder)).toBe(
+    expect(listPages(folder, servedLinks)).toBe(
       [
-        'pages/index.md         Export job    2 open threads',
-        'pages/retry-policy.md  Retry policy  no open threads',
+        `pages/index.md         Export job    2 open threads   ${exportJobAddress}`,
+        `pages/retry-policy.md  Retry policy  no open threads  ${exportJobAddress}retry-policy.md`,
       ].join('\n'),
     )
   })
@@ -36,11 +37,16 @@ describe('outlinePage', () => {
   it('prints the headings of the page with their line numbers', () => {
     const folder = exportJobScratchPad(temporaryHome())
 
-    expect(outlinePage(folder, 'index.md')).toBe('1  # Export job\n3  ## Retry policy')
+    expect(outlinePage(folder, 'index.md', servedLinks)).toBe(
+      [
+        `1  # Export job  ${exportJobAddress}#export-job`,
+        `3  ## Retry policy  ${exportJobAddress}#retry-policy`,
+      ].join('\n'),
+    )
   })
 
   it('throws UnknownPageError when the page does not exist', () => {
-    const outline = () => outlinePage(exportJobScratchPad(temporaryHome()), 'invoice')
+    const outline = () => outlinePage(exportJobScratchPad(temporaryHome()), 'invoice', servedLinks)
 
     expect(outline).toThrow(UnknownPageError)
     expect(outline).toThrow(

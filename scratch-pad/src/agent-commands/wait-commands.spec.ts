@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest'
 import { nickComments } from '../nick-actions/nick-actions'
+import { exportJobAddress, servedLinks } from '../item-links/item-links-fixtures'
 import {
   exportJobScratchPad,
   removeTemporaryHomes,
@@ -14,6 +15,7 @@ const commentText = [
   '1 new item in 2026-03-14-export-job',
   '',
   '[c-1] comment · pages/index.md:5-6 · section "Retry policy"',
+  `  link: ${exportJobAddress}#c-1`,
   '  selected: "The export job retries 5 times."',
   '  Nick: Is 5 retries enough on a slow network?',
   '  block:',
@@ -34,6 +36,7 @@ function waitRequest(changes: Partial<WaitRequest> = {}): WaitRequest {
     timeoutMilliseconds: undefined,
     checkMilliseconds: 10,
     stopSignal: new AbortController().signal,
+    links: () => Promise.resolve(servedLinks),
     ...changes,
   }
 }
@@ -82,7 +85,7 @@ describe('waitForAgentInbox', () => {
     nickCommentsOnRetryPolicy(folder)
     await waitForAgentInbox(folder, waitRequest())
 
-    expect(readAgentInbox(folder, { types: ['comment'], includeSeen: false })).toBe(
+    expect(readAgentInbox(folder, { types: ['comment'], includeSeen: false }, servedLinks)).toBe(
       'nothing new in 2026-03-14-export-job · 1 item printed before (scratch-pad inbox --pad 2026-03-14-export-job --all)',
     )
   })

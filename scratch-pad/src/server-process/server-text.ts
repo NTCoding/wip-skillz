@@ -1,8 +1,9 @@
+import { serverOrigin } from '../item-links/item-links'
+import { padPath } from '../browser-page/pad-paths'
 import { type StartedServer } from './server-process'
 
 export function serverAddress(port: number, padName: string | undefined): string {
-  const pad = padName === undefined ? '' : `${encodeURIComponent(padName)}/`
-  return `http://127.0.0.1:${port}/${pad}`
+  return `${serverOrigin(port)}${padName === undefined ? '/' : padPath(padName)}`
 }
 
 const startedTexts: Readonly<Record<StartedServer['how'], string>> = {

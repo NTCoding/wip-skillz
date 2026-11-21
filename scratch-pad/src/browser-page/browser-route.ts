@@ -1,4 +1,14 @@
 import { type HtmlBlockFrameSource } from './design-system/design-system'
+import {
+  decisionLogHref,
+  decisionLogPath,
+  indexFile,
+  pageHref,
+  progressTrackerHref,
+  progressTrackerPath,
+} from './pad-paths'
+
+export { decisionLogHref, fileOfPage, pageHref, progressTrackerHref } from './pad-paths'
 
 export type BrowserRoute =
   | {
@@ -14,10 +24,6 @@ interface BrowserLocation {
   readonly pathname: string
   readonly hash: string
 }
-
-const indexFile = 'index.md'
-const progressTrackerPath = 'progress-tracker'
-const decisionLogPath = 'decisions'
 
 function decoded(part: string): string {
   try {
@@ -49,27 +55,6 @@ function firstAndRest(path: string): string[] {
 export function routeOf(location: BrowserLocation): BrowserRoute {
   const [pad = '', rest = ''] = firstAndRest(location.pathname.replace(/^\//, ''))
   return routeFrom(pad, rest, decoded(location.hash.replace(/^#/, '')))
-}
-
-function padPath(pad: string): string {
-  return `/${encodeURIComponent(pad)}/`
-}
-
-export function pageHref(pad: string, file: string, section?: string): string {
-  const path = file === indexFile ? padPath(pad) : `${padPath(pad)}${encodeURIComponent(file)}`
-  return section === undefined ? path : `${path}#${encodeURIComponent(section)}`
-}
-
-export function progressTrackerHref(pad: string): string {
-  return `${padPath(pad)}${progressTrackerPath}`
-}
-
-export function decisionLogHref(pad: string): string {
-  return `${padPath(pad)}${decisionLogPath}`
-}
-
-export function fileOfPage(page: string): string {
-  return page.replace(/^pages\//, '')
 }
 
 export interface PadAddresses {

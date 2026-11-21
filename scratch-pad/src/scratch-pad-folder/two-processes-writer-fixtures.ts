@@ -4,6 +4,7 @@ import { readAgentInbox } from '../agent-commands/inbox-commands'
 import { addTaskToTracker } from '../agent-commands/progress-tracker-commands'
 import { replyToThread } from '../agent-commands/thread-commands'
 import { nickAnswersDecision, nickComments, nickReplies } from '../nick-actions/nick-actions'
+import { itemLinks, type ItemLinks } from '../item-links/item-links'
 import { ScratchPadError } from '../scratch-pad-error'
 import { padSchema } from './pad-schema'
 import { secondVersionPadSchema } from './pad-schema-fixtures'
@@ -38,6 +39,10 @@ class WriterArgumentsError extends ScratchPadError {
 const readInboxTimeoutMilliseconds = 10_000
 const mainInbox = { types: ['comment', 'decision'], includeSeen: false } as const
 
+function unservedLinksOf(run: WriterRun): ItemLinks {
+  return itemLinks(run.folder.name, undefined)
+}
+
 function numbers(count: number): number[] {
   return Array.from({ length: count }, (_, index) => index + 1)
 }
@@ -57,7 +62,9 @@ function readInboxUntilPrinted(
 ): void {
   const printed = new Set<string>()
   while (printed.size < run.count && Date.now() < run.deadline) {
-    Array.from(readAgentInbox(run.folder, mainInbox).matchAll(printedItem)).forEach((match) => {
+    Array.from(
+      readAgentInbox(run.folder, mainInbox, unservedLinksOf(run)).matchAll(printedItem),
+    ).forEach((match) => {
       const id = match[0].slice(1, -1)
       printed.add(id)
       run.print(line(id))
@@ -69,7 +76,9 @@ const writers: Readonly<Record<WriterName, (run: WriterRun) => void>> = {
   'agent-adds-tasks': (run) =>
     numbers(run.count).forEach((n) => addTaskToTracker(run.folder, `Export batch ${n}`)),
   'agent-replies': (run) =>
-    numbers(run.count).forEach((n) => replyToThread(run.folder, 'c-1', `Agent reply ${n}`)),
+    numbers(run.count).forEach((n) =>
+      replyToThread(run.folder, 'c-1', `Agent reply ${n}`, unservedLinksOf(run)),
+    ),
   'agent-reads-inbox': readInboxUntilAllCommentsArePrinted,
   'agent-reads-decisions': readInboxUntilAllSecondAnswersArePrinted,
   'nick-comments': (run) =>
