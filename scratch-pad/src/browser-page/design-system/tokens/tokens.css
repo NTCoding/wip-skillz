@@ -125,6 +125,8 @@
   --tint: rgb(0 0 0 / 5%);
   --tint-strong: rgb(0 0 0 / 9%);
   --scrim: rgb(0 0 0 / 55%);
+  --scrim-sidebar: rgb(255 255 255 / 60%);
+  --outline-bar: rgb(0 0 0 / 14%);
   --selection: rgb(26 137 23 / 20%);
 
   /* The focus ring is solid so that it has a contrast of 3 to 1 or more */
@@ -264,4 +266,15 @@
   --inbox-count-size: 18px;
   --field-min-h: 34px;
   --field-max-h: 160px;
+  --outline-top: 120px;
+  --outline-w: 56px;
+  --outline-bar-w: 16px;
+  --outline-bar-w-3: 12px;
+  --outline-bar-w-4: 8px;
+  --outline-bars-reserve: 200px;
+  --outline-card-w: 240px;
+  --outline-card-max-h: 640px;
+  --outline-card-reserve: 132px;
+  --outline-indent-3: 22px;
+  --outline-indent-4: 34px;
 }

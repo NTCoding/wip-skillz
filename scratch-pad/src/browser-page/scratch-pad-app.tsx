@@ -24,17 +24,16 @@ import {
   ColourSwitcher,
   Inbox,
   StatusPill,
-  Tabs,
   TopBar,
   type ColourMode,
   type Navigate,
   type PreviewContent,
-  type Tab,
 } from './design-system/design-system'
 import { useLoadedValue, type LoadedValue } from './loaded-value'
 import { MissingPageView } from './missing-page-view'
 import { nickInboxEntries } from './nick-inbox-entries'
 import { PadSidebar, sectionsOf } from './pad-sidebar'
+import { PageOutline } from './page-outline'
 import { firstRevisions, pageRevisionOf, revisedAfterReconnect, revisedBy } from './pad-revisions'
 import { pagePreview } from './page-preview'
 import { PageWithThreads, type PageActions } from './page-with-threads'
@@ -61,27 +60,14 @@ function loadedOr<T>(loaded: LoadedValue<T>, fallback: T): T {
   return loaded.status === 'loaded' ? loaded.value : fallback
 }
 
-function tabsOf(addresses: PadAddresses, route: BrowserRoute, file: string): Tab[] {
-  return [
-    {
-      label: 'Pages',
-      href: addresses.pageHref(file),
-      icon: 'page',
-      current: route.kind === 'page',
-    },
-    {
-      label: 'Progress tracker',
-      href: addresses.progressTrackerHref,
-      icon: 'progress-tracker',
-      current: route.kind === 'progress-tracker',
-    },
-    {
-      label: 'Decisions',
-      href: addresses.decisionLogHref,
-      icon: 'decision',
-      current: route.kind === 'decision-log',
-    },
-  ]
+function currentViewOf(route: BrowserRoute, viewedPage: ViewedPage | undefined): string {
+  if (route.kind === 'progress-tracker') {
+    return 'Progress tracker'
+  }
+  if (route.kind === 'decision-log') {
+    return 'Decisions'
+  }
+  return viewedPage?.title ?? route.file
 }
 
 interface PageContext {
@@ -251,18 +237,13 @@ export function ScratchPadApp(props: ScratchPadAppProps) {
   return (
     <AppFrame
       sidebarCollapsed={collapsed}
+      onSidebarCollapse={() => changeCollapsed(true)}
       topBar={
         <TopBar
           title={padTitle}
           titleHref={addresses.pageHref('index.md')}
+          current={currentViewOf(route, viewedPage)}
           onNavigate={navigate}
-          tabs={
-            <Tabs
-              label="Views of the scratch pad"
-              tabs={tabsOf(addresses, route, file)}
-              onNavigate={navigate}
-            />
-          }
           actions={
             <>
               {serverStopped && (
@@ -279,6 +260,8 @@ export function ScratchPadApp(props: ScratchPadAppProps) {
       sidebar={
         <PadSidebar
           addresses={addresses}
+          title={padTitle}
+          view={route.kind}
           pages={pageList}
           currentFile={route.kind === 'page' ? route.file : undefined}
           currentPage={viewedPage}
@@ -300,6 +283,9 @@ export function ScratchPadApp(props: ScratchPadAppProps) {
         pageContext={{ addresses, onNavigate: navigate, loadPreview }}
         actions={actions}
       />
+      {viewedPage !== undefined && (
+        <PageOutline addresses={addresses} page={viewedPage} onNavigate={navigate} />
+      )}
     </AppFrame>
   )
 }

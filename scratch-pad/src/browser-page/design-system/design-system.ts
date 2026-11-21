@@ -24,6 +24,7 @@ export { MarginCard } from './components/margin-card/margin-card'
 export { MarginLane, type MarginItem } from './components/margin-lane/margin-lane'
 export { MessageBox } from './components/message-box/message-box'
 export { Notice } from './components/notice/notice'
+export { Outline } from './components/outline/outline'
 export { PageLink } from './components/page-link/page-link'
 export { ReadingColumn } from './components/reading-column/reading-column'
 export { SelectionTools } from './components/selection-tools/selection-tools'
@@ -35,7 +36,6 @@ export {
   type ContentsEntry,
 } from './components/table-of-contents/table-of-contents'
 export { StatusPill } from './components/status-pill/status-pill'
-export { Tabs, type Tab } from './components/tabs/tabs'
 export { TaskList, type TaskRow } from './components/task-list/task-list'
 export {
   ThreadCard,

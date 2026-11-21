@@ -1,4 +1,4 @@
-import { act, render, screen, waitFor, within } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import {
@@ -43,16 +43,41 @@ beforeEach(() => {
 })
 
 describe('ScratchPadApp on a page', () => {
-  it('shows the title of the scratch pad, the tabs and the page when the address is the scratch pad', async () => {
+  it('shows the title of the scratch pad and the page in the breadcrumb when the address is the scratch pad', async () => {
     renderApp(`/${exportPad}/`)
     await shownPage('Invoice export')
+    const breadcrumb = screen.getByRole('navigation', { name: 'Breadcrumb' })
+    expect(within(breadcrumb).getByRole('link').getAttribute('href')).toBe(`/${exportPad}/`)
+    expect(breadcrumb.textContent).toBe('Invoice export/Invoice export')
     expect(
-      within(screen.getByRole('banner'))
-        .getByRole('link', { name: 'Invoice export' })
-        .getAttribute('href'),
-    ).toBe(`/${exportPad}/`)
-    expect(screen.getByRole('link', { name: 'Pages' }).getAttribute('aria-current')).toBe('page')
+      screen.getByRole('link', { name: 'Progress tracker' }).getAttribute('aria-current'),
+    ).toBeNull()
     expect(document.title).toBe('Invoice export')
+  })
+
+  it('shows the outline of the page with the current section when the page has sections', async () => {
+    renderApp(`/${exportPad}/`)
+    await shownPage('Invoice export')
+    const outline = screen.getByRole('navigation', { name: 'Outline of Invoice export' })
+    expect(
+      within(outline)
+        .getAllByRole('link')
+        .map((link) => link.textContent),
+    ).toStrictEqual(['Retry limit', 'Wait between retries', 'Will the export job retry 8 times?'])
+    await waitFor(() =>
+      expect(
+        within(outline)
+          .getByRole('link', { name: 'Will the export job retry 8 times?' })
+          .getAttribute('aria-current'),
+      ).toBe('location'),
+    )
+  })
+
+  it('names the outline after the file when the page doesn’t have a title', async () => {
+    const fake = fakeConnection()
+    vi.spyOn(fake.connection, 'page').mockResolvedValue({ ...indexPage, title: undefined })
+    renderApp(`/${exportPad}/`, fake)
+    expect(await screen.findByRole('navigation', { name: 'Outline of index.md' })).toBeDefined()
   })
 
   it('lists the pages and the sections of the current page in the sidebar when the page is shown', async () => {
@@ -240,7 +265,7 @@ describe('ScratchPadApp with live changes', () => {
   })
 })
 
-describe('ScratchPadApp on the tabs', () => {
+describe('ScratchPadApp on the progress tracker and the decisions', () => {
   it('shows the goal and the tasks when Nick opens the progress tracker', async () => {
     renderApp(`/${exportPad}/`)
     await shownPage('Invoice export')
@@ -271,6 +296,26 @@ describe('ScratchPadApp on the tabs', () => {
     expect(screen.getByText('The export job runs every night.').tagName).toBe('P')
     expect(screen.getByRole('link', { name: 'Decisions' }).getAttribute('aria-current')).toBe(
       'page',
+    )
+  })
+
+  it('shows the view in the breadcrumb and leaves out the outline when Nick opens the progress tracker', async () => {
+    renderApp(`/${exportPad}/progress-tracker`)
+    await shownPage('Progress tracker')
+    expect(screen.getByRole('navigation', { name: 'Breadcrumb' }).textContent).toBe(
+      'Invoice export/Progress tracker',
+    )
+    expect(
+      screen.getByRole('link', { name: 'Progress tracker' }).getAttribute('aria-current'),
+    ).toBe('page')
+    expect(screen.queryByRole('navigation', { name: /^Outline/ })).toBeNull()
+  })
+
+  it('shows Decisions in the breadcrumb when Nick opens the decisions', async () => {
+    renderApp(`/${exportPad}/decisions`)
+    await shownPage('Decisions')
+    expect(screen.getByRole('navigation', { name: 'Breadcrumb' }).textContent).toBe(
+      'Invoice export/Decisions',
     )
   })
 
@@ -321,6 +366,13 @@ describe('ScratchPadApp settings', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Collapse the sidebar' }))
     expect(container.firstElementChild?.getAttribute('data-sidebar')).toBe('collapsed')
     expect(window.localStorage.getItem('scratch-pad-sidebar')).toBe('collapsed')
+  })
+
+  it('collapses the sidebar when Nick clicks the scrim beside the open sidebar', async () => {
+    const { container } = renderApp(`/${exportPad}/`)
+    await shownPage('Invoice export')
+    fireEvent.click(screen.getByLabelText('Close the sidebar'))
+    expect(container.firstElementChild?.getAttribute('data-sidebar')).toBe('collapsed')
   })
 
   it('starts with the sidebar collapsed without saving it when the window is narrow', async () => {

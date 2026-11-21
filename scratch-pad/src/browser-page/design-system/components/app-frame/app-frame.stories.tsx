@@ -8,6 +8,7 @@ const meta = {
     topBar: <p>The top bar</p>,
     sidebar: <p>The sidebar</p>,
     sidebarCollapsed: false,
+    onSidebarCollapse: () => undefined,
     children: <p>The reading column</p>,
   },
 } satisfies Meta<typeof AppFrame>

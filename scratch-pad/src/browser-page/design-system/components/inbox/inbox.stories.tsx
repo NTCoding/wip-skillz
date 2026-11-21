@@ -36,8 +36,8 @@ const meta = {
         <TopBar
           title="Invoice export"
           titleHref="/2026-11-20-invoice-export/"
+          current="Retry limit"
           onNavigate={() => undefined}
-          tabs={null}
           actions={story()}
         />
         <p>

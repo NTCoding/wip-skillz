@@ -1,6 +1,7 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
+import { Icon } from '../icon/icon'
 import { SidebarLink } from './sidebar-link'
 
 function renderLink(current: boolean, onNavigate: (href: string) => void = () => undefined) {
@@ -29,6 +30,24 @@ describe('SidebarLink', () => {
     renderLink(false)
     expect(screen.getByRole('link').getAttribute('aria-current')).toBeNull()
     expect(screen.queryByText('Sections')).toBeNull()
+  })
+
+  it('shows the icon of a view rather than the icon of a page when the link has an icon', () => {
+    const icon = render(<Icon name="progress-tracker" />).container.querySelector('path')
+    render(
+      <ul>
+        <SidebarLink
+          href="/pad/progress-tracker"
+          icon="progress-tracker"
+          title="Progress tracker"
+          current={false}
+          onNavigate={() => undefined}
+        />
+      </ul>,
+    )
+    expect(screen.getByRole('link').querySelector('path')?.getAttribute('d')).toBe(
+      icon?.getAttribute('d'),
+    )
   })
 
   it('navigates to the page when Nick clicks the link', async () => {

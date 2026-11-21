@@ -7,6 +7,27 @@ const meta = {
   component: Sidebar,
   args: {
     label: 'Pages of the scratch pad',
+    title: 'Invoice export',
+    titleHref: '#invoice-export',
+    onNavigate: () => undefined,
+    views: (
+      <>
+        <SidebarLink
+          href="#progress-tracker"
+          icon="progress-tracker"
+          title="Progress tracker"
+          current={false}
+          onNavigate={() => undefined}
+        />
+        <SidebarLink
+          href="#decisions"
+          icon="decision"
+          title="Decisions"
+          current={false}
+          onNavigate={() => undefined}
+        />
+      </>
+    ),
     heading: 'Pages',
     collapsed: false,
     onCollapsedChange: () => undefined,

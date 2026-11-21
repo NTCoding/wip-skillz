@@ -12,7 +12,7 @@
   max-height: var(--field-max-h);
   padding: var(--space-sm) var(--space-2xl);
   border: var(--hairline) solid var(--field-border);
-  border-radius: var(--r-pill);
+  border-radius: var(--r-md);
   outline: 0;
   background: var(--surface-raised);
   color: var(--text);

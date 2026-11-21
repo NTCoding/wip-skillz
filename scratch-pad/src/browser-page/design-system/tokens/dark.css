@@ -25,6 +25,8 @@
   --tint: rgb(255 255 255 / 7%);
   --tint-strong: rgb(255 255 255 / 12%);
   --scrim: rgb(0 0 0 / 70%);
+  --scrim-sidebar: rgb(0 0 0 / 50%);
+  --outline-bar: rgb(255 255 255 / 16%);
   --selection: rgb(92 196 89 / 30%);
 
   --focus: #5cc459;

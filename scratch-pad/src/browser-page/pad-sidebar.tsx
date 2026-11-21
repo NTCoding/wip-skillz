@@ -1,9 +1,11 @@
 import { type PageSummary, type ViewedPage } from './api-responses'
-import { fileOfPage, type PadAddresses } from './browser-route'
+import { fileOfPage, type BrowserRoute, type PadAddresses } from './browser-route'
 import { Sidebar, SidebarLink, TableOfContents, type Navigate } from './design-system/design-system'
 
 interface PadSidebarProps {
   readonly addresses: PadAddresses
+  readonly title: string
+  readonly view: BrowserRoute['kind']
   readonly pages: readonly PageSummary[]
   readonly currentFile: string | undefined
   readonly currentPage: ViewedPage | undefined
@@ -22,6 +24,27 @@ export function PadSidebar(props: PadSidebarProps) {
   return (
     <Sidebar
       label="Pages of the scratch pad"
+      title={props.title}
+      titleHref={addresses.pageHref('index.md')}
+      onNavigate={onNavigate}
+      views={
+        <>
+          <SidebarLink
+            href={addresses.progressTrackerHref}
+            icon="progress-tracker"
+            title="Progress tracker"
+            current={props.view === 'progress-tracker'}
+            onNavigate={onNavigate}
+          />
+          <SidebarLink
+            href={addresses.decisionLogHref}
+            icon="decision"
+            title="Decisions"
+            current={props.view === 'decision-log'}
+            onNavigate={onNavigate}
+          />
+        </>
+      }
       heading="Pages"
       collapsed={props.collapsed}
       onCollapsedChange={props.onCollapsedChange}

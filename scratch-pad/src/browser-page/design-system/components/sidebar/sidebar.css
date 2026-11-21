@@ -8,16 +8,62 @@
   line-height: var(--lh-ui);
 }
 
+.sidebar__head {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: var(--space-lg);
+  min-width: 0;
+  margin: var(--space-md) var(--space-xl) var(--space-0);
+  padding: var(--space-sm) var(--space-lg);
+  border-radius: var(--r-pill);
+  color: var(--text);
+  text-decoration: none;
+  font-size: var(--fs-sidebar-title);
+  line-height: var(--lh-md);
+  font-weight: var(--fw-strong);
+  letter-spacing: var(--ls-title);
+}
+
+.sidebar__head[hidden] {
+  display: none;
+}
+
+.sidebar__head:hover {
+  background: var(--tint);
+}
+
+.sidebar__mark {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: var(--mark-size);
+  height: var(--mark-size);
+  border-radius: var(--r-round);
+  background: var(--text);
+  color: var(--surface-reading);
+  font-size: var(--fs-sm);
+  line-height: var(--lh-tight);
+  font-weight: var(--fw-strong);
+}
+
+.sidebar__name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .sidebar__scroll {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
   overscroll-behavior: contain;
-  padding: var(--space-md) var(--space-xl) var(--space-3xl);
+  padding: var(--space-xl) var(--space-xl) var(--space-3xl);
 }
 
 .sidebar__heading {
-  margin: var(--space-xl) var(--space-0) var(--space-sm);
+  margin: var(--space-6xl) var(--space-0) var(--space-sm);
   padding: var(--space-0) var(--space-xl);
   color: var(--text-label);
   font-size: var(--fs-sm);

@@ -1,12 +1,16 @@
-import { render, screen } from '@testing-library/react'
-import { describe, expect, it } from 'vitest'
+import { fireEvent, render, screen } from '@testing-library/react'
+import { describe, expect, it, vi } from 'vitest'
 import { AppFrame, narrowAppFrameQuery } from './app-frame'
 import appFrameCss from './app-frame.css?raw'
-import readingColumnCss from '../reading-column/reading-column.css?raw'
 
-function renderFrame(sidebarCollapsed: boolean) {
+function renderFrame(sidebarCollapsed: boolean, onSidebarCollapse: () => void = () => undefined) {
   return render(
-    <AppFrame topBar={<p>Top bar</p>} sidebar={<p>Sidebar</p>} sidebarCollapsed={sidebarCollapsed}>
+    <AppFrame
+      topBar={<p>Top bar</p>}
+      sidebar={<p>Sidebar</p>}
+      sidebarCollapsed={sidebarCollapsed}
+      onSidebarCollapse={onSidebarCollapse}
+    >
       <p>Reading column</p>
     </AppFrame>,
   )
@@ -24,13 +28,20 @@ describe('AppFrame', () => {
     expect(container.firstElementChild?.getAttribute('data-sidebar')).toBe('open')
   })
 
-  it('marks the sidebar as collapsed when the sidebar is collapsed', () => {
+  it('marks the sidebar as collapsed and leaves out the scrim when the sidebar is collapsed', () => {
     const { container } = renderFrame(true)
     expect(container.firstElementChild?.getAttribute('data-sidebar')).toBe('collapsed')
+    expect(screen.queryByLabelText('Close the sidebar')).toBeNull()
   })
 
-  it('uses the width of narrowAppFrameQuery in the CSS of the frame and of the reading column when the window is narrow', () => {
+  it('asks to collapse the sidebar when Nick clicks the scrim beside an open sidebar', () => {
+    const onSidebarCollapse = vi.fn<() => void>()
+    renderFrame(false, onSidebarCollapse)
+    fireEvent.click(screen.getByLabelText('Close the sidebar'))
+    expect(onSidebarCollapse).toHaveBeenCalledWith()
+  })
+
+  it('uses the width of narrowAppFrameQuery in the CSS of the frame when the window is narrow', () => {
     expect(appFrameCss).toContain(`@media ${narrowAppFrameQuery} {`)
-    expect(readingColumnCss).toContain(`@media ${narrowAppFrameQuery} {`)
   })
 })

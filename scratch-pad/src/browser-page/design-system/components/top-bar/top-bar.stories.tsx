@@ -7,8 +7,8 @@ const meta = {
   args: {
     title: 'Invoice export',
     titleHref: '/2026-11-20-invoice-export/',
+    current: 'Retry limit',
     onNavigate: () => undefined,
-    tabs: <span>The tabs</span>,
     actions: <span>The colour switcher</span>,
   },
 } satisfies Meta<typeof TopBar>
@@ -17,4 +17,4 @@ export default meta
 
 type Story = StoryObj<typeof meta>
 
-export const WithTabsAndActions: Story = {}
+export const WithABreadcrumbAndActions: Story = {}

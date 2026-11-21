@@ -66,15 +66,16 @@ The lint rules are in `.token-lint/` at the root of the project. The rules in th
 
 Run `pnpm build` after every change to `src`, because the built tool in `dist/scratch-pad` is committed and the skill runs that file. The last step of `pnpm verify` will fail if `dist/scratch-pad` isn't the bundle of the current source.
 
-## The layout in a window narrower than 1280px
+## The layout in a narrow window
 
-Nick reads the page in a window that's 1280px or wider. In a narrower window, the sidebar would squeeze the text between itself and the margin with the comments. So these 3 things change below 1280px:
+In a window that's narrower than 900px, an open sidebar would squeeze the text too much. So these 2 things change below 900px:
 
 - The page opens with the sidebar collapsed, but that choice isn't saved.
-- An open sidebar is shown on top of the page rather than beside the page.
-- The margin is `--lane-w-narrow` wide rather than `--lane-w`.
+- An open sidebar is shown on top of the page rather than beside the page. The page behind the sidebar is faded by a scrim. If Nick clicks the scrim, the sidebar will collapse.
 
-`narrowAppFrameQuery` in `app-frame.tsx` is `(width < 1280px)`. The same width is written out in `app-frame.css` and `reading-column.css`, because a media query can't read a custom property. `app-frame.spec.tsx` will fail if the 3 widths differ.
+`narrowAppFrameQuery` in `app-frame.tsx` is `(width < 900px)`. The same width is written out in `app-frame.css`, because a media query can't read a custom property. `app-frame.spec.tsx` will fail if the 2 widths differ.
+
+The margin with the comments is `--lane-w-narrow` wide rather than `--lane-w` in a window that's narrower than 1280px. That width is written out in `reading-column.css`.
 
 ## Positions that are measured at runtime
 

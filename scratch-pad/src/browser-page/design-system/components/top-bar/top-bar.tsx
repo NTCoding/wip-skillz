@@ -5,25 +5,29 @@ import './top-bar.css'
 interface TopBarProps {
   readonly title: string
   readonly titleHref: string
+  readonly current: string
   readonly onNavigate: Navigate
-  readonly tabs: ReactNode
   readonly actions: ReactNode
 }
 
-export function TopBar({ title, titleHref, onNavigate, tabs, actions }: TopBarProps) {
+export function TopBar({ title, titleHref, current, onNavigate, actions }: TopBarProps) {
   return (
     <div className="top-bar">
-      <a
-        className="top-bar__title"
-        href={titleHref}
-        onClick={navigationClick(titleHref, onNavigate)}
-      >
-        <span className="top-bar__mark" aria-hidden="true">
-          {title.slice(0, 1).toUpperCase()}
+      <nav className="top-bar__crumbs" aria-label="Breadcrumb">
+        <a
+          className="top-bar__crumb"
+          href={titleHref}
+          onClick={navigationClick(titleHref, onNavigate)}
+        >
+          {title}
+        </a>
+        <span className="top-bar__separator" aria-hidden="true">
+          /
         </span>
-        <span className="top-bar__name">{title}</span>
-      </a>
-      <div className="top-bar__tabs">{tabs}</div>
+        <span className="top-bar__crumb" aria-current="page">
+          {current}
+        </span>
+      </nav>
       <div className="top-bar__actions">{actions}</div>
     </div>
   )
