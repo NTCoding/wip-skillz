@@ -1,0 +1,14 @@
+.every-colour-mode {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--gallery-panel-min-w)), 1fr));
+}
+
+.every-colour-mode__panel {
+  min-width: 0;
+  padding: var(--space-6xl);
+  background: var(--surface-reading);
+  color: var(--text);
+  font-family: var(--font-ui);
+  font-size: var(--fs-ui);
+  line-height: var(--lh-ui);
+}

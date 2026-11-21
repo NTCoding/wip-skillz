@@ -1,0 +1,18 @@
+import { type Meta, type StoryObj } from '@storybook/react-vite'
+import { MessageBox } from './message-box'
+
+const meta = {
+  title: 'Design system/MessageBox',
+  component: MessageBox,
+  args: { label: 'Write a reply…', submitLabel: 'Reply', onSubmit: () => Promise.resolve() },
+} satisfies Meta<typeof MessageBox>
+
+export default meta
+
+type Story = StoryObj<typeof meta>
+
+export const Reply: Story = {}
+
+export const WithCancel: Story = {
+  args: { label: 'Write a comment…', submitLabel: 'Send', onCancel: () => undefined },
+}

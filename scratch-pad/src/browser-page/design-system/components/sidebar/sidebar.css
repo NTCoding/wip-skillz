@@ -1,0 +1,45 @@
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  color: var(--text-nav);
+  font-family: var(--font-ui);
+  font-size: var(--fs-ui);
+  line-height: var(--lh-ui);
+}
+
+.sidebar__scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: var(--space-md) var(--space-xl) var(--space-3xl);
+}
+
+.sidebar__heading {
+  margin: var(--space-xl) var(--space-0) var(--space-sm);
+  padding: var(--space-0) var(--space-xl);
+  color: var(--text-label);
+  font-size: var(--fs-sm);
+  line-height: var(--lh-sm);
+}
+
+.sidebar__list {
+  margin: var(--space-0);
+  padding: var(--space-0);
+  list-style: none;
+}
+
+.sidebar__foot {
+  flex: none;
+  display: flex;
+  justify-content: flex-end;
+  padding: var(--space-md) var(--space-lg);
+  border-top: var(--hairline) solid var(--line);
+}
+
+.sidebar[data-collapsed='true'] .sidebar__foot {
+  justify-content: center;
+  margin-top: auto;
+  padding: var(--space-md) var(--space-0);
+}

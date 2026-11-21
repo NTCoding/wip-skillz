@@ -1,0 +1,13 @@
+.margin-lane {
+  position: relative;
+  min-width: 0;
+  min-height: var(--margin-lane-height, 0);
+}
+
+.margin-lane__item {
+  position: absolute;
+  top: var(--margin-item-top, 0);
+  right: var(--space-0);
+  left: var(--space-0);
+  transition: top 0.2s ease;
+}

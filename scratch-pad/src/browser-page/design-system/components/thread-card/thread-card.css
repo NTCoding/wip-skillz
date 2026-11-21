@@ -1,0 +1,111 @@
+.thread-card__resolve {
+  position: absolute;
+  top: var(--space-md);
+  right: var(--space-md);
+}
+
+.thread-card__changed {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  margin: var(--space-0);
+  padding: var(--space-xs) var(--space-lg);
+  border-radius: var(--r-sm);
+  background: var(--thread-changed-bg);
+  color: var(--thread-changed-ink);
+  font-size: var(--fs-sm);
+  line-height: var(--lh-sm);
+  font-weight: var(--fw-medium);
+}
+
+.thread-card__messages {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3xl);
+  margin: var(--space-0);
+  padding: var(--space-0);
+  list-style: none;
+}
+
+.thread-card__message {
+  display: grid;
+  grid-template-columns: var(--avatar-size) minmax(0, 1fr);
+  column-gap: var(--space-lg);
+}
+
+.thread-card__avatar {
+  display: grid;
+  place-items: center;
+  width: var(--avatar-size);
+  height: var(--avatar-size);
+  border-radius: var(--r-round);
+  background: var(--avatar-nick-bg);
+  color: var(--avatar-nick-fg);
+  font-size: var(--fs-xs);
+  line-height: var(--lh-tight);
+  font-weight: var(--fw-strong);
+}
+
+.thread-card__avatar[data-author='agent'] {
+  background: var(--avatar-agent-bg);
+  color: var(--avatar-agent-fg);
+}
+
+.thread-card__meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  min-height: var(--avatar-size);
+  margin: var(--space-0);
+}
+
+.thread-card__author {
+  font-weight: var(--fw-medium);
+}
+
+.thread-card__time {
+  color: var(--text-2);
+  font-size: var(--fs-xs);
+  line-height: var(--lh-xs);
+}
+
+.thread-card__text {
+  margin: var(--space-2xs) var(--space-0) var(--space-0);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.thread-card__more {
+  display: flex;
+}
+
+.thread-card__state {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  margin: var(--space-0);
+  color: var(--thread-sent);
+  font-size: var(--fs-xs);
+  line-height: var(--lh-xs);
+}
+
+.thread-card__state[data-state='waits-for-nick'],
+.thread-card__state[data-state='resolved'] {
+  color: var(--thread-replied);
+}
+
+.thread-card__outcome {
+  margin: var(--space-0);
+  padding-top: var(--space-md);
+  border-top: var(--hairline) solid var(--line-soft);
+  color: var(--text-2);
+  font-size: var(--fs-sm);
+  line-height: var(--lh-sm);
+}
+
+.thread-card__problem {
+  margin: var(--space-0);
+  color: var(--warning-ink);
+  font-size: var(--fs-sm);
+  line-height: var(--lh-sm);
+}

@@ -1,0 +1,28 @@
+.icon-button {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: var(--control-h);
+  height: var(--control-h);
+  padding: var(--space-0);
+  border: 0;
+  border-radius: var(--r-pill);
+  background: none;
+  color: var(--icon);
+  cursor: pointer;
+}
+
+.icon-button--page:hover,
+.icon-button--page[aria-pressed='true'] {
+  background: var(--tint);
+  color: var(--text);
+}
+
+.icon-button--code {
+  color: var(--code-copy-fg);
+}
+
+.icon-button--code:hover {
+  background: var(--code-copy-hover-bg);
+  color: var(--code-copy-hover);
+}

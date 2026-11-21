@@ -1,0 +1,33 @@
+.margin-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xl);
+  padding: var(--space-3xl) var(--space-4xl) var(--space-4xl);
+  border-radius: var(--r-md);
+  background: var(--surface-raised);
+  box-shadow: var(--shadow-sm);
+  color: var(--text);
+  font-family: var(--font-ui);
+  font-size: var(--fs-ui);
+  line-height: var(--lh-ui);
+  scroll-margin-top: calc(var(--top-bar-h) + var(--space-9xl));
+  transition: box-shadow 0.15s ease;
+}
+
+.margin-card:focus {
+  outline: 0;
+}
+
+.margin-card[data-active='true'] {
+  z-index: 2;
+  box-shadow: var(--shadow-card-comment);
+}
+
+.margin-card[data-kind='grammar'][data-active='true'] {
+  box-shadow: var(--shadow-card-grammar);
+}
+
+.margin-card[data-kind='improvement'][data-active='true'] {
+  box-shadow: var(--shadow-card-improvement);
+}
