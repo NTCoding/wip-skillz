@@ -91,21 +91,8 @@ async function openPad(page, path = '') {
 
 async function pageShots(page) {
   await page.setViewport({ width: 1440, height: 900 })
-  await page.emulateMediaFeatures([{ name: 'prefers-color-scheme', value: 'light' }])
   await openPad(page)
-  await shoot(page, '01-page-light-1440')
-  await page.click('button[aria-pressed="false"]')
-  checks.colourModeAfterSwitch = await page.evaluate(
-    () => document.documentElement.dataset.colourMode,
-  )
-  await shoot(page, '02-page-dark-1440')
-  await page.reload({ waitUntil: 'domcontentloaded' })
-  checks.colourModeAfterReload = await page.evaluate(
-    () => document.documentElement.dataset.colourMode,
-  )
-  await page.evaluate(() => localStorage.setItem('scratch-pad-colour-mode', 'light'))
-  await page.reload({ waitUntil: 'domcontentloaded' })
-  await page.waitForSelector('article h1')
+  await shoot(page, '01-page-1440')
 
   await page.evaluate(() =>
     document.querySelector('figure.code-block').scrollIntoView({ block: 'center' }),

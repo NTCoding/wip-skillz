@@ -22,10 +22,8 @@ function laneWith(scope: HTMLElement): HTMLElement {
   return lane ?? scope
 }
 
-function topsOf(lane: HTMLElement): (string | undefined)[] {
-  return [...lane.querySelectorAll('div')].map((item) =>
-    item.style.getPropertyValue('--margin-item-top'),
-  )
+function topsOf(lane: HTMLElement, property = '--margin-item-top'): (string | undefined)[] {
+  return [...lane.querySelectorAll('div')].map((item) => item.style.getPropertyValue(property))
 }
 
 describe('layOutMarginLane', () => {
@@ -43,6 +41,30 @@ describe('layOutMarginLane', () => {
     placeAt(general ?? lane, 0, 30)
     layOutMarginLane(lane, scope)
     expect(topsOf(lane)).toStrictEqual(['150px', '88px', '242px', '0px'])
+  })
+
+  it('puts each popup below the bottom of its anchor and each marker beside the top of its anchor', () => {
+    const scope = document.createElement('div')
+    const lane = laneWith(scope)
+    lane.insertAdjacentHTML(
+      'beforeend',
+      '<span data-marker="c-1"></span><span data-marker="i-2"></span>',
+    )
+    placeAt(lane, 100)
+    scope
+      .querySelector('mark')
+      ?.insertAdjacentHTML('afterend', '<mark data-highlight="c-1"></mark>')
+    const [first, second] = [...scope.querySelectorAll('mark')]
+    vi.spyOn(first ?? scope, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 212, 50, 32))
+    vi.spyOn(second ?? scope, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 244, 50, 32))
+    placeAt(scope.querySelector('[data-lines="3-3"]') ?? scope, 200)
+    placeAt(scope.querySelector('[data-lines="5-5"]') ?? scope, 260)
+    layOutMarginLane(lane, scope)
+    expect(topsOf(lane, '--margin-popup-top')).toStrictEqual(['184px', '108px', '168px', '8px'])
+    const markers = [...lane.querySelectorAll('span')]
+    expect(
+      markers.map((marker) => marker.style.getPropertyValue('--margin-marker-top')),
+    ).toStrictEqual(['112px', '0px'])
   })
 
   it('makes the lane as tall as the bottom of its last item so that a card never runs past the page', () => {
@@ -69,12 +91,41 @@ describe('MarginLane', () => {
     render(
       <MarginLane
         label="Comments and notes"
-        items={[{ key: 'c-1', anchorLines: '3-3', content: <p>Is 5 retries enough?</p> }]}
+        items={[
+          {
+            key: 'c-1',
+            anchorLines: '3-3',
+            content: <p>Is 5 retries enough?</p>,
+            marker: <button type="button">Comment c-1</button>,
+            popup: true,
+          },
+        ]}
       />,
     )
     const lane = screen.getByRole('complementary', { name: 'Comments and notes' })
-    expect(lane.textContent).toBe('Is 5 retries enough?')
+    expect(lane.textContent).toBe('Is 5 retries enough?Comment c-1')
     expect(lane.firstElementChild?.getAttribute('data-anchor-lines')).toBe('3-3')
+    expect(lane.firstElementChild?.getAttribute('data-popup')).toBe('true')
+    expect(lane.lastElementChild?.getAttribute('data-marker')).toBe('c-1')
+  })
+
+  it('leaves out the marker of an item that doesn’t have a marker', () => {
+    render(
+      <MarginLane
+        label="Comments and notes"
+        items={[
+          {
+            key: 'draft',
+            anchorLines: '3-3',
+            content: <p>New comment</p>,
+            marker: undefined,
+            popup: true,
+          },
+        ]}
+      />,
+    )
+    const lane = screen.getByRole('complementary', { name: 'Comments and notes' })
+    expect(lane.children).toHaveLength(1)
   })
 
   it('looks for the anchors inside the closest margin scope when the lane has one', () => {
@@ -83,7 +134,15 @@ describe('MarginLane', () => {
         <p data-lines="3-3">The export job retries 5 times.</p>
         <MarginLane
           label="Comments and notes"
-          items={[{ key: 'c-1', anchorLines: '3-3', content: <p>Is 5 retries enough?</p> }]}
+          items={[
+            {
+              key: 'c-1',
+              anchorLines: '3-3',
+              content: <p>Is 5 retries enough?</p>,
+              marker: undefined,
+              popup: false,
+            },
+          ]}
         />
       </div>,
     )

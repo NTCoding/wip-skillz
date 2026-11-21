@@ -10,15 +10,13 @@ interface ReadingColumnProps {
 export function ReadingColumn({ children, margin, textRef }: ReadingColumnProps) {
   const withMargin = margin !== undefined
   return (
-    <div
-      className="reading-column"
-      data-margin={withMargin}
-      data-margin-scope={withMargin || undefined}
-    >
-      <article ref={textRef} className="reading-column__text">
-        {children}
-      </article>
-      {withMargin && <div className="reading-column__margin">{margin}</div>}
+    <div className="reading-column" data-margin-scope={withMargin || undefined}>
+      <div className="reading-column__grid">
+        <article ref={textRef} className="reading-column__text">
+          {children}
+        </article>
+        {withMargin && <div className="reading-column__margin">{margin}</div>}
+      </div>
     </div>
   )
 }

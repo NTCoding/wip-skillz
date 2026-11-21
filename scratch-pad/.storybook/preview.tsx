@@ -1,9 +1,9 @@
 import { type Preview } from '@storybook/react-vite'
-import { EveryColourMode } from '../src/browser-page/design-system/design-system'
+import { GalleryPanel } from '../src/browser-page/design-system/design-system'
 
 const preview: Preview = {
   parameters: { layout: 'fullscreen' },
-  decorators: [(story) => <EveryColourMode>{story()}</EveryColourMode>],
+  decorators: [(story) => <GalleryPanel>{story()}</GalleryPanel>],
 }
 
 export default preview

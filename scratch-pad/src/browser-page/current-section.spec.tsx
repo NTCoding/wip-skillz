@@ -26,6 +26,22 @@ describe('useCurrentSection', () => {
     headings.forEach((heading) => heading.remove())
   })
 
+  it('returns the last section when Nick has scrolled to the bottom of the page', async () => {
+    const headings = [
+      headingAt('retry-limit', -400),
+      headingAt('wait', 80),
+      headingAt('layout', 600),
+    ]
+    Object.defineProperty(document.documentElement, 'scrollHeight', {
+      value: 1500,
+      configurable: true,
+    })
+    vi.spyOn(window, 'scrollY', 'get').mockReturnValue(1500 - window.innerHeight)
+    const { result } = renderHook(() => useCurrentSection(['retry-limit', 'wait', 'layout']))
+    await waitFor(() => expect(result.current).toBe('layout'))
+    headings.forEach((heading) => heading.remove())
+  })
+
   it('returns the first section when every section is below the reading line', async () => {
     const heading = headingAt('retry-limit', 500)
     const { result } = renderHook(() => useCurrentSection(['retry-limit']))

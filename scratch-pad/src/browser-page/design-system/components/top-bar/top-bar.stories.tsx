@@ -9,7 +9,7 @@ const meta = {
     titleHref: '/2026-11-20-invoice-export/',
     current: 'Retry limit',
     onNavigate: () => undefined,
-    actions: <span>The colour switcher</span>,
+    actions: <span>The Inbox</span>,
   },
 } satisfies Meta<typeof TopBar>
 
@@ -18,3 +18,5 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const WithABreadcrumbAndActions: Story = {}
+
+export const OnTheFirstPage: Story = { args: { current: undefined } }

@@ -1,12 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { colourModes } from '../colour-modes'
-import lightCss from './tokens.css?raw'
-
-const modeFiles = import.meta.glob<string>('./*.css', {
-  query: '?raw',
-  import: 'default',
-  eager: true,
-})
+import tokensCss from './tokens.css?raw'
 
 interface Colour {
   readonly red: number
@@ -34,15 +27,7 @@ function tokensIn(css: string): Map<string, string> {
   )
 }
 
-const modes = Object.fromEntries(
-  colourModes.map((mode) => [
-    mode,
-    new Map([
-      ...tokensIn(lightCss),
-      ...tokensIn(mode === 'light' ? '' : String(modeFiles[`./${mode}.css`])),
-    ]),
-  ]),
-)
+const tokens = tokensIn(tokensCss)
 
 function hexColour(hex: string): Colour {
   const digits = hex.length === 3 ? [...hex].map((digit) => `${digit}${digit}`).join('') : hex
@@ -168,15 +153,8 @@ const pairs = (
   ] satisfies readonly TokenPair[]
 ).map((pair) => ({ smallest: textContrast, ...pair }))
 
-const cases = Object.entries(modes).flatMap(([mode, tokens]) =>
-  pairs.map((pair) => ({ mode, tokens, ...pair })),
-)
-
 describe('the contrast of the colour tokens', () => {
-  it.each(cases)(
-    'reaches $smallest to 1 when $text is drawn on $background in the $mode mode',
-    ({ tokens, ...pair }) => {
-      expect(contrastOf(pair, tokens)).toBeGreaterThanOrEqual(pair.smallest)
-    },
-  )
+  it.each(pairs)('reaches $smallest to 1 when $text is drawn on $background', (pair) => {
+    expect(contrastOf(pair, tokens)).toBeGreaterThanOrEqual(pair.smallest)
+  })
 })

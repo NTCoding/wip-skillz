@@ -1,5 +1,6 @@
 import { type Meta, type StoryObj } from '@storybook/react-vite'
 import { MarginCard } from '../margin-card/margin-card'
+import { MarginMarker } from '../margin-marker/margin-marker'
 import { ReadingColumn } from '../reading-column/reading-column'
 import { MarginLane } from './margin-lane'
 
@@ -17,6 +18,16 @@ const meta = {
             <p>Is 5 retries enough on a slow network?</p>
           </MarginCard>
         ),
+        marker: (
+          <MarginMarker
+            label="Comment c-1"
+            kind="comment"
+            messages={1}
+            open
+            onClick={() => undefined}
+          />
+        ),
+        popup: true,
       },
       {
         key: 'g-1',
@@ -26,6 +37,16 @@ const meta = {
             <p>Write who retries the export rather than “it”.</p>
           </MarginCard>
         ),
+        marker: (
+          <MarginMarker
+            label="Grammar / tone g-1"
+            kind="grammar"
+            messages={1}
+            open={false}
+            onClick={() => undefined}
+          />
+        ),
+        popup: false,
       },
     ],
   },

@@ -25,6 +25,22 @@ describe('TopBar', () => {
     expect(screen.getByText('Actions').textContent).toBe('Actions')
   })
 
+  it('shows only the name of the scratch pad as the current crumb when there isn’t a current view', () => {
+    render(
+      <TopBar
+        title="Invoice export"
+        titleHref="/pad/"
+        current={undefined}
+        onNavigate={() => undefined}
+        actions={undefined}
+      />,
+    )
+    const breadcrumb = screen.getByRole('navigation', { name: 'Breadcrumb' })
+    expect(breadcrumb.textContent).toBe('Invoice export')
+    expect(screen.getByText('Invoice export').getAttribute('aria-current')).toBe('page')
+    expect(screen.queryAllByRole('link')).toHaveLength(0)
+  })
+
   it('navigates to the first page when Nick clicks the name of the scratch pad', async () => {
     const onNavigate = vi.fn<(href: string) => void>()
     renderTopBar(onNavigate)

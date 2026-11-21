@@ -11,21 +11,12 @@ import {
 } from './api-responses'
 import { scrollTargetOf, useBrowserNavigation, useScrollOnNavigation } from './browser-navigation'
 import { type BrowserRoute, type PadAddresses } from './browser-route'
-import {
-  saveColourMode,
-  savedColourMode,
-  savedSidebarCollapsed,
-  saveSidebarCollapsed,
-  type SavedSettings,
-} from './colour-mode'
 import { useCurrentSection } from './current-section'
 import {
   AppFrame,
-  ColourSwitcher,
   Inbox,
   StatusPill,
   TopBar,
-  type ColourMode,
   type Navigate,
   type PreviewContent,
 } from './design-system/design-system'
@@ -36,6 +27,7 @@ import { PadSidebar, sectionsOf } from './pad-sidebar'
 import { PageOutline } from './page-outline'
 import { firstRevisions, pageRevisionOf, revisedAfterReconnect, revisedBy } from './pad-revisions'
 import { pagePreview } from './page-preview'
+import { savedSidebarCollapsed, saveSidebarCollapsed, type SavedSettings } from './saved-settings'
 import { PageWithThreads, type PageActions } from './page-with-threads'
 import {
   type NewThread,
@@ -50,7 +42,6 @@ interface ScratchPadAppProps {
   readonly connection: ScratchPadReading
   readonly writing: ScratchPadWriting | undefined
   readonly settings: SavedSettings
-  readonly prefersDark: boolean
   readonly narrowWindow: boolean
 }
 
@@ -60,12 +51,18 @@ function loadedOr<T>(loaded: LoadedValue<T>, fallback: T): T {
   return loaded.status === 'loaded' ? loaded.value : fallback
 }
 
-function currentViewOf(route: BrowserRoute, viewedPage: ViewedPage | undefined): string {
+function currentViewOf(
+  route: BrowserRoute,
+  viewedPage: ViewedPage | undefined,
+): string | undefined {
   if (route.kind === 'progress-tracker') {
     return 'Progress tracker'
   }
   if (route.kind === 'decision-log') {
     return 'Decisions'
+  }
+  if (route.file === 'index.md') {
+    return undefined
   }
   return viewedPage?.title ?? route.file
 }
@@ -89,6 +86,7 @@ interface RouteViewProps {
   readonly inboxThreads: readonly Thread[]
   readonly pageContext: PageContext
   readonly actions: PageActions | undefined
+  readonly navigations: number
 }
 
 function isMissing(pages: LoadedValue<PageSummary[]>, file: string): boolean {
@@ -129,6 +127,7 @@ function RouteView(props: RouteViewProps) {
       threads={threads}
       context={pageContext}
       actions={actions}
+      address={{ section: route.section, navigations: props.navigations }}
     />
   ) : (
     <LoadingView loaded={page} />
@@ -172,10 +171,9 @@ function tabTitleOf(pageTitle: string | undefined, padTitle: string): string {
 }
 
 export function ScratchPadApp(props: ScratchPadAppProps) {
-  const { pad, addresses, connection, writing, settings, prefersDark, narrowWindow } = props
+  const { pad, addresses, connection, writing, settings, narrowWindow } = props
   const { route, navigate, navigations } = useBrowserNavigation(addresses.routeOf)
   const [revisions, setRevisions] = useState(firstRevisions)
-  const [colourMode, setColourMode] = useState(() => savedColourMode(settings, prefersDark))
   const [collapsed, setCollapsed] = useState(() => narrowWindow || savedSidebarCollapsed(settings))
   const [serverStopped, setServerStopped] = useState(false)
   const changed = useCallback(
@@ -195,9 +193,6 @@ export function ScratchPadApp(props: ScratchPadAppProps) {
       }),
     [connection, changed],
   )
-  useEffect(() => {
-    document.documentElement.dataset['colourMode'] = colourMode
-  }, [colourMode])
 
   const file = route.kind === 'page' ? route.file : 'index.md'
   const pages = useLoadedValue(pad, revisions.pages, connection.pages)
@@ -223,10 +218,6 @@ export function ScratchPadApp(props: ScratchPadAppProps) {
     [connection, padTitle],
   )
   const actions = usePageActions(writing, changed)
-  const changeColourMode = (mode: ColourMode): void => {
-    setColourMode(mode)
-    saveColourMode(settings, mode)
-  }
   const changeCollapsed = (next: boolean): void => {
     setCollapsed(next)
     saveSidebarCollapsed(settings, next)
@@ -252,7 +243,6 @@ export function ScratchPadApp(props: ScratchPadAppProps) {
                 </StatusPill>
               )}
               {actions !== undefined && <Inbox entries={inboxEntries} onNavigate={navigate} />}
-              <ColourSwitcher mode={colourMode} onChange={changeColourMode} />
             </>
           }
         />
@@ -282,6 +272,7 @@ export function ScratchPadApp(props: ScratchPadAppProps) {
         inboxThreads={loadedOr(inbox, emptyNickInbox).threads}
         pageContext={{ addresses, onNavigate: navigate, loadPreview }}
         actions={actions}
+        navigations={navigations}
       />
       {viewedPage !== undefined && (
         <PageOutline addresses={addresses} page={viewedPage} onNavigate={navigate} />

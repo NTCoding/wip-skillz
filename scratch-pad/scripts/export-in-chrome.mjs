@@ -131,7 +131,6 @@ async function shownTitle(page, title) {
 
 async function pageChecks(page, exportUrl) {
   await page.setViewport({ width: 1440, height: 900 })
-  await page.emulateMediaFeatures([{ name: 'prefers-color-scheme', value: 'light' }])
   await page.goto(exportUrl, { waitUntil: 'load' })
   await shownTitle(page, 'Invoice export')
   await page.waitForSelector('[aria-label="Comment c-1"]')
@@ -193,16 +192,10 @@ async function navigationChecks(page) {
 async function reloadChecks(page, exportUrl) {
   await page.goto(`${exportUrl}#/retry-limit.md`, { waitUntil: 'load' })
   await shownTitle(page, 'Retry limit')
-  await page.click('button[aria-pressed="false"]')
-  check(
-    'colourModeAfterSwitch',
-    await page.evaluate(() => document.documentElement.dataset.colourMode),
-    'dark',
-  )
   await page.goto(exportUrl, { waitUntil: 'load' })
   await shownTitle(page, 'Invoice export')
   await page.waitForSelector('iframe[title="HTML block"]')
-  await shoot(page, '08-index-dark')
+  await shoot(page, '08-index-after-reload')
 }
 
 mkdirSync(output, { recursive: true })

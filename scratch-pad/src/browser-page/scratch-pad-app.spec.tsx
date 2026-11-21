@@ -13,12 +13,7 @@ import {
 import { BrowserPageError } from './browser-page-error'
 import { ScratchPadApp } from './scratch-pad-app'
 
-function renderApp(
-  path: string,
-  fake: FakeConnection = fakeConnection(),
-  prefersDark = false,
-  narrowWindow = false,
-) {
+function renderApp(path: string, fake: FakeConnection = fakeConnection(), narrowWindow = false) {
   window.history.replaceState(null, '', path)
   const rendered = render(
     <ScratchPadApp
@@ -27,7 +22,6 @@ function renderApp(
       connection={fake.connection}
       writing={fake.connection}
       settings={window.localStorage}
-      prefersDark={prefersDark}
       narrowWindow={narrowWindow}
     />,
   )
@@ -43,12 +37,12 @@ beforeEach(() => {
 })
 
 describe('ScratchPadApp on a page', () => {
-  it('shows the title of the scratch pad and the page in the breadcrumb when the address is the scratch pad', async () => {
+  it('shows only the title of the scratch pad in the breadcrumb when the address is the scratch pad', async () => {
     renderApp(`/${exportPad}/`)
     await shownPage('Invoice export')
     const breadcrumb = screen.getByRole('navigation', { name: 'Breadcrumb' })
-    expect(within(breadcrumb).getByRole('link').getAttribute('href')).toBe(`/${exportPad}/`)
-    expect(breadcrumb.textContent).toBe('Invoice export/Invoice export')
+    expect(within(breadcrumb).queryByRole('link')).toBeNull()
+    expect(breadcrumb.textContent).toBe('Invoice export')
     expect(
       screen.getByRole('link', { name: 'Progress tracker' }).getAttribute('aria-current'),
     ).toBeNull()
@@ -346,20 +340,6 @@ describe('ScratchPadApp on the progress tracker and the decisions', () => {
 })
 
 describe('ScratchPadApp settings', () => {
-  it('switches to the dark mode and saves it when Nick presses Dark', async () => {
-    renderApp(`/${exportPad}/`)
-    await shownPage('Invoice export')
-    await userEvent.click(screen.getByRole('button', { name: 'Dark' }))
-    expect(document.documentElement.dataset['colourMode']).toBe('dark')
-    expect(window.localStorage.getItem('scratch-pad-colour-mode')).toBe('dark')
-  })
-
-  it('starts in the dark mode when the system prefers dark and nothing is saved', async () => {
-    renderApp(`/${exportPad}/`, fakeConnection(), true)
-    await shownPage('Invoice export')
-    expect(document.documentElement.dataset['colourMode']).toBe('dark')
-  })
-
   it('collapses the sidebar and saves it when Nick presses the button at the bottom of the sidebar', async () => {
     const { container } = renderApp(`/${exportPad}/`)
     await shownPage('Invoice export')
@@ -376,7 +356,7 @@ describe('ScratchPadApp settings', () => {
   })
 
   it('starts with the sidebar collapsed without saving it when the window is narrow', async () => {
-    const { container } = renderApp(`/${exportPad}/`, fakeConnection(), false, true)
+    const { container } = renderApp(`/${exportPad}/`, fakeConnection(), true)
     await shownPage('Invoice export')
     expect(container.firstElementChild?.getAttribute('data-sidebar')).toBe('collapsed')
     expect(window.localStorage.getItem('scratch-pad-sidebar')).toBeNull()

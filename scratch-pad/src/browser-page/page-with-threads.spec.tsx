@@ -22,7 +22,6 @@ async function renderIndex(fake: FakeConnection = fakeConnection()) {
       connection={fake.connection}
       writing={fake.connection}
       settings={window.localStorage}
-      prefersDark={false}
       narrowWindow={false}
     />,
   )
@@ -42,6 +41,10 @@ function selectInBlock(lines: string, from: number, to: number): void {
 
 function card(name: string): HTMLElement {
   return screen.getByRole('region', { name })
+}
+
+function popupOf(name: string): string | null | undefined {
+  return card(name).parentElement?.getAttribute('data-popup')
 }
 
 beforeEach(() => {
@@ -231,6 +234,35 @@ describe('the threads of a page', () => {
   })
 })
 
+describe('the markers of a narrow page', () => {
+  it('opens the card of a thread below its text when Nick clicks its marker and closes it on a second click', async () => {
+    await renderIndex()
+    const marker = screen.getByRole('button', { name: 'Comment c-1', expanded: false })
+    await userEvent.click(marker)
+    expect(marker.getAttribute('aria-expanded')).toBe('true')
+    expect([popupOf('Comment c-1'), popupOf('Grammar / tone g-1')]).toStrictEqual(['true', 'false'])
+    await userEvent.click(marker)
+    expect(popupOf('Comment c-1')).toBe('false')
+  })
+
+  it('shows the count of messages on the marker of a thread with a reply', async () => {
+    await renderIndex()
+    expect(screen.getByRole('button', { name: 'Comment c-1' }).textContent).toBe('2')
+  })
+
+  it('opens the draft rather than the active card while Nick writes a new thread', async () => {
+    await renderIndex()
+    await userEvent.click(screen.getByRole('button', { name: 'Comment c-1' }))
+    selectInBlock('3-4', 4, 14)
+    await userEvent.click(screen.getByRole('button', { name: 'Comment' }))
+    const draft = screen.getByRole('textbox', { name: 'Write a comment…' }).closest('[data-popup]')
+    expect([draft?.getAttribute('data-popup'), popupOf('Comment c-1')]).toStrictEqual([
+      'true',
+      'false',
+    ])
+  })
+})
+
 describe('Nick’s Inbox in the top bar', () => {
   it('counts the items that wait for Nick and goes to the card of the item that Nick chooses', async () => {
     await renderIndex()
@@ -239,6 +271,16 @@ describe('Nick’s Inbox in the top bar', () => {
     await userEvent.click(screen.getByRole('menuitem', { name: /The agent replied/ }))
     expect(window.location.hash).toBe('#c-1')
     await waitFor(() => expect(document.activeElement).toBe(card('Comment c-1')))
+    expect(popupOf('Comment c-1')).toBe('true')
+  })
+
+  it('opens the card of the thread that Nick chooses even when the card can’t receive the focus', async () => {
+    vi.spyOn(HTMLElement.prototype, 'focus').mockImplementation(() => undefined)
+    await renderIndex()
+    expect(popupOf('Comment c-1')).toBe('false')
+    await userEvent.click(screen.getByRole('button', { name: /^Inbox/ }))
+    await userEvent.click(screen.getByRole('menuitem', { name: /The agent replied/ }))
+    expect(popupOf('Comment c-1')).toBe('true')
   })
 
   it('goes to the decision block when Nick chooses a decision', async () => {

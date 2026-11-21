@@ -12,7 +12,6 @@ Element.prototype.scrollIntoView = function scrollIntoView(): void {
 afterEach(() => {
   cleanup()
   window.localStorage.clear()
-  document.documentElement.removeAttribute('data-colour-mode')
 })
 
 class ResizeObserverInTests {

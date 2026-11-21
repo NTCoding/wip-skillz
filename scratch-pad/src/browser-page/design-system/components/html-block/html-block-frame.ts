@@ -39,14 +39,6 @@ export function htmlBlockFrameScript(): void {
   if (!(port instanceof MessagePort)) {
     return
   }
-  port.onmessage = (event: MessageEvent<unknown>) => {
-    const data = event.data
-    const tokens =
-      typeof data === 'object' && data !== null && 'tokens' in data ? data.tokens : undefined
-    if (typeof tokens === 'string') {
-      document.getElementById('html-block-tokens')?.replaceChildren(tokens)
-    }
-  }
   document.addEventListener('click', (event) => {
     const link = event.target instanceof Element ? event.target.closest('a[href]') : null
     if (link !== null) {
@@ -66,7 +58,7 @@ export function htmlBlockDocument(html: string, tokenRule: string): string {
     '<html lang="en">',
     '<head>',
     '<meta charset="utf-8">',
-    `<style id="html-block-tokens">${tokenRule}</style>`,
+    `<style>${tokenRule}</style>`,
     `<style>${frameStyles}</style>`,
     `<script>(${htmlBlockFrameScript.toString()})()</script>`,
     '</head>',
@@ -132,18 +124,9 @@ export function connectHtmlBlockFrame(
     port.onmessage = receiveFromFrame
     port.postMessage(htmlBlockDocument(html, tokenRuleFor(frame)))
   }
-  const modes = new MutationObserver(() => {
-    connection.port?.postMessage({ tokens: tokenRuleFor(frame) })
-  })
   window.addEventListener('message', receive)
-  modes.observe(document.documentElement, {
-    attributes: true,
-    attributeFilter: ['data-colour-mode'],
-    subtree: true,
-  })
   return () => {
     window.removeEventListener('message', receive)
-    modes.disconnect()
     connection.port?.close()
   }
 }

@@ -27,7 +27,7 @@ function messagesOn(port: MessagePort): unknown[] {
 
 function frameWithTokens(onLink: (href: string) => void = () => undefined) {
   document.head.innerHTML =
-    '<style>:root { --text: #242424; } [data-colour-mode="dark"] { --text: #e8e8e6; } @media screen { :root { --space-md: 8px; } } .invoice-only { --invoice-gap: 4px; } @font-face { font-family: Export; }</style>'
+    '<style>:root { --text: #242424; } @media screen { :root { --space-md: 8px; } } .invoice-only { --invoice-gap: 4px; } @font-face { font-family: Export; }</style>'
   const frame = document.createElement('iframe')
   document.body.append(frame)
   const frameWindow = frame.contentWindow ?? window
@@ -95,24 +95,6 @@ describe('connectHtmlBlockFrame', () => {
     expect(onLink).toHaveBeenCalledOnce()
   })
 
-  it('sends the tokens of the new colour mode when Nick switches the colour mode', async () => {
-    const { fromFrame, ready } = frameWithTokens()
-    ready()
-    document.documentElement.dataset['colourMode'] = 'dark'
-    await vi.waitFor(() =>
-      expect(fromFrame[1]).toStrictEqual({
-        tokens: ':root{color-scheme:normal;--text:#e8e8e6;--space-md:8px}',
-      }),
-    )
-  })
-
-  it('ignores a change of the colour mode when the frame isn’t ready yet', async () => {
-    const { fromFrame } = frameWithTokens()
-    document.documentElement.dataset['colourMode'] = 'dark'
-    await new Promise((resolve) => setTimeout(resolve, 10))
-    expect(fromFrame).toStrictEqual([])
-  })
-
   it('ignores another message of the frame or a ready message without a port', async () => {
     const { frame, fromFrame } = frameWithTokens()
     const source = frame.contentWindow ?? window
@@ -156,24 +138,15 @@ describe('htmlBlockFrameScript', () => {
     expect(clicks).toStrictEqual([true, false, true])
   })
 
-  it('reports the height of the frame and applies new tokens when it runs in the frame', async () => {
-    document.head.innerHTML = '<style id="html-block-tokens">:root{--text:#242424}</style>'
+  it('reports the height of the frame when it runs in the frame', async () => {
     const channel = new MessageChannel()
     const fromFrame = messagesOn(channel.port2)
     Reflect.set(window, 'htmlBlockPort', channel.port1)
     htmlBlockFrameScript()
-    channel.port2.postMessage({ height: 40 })
-    channel.port2.postMessage({ tokens: ':root{--text:#e8e8e6}' })
-    await vi.waitFor(() =>
-      expect(document.getElementById('html-block-tokens')?.textContent).toBe(
-        ':root{--text:#e8e8e6}',
-      ),
-    )
-    expect(fromFrame).toStrictEqual([{ height: 0 }])
+    await vi.waitFor(() => expect(fromFrame).toStrictEqual([{ height: 0 }]))
   })
 
   it('does nothing when the frame doesn’t have a port to the page', () => {
-    document.head.innerHTML = '<style id="html-block-tokens">:root{--text:#242424}</style>'
     expect(() => htmlBlockFrameScript()).not.toThrow()
   })
 })

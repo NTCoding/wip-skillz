@@ -1,11 +1,8 @@
 /*
-  The tokens of the Medium theme in the light colour mode. Every other CSS file
-  of the page uses these custom properties rather than a raw value.
-  The selector also matches any element with data-colour-mode so that a part of
-  the page, like a panel of the gallery, can switch its mode on its own.
+  The tokens of the Medium theme. Every other CSS file of the page uses these
+  custom properties rather than a raw value.
 */
-:root,
-[data-colour-mode] {
+:root {
   color-scheme: light;
 
   /* Fonts */
@@ -101,6 +98,7 @@
   --reading-padding-top: 64px;
   --reading-padding-bottom: 28vh;
   --reading-side-min: 40px;
+  --marker-side-min: 88px;
 
   /* Text */
   --text: #242424;
@@ -234,6 +232,7 @@
   --shadow-card-comment: 0 0 0 1.5px var(--highlight-comment-line), 0 6px 22px rgb(0 0 0 / 10%);
   --shadow-card-grammar: 0 0 0 1.5px var(--grammar-ink), 0 6px 22px rgb(0 0 0 / 10%);
   --shadow-card-improvement: 0 0 0 1.5px var(--improvement-ink), 0 6px 22px rgb(0 0 0 / 10%);
+  --shadow-marker: inset 0 0 0 var(--hairline) var(--line);
 
   /* Layout */
   --sidebar-w: 264px;
@@ -261,6 +260,10 @@
   --lane-w-narrow: 280px;
   --lane-gap: 24px;
   --lane-side-min: 32px;
+  --lane-side-min-end: var(--outline-w);
+  --margin-popup-w: 340px;
+  --marker-h: 26px;
+  --marker-min-w: 30px;
   --avatar-size: 26px;
   --inbox-w: 380px;
   --inbox-count-size: 18px;

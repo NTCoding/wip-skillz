@@ -1,9 +1,4 @@
-.every-colour-mode {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--gallery-panel-min-w)), 1fr));
-}
-
-.every-colour-mode__panel {
+.gallery-panel {
   min-width: 0;
   padding: var(--space-6xl);
   background: var(--surface-reading);

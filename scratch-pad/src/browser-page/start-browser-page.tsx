@@ -46,7 +46,6 @@ export function startBrowserPage(): void {
         pad={pad}
         {...scratchPad}
         settings={window.localStorage}
-        prefersDark={window.matchMedia('(prefers-color-scheme: dark)').matches}
         narrowWindow={window.matchMedia(narrowAppFrameQuery).matches}
       />
     </StrictMode>,

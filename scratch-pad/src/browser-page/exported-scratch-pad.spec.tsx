@@ -27,7 +27,6 @@ function renderExport(hash = '') {
       connection={exportedScratchPad(exportedPadJson)}
       writing={undefined}
       settings={window.localStorage}
-      prefersDark={false}
       narrowWindow={false}
     />,
   )

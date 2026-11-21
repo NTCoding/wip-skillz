@@ -1,32 +1,48 @@
+/*
+  The columns depend on the width of the reading column, which is the area
+  beside the sidebar. In margin-lane.css, the markers are replaced by the lane
+  at the same width of 1040px.
+*/
 .reading-column {
+  container: reading-column / inline-size;
+}
+
+.reading-column__grid {
   display: grid;
-  grid-template-columns: minmax(var(--reading-side-min), 1fr) minmax(0, var(--col-w)) minmax(
-      var(--reading-side-min),
-      1fr
-    );
-  padding: var(--reading-padding-top) var(--space-0) var(--reading-padding-bottom);
-}
-
-.reading-column[data-margin='true'] {
-  --reading-lane-w: var(--lane-w);
-
   grid-template-columns:
-    minmax(var(--lane-side-min), 1fr) minmax(0, var(--col-w))
-    calc(var(--reading-lane-w) + var(--lane-gap)) minmax(var(--lane-side-min), 1fr);
-}
-
-@media (width < 1280px) {
-  .reading-column[data-margin='true'] {
-    --reading-lane-w: var(--lane-w-narrow);
-  }
+    minmax(var(--reading-side-min), 1fr) minmax(0, var(--col-w))
+    minmax(var(--marker-side-min), 1fr);
+  padding: var(--reading-padding-top) var(--space-0) var(--reading-padding-bottom);
 }
 
 .reading-column__margin {
   grid-row: 1;
-  grid-column: 3;
-  display: grid;
+  grid-column: 2;
+  align-self: start;
   min-width: 0;
-  padding-left: var(--lane-gap);
+}
+
+@container reading-column (width >= 1040px) {
+  .reading-column__grid {
+    grid-template-columns:
+      minmax(var(--lane-side-min), 1fr) minmax(0, var(--col-w))
+      calc(var(--lane-w-narrow) + var(--lane-gap)) minmax(var(--lane-side-min-end), 1fr);
+  }
+
+  .reading-column__margin {
+    grid-column: 3;
+    align-self: stretch;
+    display: grid;
+    padding-left: var(--lane-gap);
+  }
+}
+
+@container reading-column (width >= 1152px) {
+  .reading-column__grid {
+    grid-template-columns:
+      minmax(var(--lane-side-min), 1fr) var(--col-w)
+      calc(var(--lane-w) + var(--lane-gap)) minmax(var(--lane-side-min-end), 1fr);
+  }
 }
 
 :where(.reading-column__text) {
@@ -45,7 +61,7 @@
   margin: var(--space-0);
 }
 
-.reading-column > .reading-column__text > * + * {
+.reading-column__grid > .reading-column__text > * + * {
   margin-top: var(--gap-block);
 }
 
@@ -78,35 +94,35 @@
   line-height: var(--lh-h4);
 }
 
-.reading-column > .reading-column__text > h2 {
+.reading-column__grid > .reading-column__text > h2 {
   margin-top: var(--gap-h2);
 }
 
-.reading-column > .reading-column__text > h3 {
+.reading-column__grid > .reading-column__text > h3 {
   margin-top: var(--gap-h3);
 }
 
-.reading-column > .reading-column__text > h4 {
+.reading-column__grid > .reading-column__text > h4 {
   margin-top: var(--gap-h4);
 }
 
-.reading-column > .reading-column__text > :first-child {
+.reading-column__grid > .reading-column__text > :first-child {
   margin-top: var(--space-0);
 }
 
-.reading-column > .reading-column__text > h1 + * {
+.reading-column__grid > .reading-column__text > h1 + * {
   margin-top: var(--gap-under-h1);
 }
 
-.reading-column > .reading-column__text > h2 + * {
+.reading-column__grid > .reading-column__text > h2 + * {
   margin-top: var(--gap-under-h2);
 }
 
-.reading-column > .reading-column__text > :is(h3, h4) + * {
+.reading-column__grid > .reading-column__text > :is(h3, h4) + * {
   margin-top: var(--gap-under-h3);
 }
 
-.reading-column > .reading-column__text > p + :is(ul, ol, figure, blockquote, div) {
+.reading-column__grid > .reading-column__text > p + :is(ul, ol, figure, blockquote, div) {
   margin-top: var(--gap-intro);
 }
 

@@ -12,14 +12,12 @@ const paths = {
     'M6 12.5h4M6.5 14h3M8 2a4 4 0 0 0-2.5 7.1c.6.5 1 1.1 1 1.9h3c0-.8.4-1.4 1-1.9A4 4 0 0 0 8 2z',
   inbox: 'M2.5 9.5l1.5-6h8l1.5 6v3.5h-11zM2.5 9.5h3.5l.5 1.5h3l.5-1.5h3.5',
   'full-size': 'M9.5 2.5h4v4M6.5 13.5h-4v-4M13.5 2.5l-4.5 4.5M2.5 13.5l4.5-4.5',
-  moon: 'M13 9.5A5.5 5.5 0 0 1 6.5 3a5.5 5.5 0 1 0 6.5 6.5z',
   page: 'M4.5 2.5h5l2.5 2.5v8.5h-7.5zM9.5 2.5v2.5h2.5',
   'progress-tracker': 'M2.5 4.5h1M2.5 8h1M2.5 11.5h1M6 4.5h7.5M6 8h7.5M6 11.5h7.5',
   sent: 'M2.5 7.5l11-5-4.5 11-2-4.5zM7 9l6.5-6.5',
   'sidebar-collapse': 'M2.5 3.5h11v9h-11zM6 3.5v9M10.5 6.5L9 8l1.5 1.5',
   'sidebar-expand': 'M2.5 3.5h11v9h-11zM6 3.5v9M9 6.5L10.5 8 9 9.5',
   'text-changed': 'M8 2.5l6 11H2zM8 6.5v3.5M8 12h.01',
-  sun: 'M8 5.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5zM8 1.5v1.5M8 13v1.5M1.5 8H3M13 8h1.5M3.4 3.4l1 1M11.6 11.6l1 1M3.4 12.6l1-1M11.6 4.4l1-1',
 } as const
 
 export type IconName = keyof typeof paths

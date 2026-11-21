@@ -17,8 +17,16 @@ describe('IconButton', () => {
   })
 
   it('tells assistive technology that it is pressed when pressed is true', () => {
-    render(<IconButton icon="sun" label="Light" onClick={() => undefined} pressed tone="code" />)
-    expect(screen.getByRole('button', { name: 'Light', pressed: true }).className).toBe(
+    render(
+      <IconButton
+        icon="comment"
+        label="Show the comments"
+        onClick={() => undefined}
+        pressed
+        tone="code"
+      />,
+    )
+    expect(screen.getByRole('button', { name: 'Show the comments', pressed: true }).className).toBe(
       'icon-button icon-button--code',
     )
   })

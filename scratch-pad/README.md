@@ -7,5 +7,3 @@ With this skill, I work with the agent on pages in my browser rather than in the
 ![The Inbox lists what's waiting for me](docs/inbox.png)
 
 ![A decision that's waiting for me](docs/decision.png)
-
-![The dark mode](docs/dark-mode.png)

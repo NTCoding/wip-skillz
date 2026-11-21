@@ -3,10 +3,12 @@ import { createPortal } from 'react-dom'
 import { type Answer, type Thread, type ViewedPage } from './api-responses'
 import {
   MarginLane,
+  MarginMarker,
   ReadingColumn,
   SelectionTools,
   ThreadCard,
   ThreadDraft,
+  threadKindLabels,
   type MarginItem,
   type ThreadKindName,
   type ThreadState,
@@ -35,11 +37,19 @@ type PageContext = Omit<
   'page' | 'onAnswerDecision' | 'onCommentOnBlock' | 'answersOnThisPage'
 >
 
+// The address is the section in the address of the page and the number of navigations so far.
+// When Nick goes to the address of a thread, for example from his Inbox, that thread becomes active.
+interface PageAddress {
+  readonly section: string | undefined
+  readonly navigations: number
+}
+
 interface PageWithThreadsProps {
   readonly page: ViewedPage
   readonly threads: readonly Thread[]
   readonly context: PageContext
   readonly actions: PageActions | undefined
+  readonly address: PageAddress
 }
 
 interface Draft {
@@ -156,12 +166,25 @@ function newThreadOf(draft: Draft, page: string, message: string): NewThread {
   return { type: draft.kind, page, firstLine, lastLine, selectedText, prefix, suffix, message }
 }
 
-export function PageWithThreads({ page, threads, context, actions }: PageWithThreadsProps) {
+function useActiveThread(
+  address: PageAddress,
+): [string | undefined, (thread: string | undefined) => void] {
+  const [active, setActive] = useState(address.section)
+  const [followed, setFollowed] = useState(address)
+  if (followed.navigations !== address.navigations) {
+    setFollowed(address)
+    setActive(address.section)
+  }
+  return [active, setActive]
+}
+
+export function PageWithThreads(props: PageWithThreadsProps) {
+  const { page, threads, context, actions } = props
   const pageText = useRef<HTMLElement>(null)
   const toolsHolder = useRef<HTMLDivElement>(null)
   const [selected, setSelected] = useSelectionTools(pageText, toolsHolder)
   const [draft, setDraft] = useState<Draft | undefined>(undefined)
-  const [active, setActive] = useState<string | undefined>(undefined)
+  const [active, setActive] = useActiveThread(props.address)
   const [posted, setPosted] = useState<ReadonlyMap<string, Thread>>(new Map())
   const [choices, setChoices] = useState<ReadonlyMap<string, Answer>>(new Map())
   const body = useMemo(() => parsedPageBody(page.html), [page.html])
@@ -204,6 +227,16 @@ export function PageWithThreads({ page, threads, context, actions }: PageWithThr
         {...(actions === undefined ? {} : threadCardActions(actions, thread.id, remember))}
       />
     ),
+    marker: (
+      <MarginMarker
+        label={`${threadKindLabels[thread.type]} ${thread.id}`}
+        kind={thread.type}
+        messages={thread.messages.length}
+        open={draft === undefined && thread.id === active}
+        onClick={() => setActive(thread.id === active ? undefined : thread.id)}
+      />
+    ),
+    popup: draft === undefined && thread.id === active,
   }))
   const draftItems: MarginItem[] =
     draft === undefined || actions === undefined
@@ -221,6 +254,8 @@ export function PageWithThreads({ page, threads, context, actions }: PageWithThr
                 onCancel={() => setDraft(undefined)}
               />
             ),
+            marker: undefined,
+            popup: true,
           },
         ]
   const elementContext: PageElementContext = {

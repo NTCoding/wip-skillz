@@ -6,7 +6,7 @@
   padding: var(--space-3xl) var(--space-4xl) var(--space-4xl);
   border-radius: var(--r-md);
   background: var(--surface-raised);
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--margin-card-shadow, var(--shadow-sm));
   color: var(--text);
   font-family: var(--font-ui);
   font-size: var(--fs-ui);
@@ -21,13 +21,13 @@
 
 .margin-card[data-active='true'] {
   z-index: 2;
-  box-shadow: var(--shadow-card-comment);
+  box-shadow: var(--margin-card-shadow, var(--shadow-card-comment));
 }
 
 .margin-card[data-kind='grammar'][data-active='true'] {
-  box-shadow: var(--shadow-card-grammar);
+  box-shadow: var(--margin-card-shadow, var(--shadow-card-grammar));
 }
 
 .margin-card[data-kind='improvement'][data-active='true'] {
-  box-shadow: var(--shadow-card-improvement);
+  box-shadow: var(--margin-card-shadow, var(--shadow-card-improvement));
 }

@@ -2,7 +2,6 @@ import { composeStories, type Meta, type StoryObj } from '@storybook/react-vite'
 import { render } from '@testing-library/react'
 import { createElement } from 'react'
 import { describe, expect, it } from 'vitest'
-import { colourModes } from './colour-modes'
 import * as designSystem from './design-system'
 
 type StoryModule = { readonly default: Meta } & Readonly<Record<string, StoryObj>>
@@ -53,19 +52,17 @@ describe('the components of the design system', () => {
   )
 
   it.each(componentFolders)(
-    'renders every story in every colour mode when the folder is %s',
+    'renders every story in the frame of the gallery when the folder is %s',
     (folder) => {
       const stories = Object.values(composeStories(storiesOf(folder) ?? { default: {} }))
       const rendered = stories.map((story) => {
         const { container, unmount } = render(createElement(story))
-        const modes = [...container.querySelectorAll('[data-colour-mode]')].map((panel) =>
-          panel.getAttribute('data-colour-mode'),
-        )
+        const panels = container.querySelectorAll('.gallery-panel').length
         unmount()
-        return modes
+        return panels
       })
       expect(rendered.length).toBeGreaterThan(0)
-      expect(rendered).toStrictEqual(rendered.map(() => [...colourModes]))
+      expect(rendered).toStrictEqual(rendered.map(() => 1))
     },
   )
 })

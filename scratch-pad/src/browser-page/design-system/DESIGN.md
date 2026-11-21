@@ -2,26 +2,24 @@
 
 The browser page is the React page in `src/browser-page` that shows a scratch pad in the Medium theme. We want every part of the page to look consistent, including every part that's added later. So every part of the page is built from the components in this folder rather than styled on its own.
 
-This file describes the rules of the design system first. The sections after the rules describe how to change the page, like adding a component or a colour mode.
+This file describes the rules of the design system first. The sections after the rules describe how to change the page, like adding a component or a token.
 
 ## The folders
 
 | Folder or file           | What it contains                                                                                |
 | ------------------------ | ----------------------------------------------------------------------------------------------- |
 | `tokens/tokens.css`      | The tokens as custom properties, which are listed by group in that file                         |
-| `tokens/dark.css`        | The dark colour mode, which only overrides tokens                                               |
 | `page-base.css`          | The styles of `body`, the selection and the focus ring                                          |
 | `components/<name>/`     | One component in 4 files, which are listed in [How to add a component](#how-to-add-a-component) |
-| `gallery/`               | The frame that shows each story in every colour mode                                            |
-| `colour-modes.ts`        | The list of colour modes                                                                        |
+| `gallery/`               | The frame that shows each story in the gallery                                                  |
 | `design-system.ts`       | The only module that a feature imports                                                          |
-| `design-system.spec.tsx` | Checks each component folder and renders every story in every colour mode                       |
+| `design-system.spec.tsx` | Checks each component folder and renders every story                                            |
 
 ## The rules
 
 1. Every value in a CSS file is a token, like `var(--space-md)` or `var(--text)`. Outside `tokens/`, the lint rejects a literal value of every kind that's listed in the table below.
 2. A colour in a TypeScript string is a lint error too. An inline SVG uses `currentcolor` instead.
-3. A colour mode or a theme only overrides tokens. It never adds a rule for a component.
+3. A theme only overrides tokens. It never adds a rule for a component.
 4. A component only imports its own CSS. It uses another component through that component's React function.
 5. A feature only imports components from `design-system.ts` so it never imports a CSS file. It doesn't pass `className` or `style` to an element either.
 6. A component never sets its own outer margin, because the reading column sets the space between a page's blocks.
@@ -55,7 +53,7 @@ The rule recognises every colour format that's defined in CSS Color 4 and 5. The
 | --------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | The Stylelint rule `tokens/value-from-token`, on every CSS file in `src`    | A value like `padding: 13px`, `width: 683px` or `color: #242424`. Use a token instead. If there isn't a token that fits, add a token to `tokens/tokens.css` as described in [How to add a token](#how-to-add-a-token). The values that are accepted without a token are listed in [The values that need a token](#the-values-that-need-a-token). |
 | The ESLint rule `tokens/no-colour-in-string`, on the browser page's strings | A colour in a TypeScript string                                                                                                                                                                                                                                                                                                                  |
-| `tokens/token-contrast.spec.ts`                                             | A text colour that has too little contrast on its background. `token-contrast.spec.ts` checks each pair of a text token and a background token in every colour mode. Text needs 4.5 to 1, whereas a focus ring and an icon need 3 to 1.                                                                                                          |
+| `tokens/token-contrast.spec.ts`                                             | A text colour that has too little contrast on its background. `token-contrast.spec.ts` checks each pair of a text token and a background token. Text needs 4.5 to 1, whereas a focus ring and an icon need 3 to 1.                                                                                                                               |
 | `no-restricted-imports`                                                     | A feature that imports `design-system/components/...` or a CSS file                                                                                                                                                                                                                                                                              |
 | `react/forbid-dom-props`                                                    | `className` or `style` on an element in a feature                                                                                                                                                                                                                                                                                                |
 | `design-system.spec.tsx`                                                    | A component folder that doesn't have one of its 4 files, like its story, its `<name>.css` or its `<name>.spec.tsx`. A component that `design-system.ts` doesn't export fails `design-system.spec.tsx` too.                                                                                                                                       |
@@ -75,7 +73,12 @@ In a window that's narrower than 900px, an open sidebar would squeeze the text t
 
 `narrowAppFrameQuery` in `app-frame.tsx` is `(width < 900px)`. The same width is written out in `app-frame.css`, because a media query can't read a custom property. `app-frame.spec.tsx` will fail if the 2 widths differ.
 
-The margin with the comments is `--lane-w-narrow` wide rather than `--lane-w` in a window that's narrower than 1280px. That width is written out in `reading-column.css`.
+The layout of the reading column depends on the width of the reading column, which is the area beside the sidebar, rather than on the width of the window:
+
+- Below 1040px, the text is centred and the margin with the comments is hidden. Each thread is shown as a marker beside the text instead. If Nick clicks a marker, the card of the thread will open below its text.
+- From 1040px, the margin is shown beside the text and the markers are hidden. The margin is `--lane-w-narrow` wide below 1152px and `--lane-w` wide from 1152px.
+
+The widths are written out in `reading-column.css` and `margin-lane.css`, because a container query can't read a custom property. `reading-column.spec.tsx` will fail if the 2 files switch at different widths.
 
 ## Positions that are measured at runtime
 
@@ -105,28 +108,13 @@ element?.style.setProperty(
 
 1. The server returns a small frame document at `/browser-page/html-block-frame.html`. The frame document has its own content security policy, because the browser page's policy doesn't allow the block's inline scripts. The frame's policy allows inline scripts and inline styles, but it only allows a connection to an `https:` address. It doesn't allow a form to be sent either.
 2. The frame sends a ready message and a `MessagePort` to the page.
-3. `connectHtmlBlockFrame` sends the block's HTML through the `MessagePort`. The HTML is wrapped in a document with a `:root` rule, which contains the current colour mode's tokens.
-4. If Nick switches the colour mode, `connectHtmlBlockFrame` will send the new tokens through the `MessagePort`.
-5. The frame sends its content's height through the `MessagePort` and `HtmlBlock` sets that height as `--html-block-height`.
-6. If Nick clicks a link in the frame, the frame will send the link's address through the `MessagePort` rather than open the link itself. `followLink` then opens a page of the scratch pad in the browser page or a web address in a new tab. Every other address is ignored.
+3. `connectHtmlBlockFrame` sends the block's HTML through the `MessagePort`. The HTML is wrapped in a document with a `:root` rule, which contains the page's tokens.
+4. The frame sends its content's height through the `MessagePort` and `HtmlBlock` sets that height as `--html-block-height`.
+5. If Nick clicks a link in the frame, the frame will send the link's address through the `MessagePort` rather than open the link itself. `followLink` then opens a page of the scratch pad in the browser page or a web address in a new tab. Every other address is ignored.
 
 `HtmlBlock` has a comment button beside the full size control, because the page can't see a selection inside the frame. Nick uses that button to comment on the block as a whole.
 
 The full size view shows the same frame in the top layer rather than rendering the block a second time.
-
-## The colour modes
-
-The light mode's values are the defaults in `tokens/tokens.css`. The page sets `data-colour-mode` on `<html>` to the mode that Nick picked with the colour switcher in the top bar. His choice is saved in `localStorage` under `scratch-pad-colour-mode`. Without a saved choice, the page follows the system's colour scheme.
-
-The attribute works on any element as well, which is why the gallery can show a story in every colour mode on the same page.
-
-The colour modes are listed in `colour-modes.ts`. These parts all read that list:
-
-- the colour switcher
-- the gallery and `design-system.spec.tsx`
-- `savedColourMode` and the script that sets the mode before the first paint
-- `tokens/token-contrast.spec.ts`, which checks every pair of tokens in every mode
-- `colour-modes.spec.ts`, which fails if a mode doesn't have its CSS file with the right selector or if `design-system.ts` doesn't import that file
 
 ## How to use the design system in a feature
 
@@ -215,50 +203,20 @@ export default meta
 export const OneMessage: StoryObj<typeof meta> = {}
 ```
 
-Run `pnpm gallery` to look at your new component on port 6106, where the gallery shows every story in every colour mode.
+Run `pnpm gallery` to look at your new component on port 6106, where the gallery shows every story.
 
 ## How to add a token
 
-Add the token to `tokens/tokens.css` in the group it belongs to. If the value has to change in the dark mode, add the dark value to `tokens/dark.css` too.
+Add the token to `tokens/tokens.css` in the group it belongs to.
 
 ```css
 /* src/browser-page/design-system/tokens/tokens.css */
 --thread-highlight: #e0f0e0;
-
-/* src/browser-page/design-system/tokens/dark.css */
---thread-highlight: #1f3320;
-```
-
-## How to add a colour mode
-
-A colour mode is a CSS file that only overrides tokens. Here are the steps to add a mode called `sepia`:
-
-1. Write `tokens/sepia.css` with the selector `[data-colour-mode='sepia']` and the tokens that change.
-2. Import `./tokens/sepia.css` in `design-system.ts` after `./tokens/dark.css`.
-3. Add `'sepia'` to `colourModes` in `design-system/colour-modes.ts`.
-4. Add the Sepia button's label and icon to `buttons` in `components/colour-switcher/colour-switcher.tsx`. The type check will fail until the button is there.
-
-Every other part that reads the list in `colour-modes.ts` doesn't need any change. Those parts are listed under [The colour modes](#the-colour-modes).
-
-A new mode has to pass the contrast check, which the example below does. The example also overrides `--text-2`, `--accent` and the state colours, because a token that isn't overridden by the mode still has its light value from `tokens.css`. That light value might not have enough contrast on the sepia background.
-
-```css
-/* src/browser-page/design-system/tokens/sepia.css */
-[data-colour-mode='sepia'] {
-  --text: #3b2f22;
-  --text-2: #5f5242;
-  --state-todo: #5f5242;
-  --state-doing: #24589f;
-  --accent: #146c12;
-  --surface-reading: #f6efe3;
-  --surface-sidebar: #ece3d3;
-  --surface-top-bar: #f1e9db;
-}
 ```
 
 ## How to add a theme
 
-A theme overrides the tokens under its own attribute so that it works with every colour mode. The Medium theme's values are the defaults in `tokens/tokens.css`. Here is an example theme called `editorial`:
+A theme overrides the tokens under its own attribute. The Medium theme's values are the defaults in `tokens/tokens.css`. Here is an example theme called `editorial`:
 
 ```css
 /* src/browser-page/design-system/tokens/editorial.css */
@@ -269,7 +227,7 @@ A theme overrides the tokens under its own attribute so that it works with every
 }
 ```
 
-Import the theme's CSS file in `design-system.ts` and then set `data-theme` on `<html>` in `src/local-server/browser-page.ts`. If a theme changes a colour, it will need its own value of that colour for each colour mode. For the dark mode, the selector is `[data-theme='editorial'][data-colour-mode='dark']`.
+Import the theme's CSS file in `design-system.ts` and then set `data-theme` on `<html>` in `src/local-server/browser-page.ts`.
 
 ## How the comments are attached to the page
 
