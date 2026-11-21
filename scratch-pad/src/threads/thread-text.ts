@@ -2,6 +2,7 @@ import { countedNoun } from '../counted-noun'
 import { localTime } from '../local-time'
 import { itemTypeNoun } from '../items/item-id'
 import { linkLines, pageLink, type ItemLinks } from '../item-links/item-links'
+import { type PageLines } from '../pages/page-files'
 import { numberedLines } from '../pages/page-text'
 import { sectionAt } from '../pages/page-markdown'
 import { normalisedText } from '../rendered-page/page-blocks'
@@ -31,17 +32,13 @@ const waitingTexts: Readonly<Record<WaitingParty, string>> = {
   nobody: 'closed',
 }
 
-export function threadInboxLines(
-  stored: Thread,
-  pageLines: readonly string[],
-  links: ItemLinks,
-): string[] {
+export function threadInboxLines(stored: Thread, page: PageLines, links: ItemLinks): string[] {
   const padName = links.pad
-  const thread = positionedThread(stored, pageLines.join('\n'))
+  const thread = positionedThread(stored, page.lines.join('\n'))
   const newMessages = messagesSinceAgentReply(thread)
   const earlierMessages = thread.messages.length - newMessages.length
   return [
-    threadHeader(thread, pageLines),
+    threadHeader(thread, page),
     ...threadLinkLines(thread, links),
     ...selectedLines(thread),
     ...(earlierMessages === 0
@@ -50,21 +47,17 @@ export function threadInboxLines(
           `  earlier: ${countedNoun(earlierMessages, 'message')} (${showCommand(padName, thread.id)})`,
         ]),
     ...newMessages.map((entry) => `  ${authorNames[entry.author]}: ${indented(entry.text)}`),
-    ...blockLines(thread, pageLines, { length: 'preview', padName }),
+    ...blockLines(thread, page, { length: 'preview', padName }),
   ]
 }
 
-export function threadShowLines(
-  stored: Thread,
-  pageLines: readonly string[],
-  links: ItemLinks,
-): string[] {
-  const thread = positionedThread(stored, pageLines.join('\n'))
+export function threadShowLines(stored: Thread, page: PageLines, links: ItemLinks): string[] {
+  const thread = positionedThread(stored, page.lines.join('\n'))
   return [
-    `${threadHeader(thread, pageLines)} · ${waitingTexts[thread.waitsFor]}`,
+    `${threadHeader(thread, page)} · ${waitingTexts[thread.waitsFor]}`,
     ...threadLinkLines(thread, links),
     ...selectedLines(thread),
-    ...blockLines(thread, pageLines, { length: 'whole' }),
+    ...blockLines(thread, page, { length: 'whole' }),
     ...thread.messages.map(timedMessageLine),
     ...(thread.outcome === undefined ? [] : [`  outcome: ${thread.outcome}`]),
   ]
@@ -74,17 +67,17 @@ function threadLinkLines(thread: Thread, links: ItemLinks): string[] {
   return linkLines(pageLink(links, thread.page, thread.id), '  ')
 }
 
-function threadHeader(thread: PositionedThread, pageLines: readonly string[]): string {
+function threadHeader(thread: PositionedThread, page: PageLines): string {
   const name = `[${thread.id}] ${itemTypeNoun(thread.type)}`
   const { anchor, position } = thread
   if (anchor === undefined || position === undefined) {
-    return `${name} · ${thread.page}`
+    return `${name} · ${page.file}`
   }
   if (position.kind === 'detached') {
-    return `${name} · ${thread.page} · detached from ${lineWord(anchor)} ${lineRange(anchor)}`
+    return `${name} · ${page.file} · detached from ${lineWord(anchor)} ${lineRange(anchor)}`
   }
-  const location = `${thread.page}:${lineRange(position)}`
-  const section = sectionAt(pageLines, position.firstLine)
+  const location = `${page.file}:${lineRange(position)}`
+  const section = sectionAt(page.lines, position.firstLine)
   return section === undefined
     ? `${name} · ${location}`
     : `${name} · ${location} · section "${section}"`
@@ -115,21 +108,17 @@ function showCommand(padName: string, id: string): string {
   return `scratch-pad show --pad ${padName} ${id}`
 }
 
-function blockLines(
-  thread: PositionedThread,
-  pageLines: readonly string[],
-  shown: BlockLength,
-): string[] {
+function blockLines(thread: PositionedThread, page: PageLines, shown: BlockLength): string[] {
   const { position } = thread
   if (position === undefined) {
     return []
   }
   if (position.kind === 'detached') {
-    return pageLines.length === 0
-      ? [`  block: (${thread.page} doesn't exist any more)`]
-      : [`  block: (the selected text isn't in ${thread.page} any more)`]
+    return page.lines.length === 0
+      ? [`  block: (${page.file} doesn't exist any more)`]
+      : [`  block: (the selected text isn't in ${page.file} any more)`]
   }
-  const lines = numberedLines(pageLines, position.firstLine, position.lastLine)
+  const lines = numberedLines(page.lines, position.firstLine, position.lastLine)
   if (shown.length === 'whole' || lines.length <= shortBlockLines) {
     return ['  block:', ...lines]
   }

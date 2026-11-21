@@ -13,6 +13,7 @@ import {
 import { basename, dirname, join, sep } from 'node:path'
 import { DatabaseSync } from 'node:sqlite'
 import { type PageVersions } from '../pad-changes/pad-change'
+import { pageFileOf, pageFilesInOrder, type PageFile, type PageLines } from '../pages/page-files'
 import { isPagePath } from '../pages/page-markdown'
 import { isCustomHtmlPath } from '../rendered-page/html-block'
 import { ScratchPadError } from '../scratch-pad-error'
@@ -79,20 +80,28 @@ export class ScratchPadFolder {
     return this.withPadDb((db) => this.inTransaction(db, 'BEGIN IMMEDIATE', work))
   }
 
-  pages(): string[] {
+  pageFiles(): PageFile[] {
     const path = join(this.path, pagesFolder)
     return existsSync(path)
-      ? readdirSync(path)
-          .filter((name) => name.endsWith('.md'))
-          .map((name) => `${pagesFolder}/${name}`)
+      ? pageFilesInOrder(
+          readdirSync(path)
+            .filter((name) => name.endsWith('.md'))
+            .map((name) => pageFileOf(`${pagesFolder}/${name}`)),
+        )
       : []
   }
 
+  pages(): string[] {
+    return [...new Set(this.pageFiles().map((file) => file.page))]
+  }
+
   pageVersions(): PageVersions {
+    const files = this.pageFiles()
     return new Map(
       this.pages().map((page) => {
-        const stats = statSync(join(this.path, page))
-        return [page, `${stats.mtimeMs}-${stats.size}`]
+        const file = fileOfPage(files, page)
+        const stats = statSync(join(this.path, file))
+        return [page, `${file}-${stats.mtimeMs}-${stats.size}`]
       }),
     )
   }
@@ -105,9 +114,17 @@ export class ScratchPadFolder {
     )
   }
 
+  readPage(page: string): PageLines {
+    if (!isPagePath(page)) {
+      return { file: page, lines: [] }
+    }
+    const file = fileOfPage(this.pageFiles(), page)
+    const text = this.readFile(file)
+    return { file, lines: text === undefined ? [] : text.split('\n') }
+  }
+
   readPageLines(page: string): readonly string[] {
-    const text = isPagePath(page) ? this.readFile(page) : undefined
-    return text === undefined ? [] : text.split('\n')
+    return this.readPage(page).lines
   }
 
   readCustomFile(file: string): string | undefined {
@@ -228,6 +245,10 @@ export class ScratchPadFolder {
     db.exec('COMMIT')
     return result
   }
+}
+
+function fileOfPage(files: readonly PageFile[], page: string): string {
+  return files.find((file) => file.page === page)?.file ?? page
 }
 
 function rolledBackOnError<T>(db: DatabaseSync, work: () => T): T {

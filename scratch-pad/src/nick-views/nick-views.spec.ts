@@ -1,4 +1,4 @@
-import { mkdirSync } from 'node:fs'
+import { mkdirSync, renameSync } from 'node:fs'
 import { join } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
 import { replyToThread } from '../agent-commands/thread-commands'
@@ -56,10 +56,146 @@ describe('pageSummaries', () => {
     commentOnRetryPolicy(folder, 'Is 5 retries enough?')
 
     expect(pageSummaries(folder)).toStrictEqual([
-      { page: 'pages/index.md', title: 'Export job', openThreads: 1 },
+      {
+        page: 'pages/index.md',
+        file: 'pages/index.md',
+        number: undefined,
+        parent: undefined,
+        title: 'Export job',
+        description: 'The export job retries 5 times.',
+        openThreads: 1,
+        waitingForNick: { decisions: 0, replies: 0 },
+        waitingForNickWithSubPages: { decisions: 0, replies: 0 },
+      },
+    ])
+  })
+
+  it('returns the pages in the order of their numbers with their numbers, their parents and what waits for Nick on them and on their sub pages', () => {
+    const folder = numberedScratchPad()
+    const anchor = { firstLine: 3, lastLine: 3, selectedText: 'Raw logs', prefix: '', suffix: '' }
+    nickComments(folder, { type: 'comment', page: 'raw-logs', anchor, text: 'Which day?' })
+    replyToThread(folder, 'c-1', 'Monday.', unservedLinks)
+
+    expect(
+      pageSummaries(folder).map((summary) => ({
+        file: summary.file,
+        page: summary.page,
+        number: summary.number,
+        parent: summary.parent,
+        own: summary.waitingForNick,
+        withSubPages: summary.waitingForNickWithSubPages,
+      })),
+    ).toStrictEqual([
+      {
+        file: 'pages/index.md',
+        page: 'pages/index.md',
+        number: undefined,
+        parent: undefined,
+        own: { decisions: 0, replies: 0 },
+        withSubPages: { decisions: 0, replies: 0 },
+      },
+      {
+        file: 'pages/1-comment-on-the-export.md',
+        page: 'pages/comment-on-the-export.md',
+        number: '1',
+        parent: undefined,
+        own: { decisions: 0, replies: 0 },
+        withSubPages: { decisions: 1, replies: 1 },
+      },
+      {
+        file: 'pages/1.1-evidence.md',
+        page: 'pages/evidence.md',
+        number: '1.1',
+        parent: 'pages/comment-on-the-export.md',
+        own: { decisions: 1, replies: 0 },
+        withSubPages: { decisions: 1, replies: 1 },
+      },
+      {
+        file: 'pages/1.1.1-raw-logs.md',
+        page: 'pages/raw-logs.md',
+        number: '1.1.1',
+        parent: 'pages/evidence.md',
+        own: { decisions: 0, replies: 1 },
+        withSubPages: { decisions: 0, replies: 1 },
+      },
+      {
+        file: 'pages/2-board-edge.md',
+        page: 'pages/board-edge.md',
+        number: '2',
+        parent: undefined,
+        own: { decisions: 0, replies: 0 },
+        withSubPages: { decisions: 0, replies: 0 },
+      },
+      {
+        file: 'pages/notes.md',
+        page: 'pages/notes.md',
+        number: undefined,
+        parent: undefined,
+        own: { decisions: 0, replies: 0 },
+        withSubPages: { decisions: 0, replies: 0 },
+      },
+    ])
+  })
+
+  it('returns the first sentence after the title of each page as its description', () => {
+    expect(pageSummaries(numberedScratchPad()).map((summary) => summary.description)).toStrictEqual(
+      [
+        'The export job retries 5 times.',
+        'Nick commented on the export of the invoices.',
+        'The logs show 3 failed exports.',
+        undefined,
+        undefined,
+        undefined,
+      ],
+    )
+  })
+
+  it('lists a duplicate page once and leaves out the parent of a sub page whose parent number does not exist', () => {
+    const folder = exportJobScratchPad(temporaryHome())
+    writeFileInPad(folder, 'pages/1-evidence.md', '# Evidence\n')
+    writeFileInPad(folder, 'pages/2-evidence.md', '# Evidence again\n')
+    writeFileInPad(folder, 'pages/3.1-orphan.md', '# Orphan\n')
+
+    expect(
+      pageSummaries(folder).map((summary) => [summary.file, summary.title, summary.parent]),
+    ).toStrictEqual([
+      ['pages/index.md', 'Export job', undefined],
+      ['pages/1-evidence.md', 'Evidence', undefined],
+      ['pages/3.1-orphan.md', 'Orphan', undefined],
     ])
   })
 })
+
+function numberedScratchPad(): ScratchPadFolder {
+  const folder = exportJobScratchPad(temporaryHome())
+  writeFileInPad(
+    folder,
+    'pages/1-comment-on-the-export.md',
+    '# Comment on the export\n\nNick commented on the export of the invoices. The agent replied.\n',
+  )
+  writeFileInPad(
+    folder,
+    'pages/1.1-evidence.md',
+    [
+      '# Evidence',
+      '',
+      'The logs show 3 failed exports.',
+      '',
+      '## Will the export job retry 8 times?',
+      '',
+      ':::decision d-1',
+      'proposal: Raise the retry limit to 8.',
+      'alternative: Keep the retry limit at 5.',
+      'pick: proposal',
+      ':::',
+      '',
+    ].join('\n'),
+  )
+  writeFileInPad(folder, 'pages/1.1.1-raw-logs.md', '# Raw logs\n\n## Raw logs\n')
+  writeFileInPad(folder, 'pages/2-board-edge.md', '# Board edge\n')
+  writeFileInPad(folder, 'pages/notes.md', '# Notes\n')
+  return folder
+}
 
 describe('viewPage', () => {
   it('returns the rendered page with its title and headings when the page exists', () => {
@@ -163,6 +299,20 @@ describe('threadsOfPage', () => {
       ['c-1', 'agent'],
       ['c-2', 'nobody'],
     ])
+  })
+
+  it('returns the thread on its text when the agent has changed the number of the page', () => {
+    const folder = numberedScratchPad()
+    const anchor = { firstLine: 1, lastLine: 1, selectedText: 'Board edge', prefix: '', suffix: '' }
+    nickComments(folder, { type: 'comment', page: '2-board-edge.md', anchor, text: 'Why?' })
+    renameSync(
+      join(folder.path, 'pages/2-board-edge.md'),
+      join(folder.path, 'pages/3-board-edge.md'),
+    )
+
+    expect(
+      threadsOfPage(folder, 'board-edge.md').map((thread) => [thread.page, thread.position?.kind]),
+    ).toStrictEqual([['pages/board-edge.md', 'attached']])
   })
 })
 

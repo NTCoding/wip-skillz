@@ -54,7 +54,7 @@ function scanHeading(scan: HeadingScan, token: Token): HeadingScan {
   return { ...scan, line, open: { ...scan.open, text: scan.open.text + plainText(token) } }
 }
 
-function plainText(token: Token): string {
+export function plainText(token: Token): string {
   if (token.type === 'text' || token.type === 'code_inline') {
     return token.content
   }

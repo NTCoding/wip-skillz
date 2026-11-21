@@ -6723,6 +6723,45 @@ var init_rendered_page = __esm({
   }
 });
 
+// src/pages/page-files.ts
+function pageFileOf(file) {
+  const match2 = numberedFilePattern.exec(file);
+  return match2 === null ? { page: file, file, number: void 0 } : { page: `pages/${String(match2[2])}`, file, number: match2[1] };
+}
+function pageFilesInOrder(files) {
+  return files.toSorted(
+    (first, second) => placeOf(first) - placeOf(second) || byNumber(numberParts(first), numberParts(second)) || first.file.localeCompare(second.file)
+  );
+}
+function parentNumberOf(number) {
+  const parts = number?.split(".") ?? [];
+  return parts.length < 2 ? void 0 : parts.slice(0, -1).join(".");
+}
+function isUnderNumber(number, parent) {
+  return number !== void 0 && parent !== void 0 && number.startsWith(`${parent}.`);
+}
+function placeOf(file) {
+  if (file.page === indexPage) {
+    return 0;
+  }
+  return file.number === void 0 ? 2 : 1;
+}
+function numberParts(file) {
+  return file.number === void 0 ? [] : file.number.split(".").map(Number);
+}
+function byNumber(first, second) {
+  const differs = first.findIndex((part, index) => part !== second[index]);
+  return differs === -1 || differs >= second.length ? first.length - second.length : Number(first[differs]) - Number(second[differs]);
+}
+var numberedFilePattern, indexPage;
+var init_page_files = __esm({
+  "src/pages/page-files.ts"() {
+    "use strict";
+    numberedFilePattern = /^pages\/(\d+(?:\.\d+)*)-([^/]+\.md)$/;
+    indexPage = "pages/index.md";
+  }
+});
+
 // src/pages/page-markdown.ts
 function pageTitle(lines) {
   return pageHeadings(lines.join("\n")).find((heading2) => heading2.level === 1)?.text;
@@ -6734,29 +6773,23 @@ function isPagePath(page) {
   return pagePattern.test(page);
 }
 function findPage(pages, requested, padName) {
-  const candidates = [requested, `pages/${requested}`, `pages/${requested}.md`];
+  const candidates = [requested, `pages/${requested}`, `pages/${requested}.md`].map(
+    (candidate) => pageFileOf(candidate).page
+  );
   const page = pages.find((candidate) => candidates.includes(candidate));
   if (page === void 0) {
-    throw new UnknownPageError(requested, padName, pagesInOrder(pages));
+    throw new UnknownPageError(requested, padName, pages);
   }
   return page;
 }
-function pagesInOrder(pages) {
-  return pages.toSorted(
-    (first, second) => pageOrder(first) - pageOrder(second) || first.localeCompare(second)
-  );
-}
-function pageOrder(page) {
-  return page === indexPage ? 0 : 1;
-}
-var pagePattern, indexPage, UnknownPageError;
+var pagePattern, UnknownPageError;
 var init_page_markdown = __esm({
   "src/pages/page-markdown.ts"() {
     "use strict";
     init_rendered_page();
     init_scratch_pad_error();
+    init_page_files();
     pagePattern = /^pages\/[^/]+\.md$/;
-    indexPage = "pages/index.md";
     UnknownPageError = class extends ScratchPadError {
       constructor(page, padName, pages) {
         super(`There isn't any page called ${page} in ${padName}. The pages are: ${pages.join(", ")}`);
@@ -7961,6 +7994,9 @@ import {
   writeFileSync
 } from "node:fs";
 import { basename, dirname, join, sep } from "node:path";
+function fileOfPage(files, page) {
+  return files.find((file) => file.page === page)?.file ?? page;
+}
 function rolledBackOnError(db, work) {
   try {
     return work();
@@ -7975,6 +8011,7 @@ var init_scratch_pad_folder = __esm({
     "use strict";
     init_node_sqlite();
     init_pad_change();
+    init_page_files();
     init_page_markdown();
     init_html_block2();
     init_scratch_pad_error();
@@ -8004,13 +8041,13 @@ var init_scratch_pad_folder = __esm({
       static isScratchPad(path) {
         return existsSync(join(path, padDbFile)) || existsSync(join(path, pagesFolder));
       }
-      static create(path, indexPage2, fill) {
+      static create(path, indexPage3, fill) {
         if (existsSync(path)) {
           throw new ScratchPadExistsError(path);
         }
         const building = new _ScratchPadFolder(mkdtempSync(join(dirname(path), `.${basename(path)}-`)));
         try {
-          building.build(indexPage2, fill);
+          building.build(indexPage3, fill);
           renameSync(building.path, path);
         } catch (error) {
           throw existsSync(path) ? new ScratchPadExistsError(path) : error;
@@ -8028,15 +8065,22 @@ var init_scratch_pad_folder = __esm({
       change(work) {
         return this.withPadDb((db) => this.inTransaction(db, "BEGIN IMMEDIATE", work));
       }
-      pages() {
+      pageFiles() {
         const path = join(this.path, pagesFolder);
-        return existsSync(path) ? readdirSync(path).filter((name) => name.endsWith(".md")).map((name) => `${pagesFolder}/${name}`) : [];
+        return existsSync(path) ? pageFilesInOrder(
+          readdirSync(path).filter((name) => name.endsWith(".md")).map((name) => pageFileOf(`${pagesFolder}/${name}`))
+        ) : [];
+      }
+      pages() {
+        return [...new Set(this.pageFiles().map((file) => file.page))];
       }
       pageVersions() {
+        const files = this.pageFiles();
         return new Map(
           this.pages().map((page) => {
-            const stats = statSync(join(this.path, page));
-            return [page, `${stats.mtimeMs}-${stats.size}`];
+            const file = fileOfPage(files, page);
+            const stats = statSync(join(this.path, file));
+            return [page, `${file}-${stats.mtimeMs}-${stats.size}`];
           })
         );
       }
@@ -8047,9 +8091,16 @@ var init_scratch_pad_folder = __esm({
           this.name
         );
       }
+      readPage(page) {
+        if (!isPagePath(page)) {
+          return { file: page, lines: [] };
+        }
+        const file = fileOfPage(this.pageFiles(), page);
+        const text3 = this.readFile(file);
+        return { file, lines: text3 === void 0 ? [] : text3.split("\n") };
+      }
       readPageLines(page) {
-        const text3 = isPagePath(page) ? this.readFile(page) : void 0;
-        return text3 === void 0 ? [] : text3.split("\n");
+        return this.readPage(page).lines;
       }
       readCustomFile(file) {
         const path = join(this.path, file);
@@ -8063,9 +8114,9 @@ var init_scratch_pad_folder = __esm({
         const path = join(this.path, file);
         return existsSync(path) ? readFileSync(path, "utf8") : void 0;
       }
-      build(indexPage2, fill) {
+      build(indexPage3, fill) {
         mkdirSync(join(this.path, pagesFolder));
-        writeFileSync(join(this.path, pagesFolder, "index.md"), indexPage2);
+        writeFileSync(join(this.path, pagesFolder, "index.md"), indexPage3);
         this.usePadDb((db) => {
           db.exec("PRAGMA journal_mode = WAL");
           this.inTransaction(db, "BEGIN IMMEDIATE", (pad2) => {
@@ -9071,7 +9122,7 @@ function progressTrackerHref(pad2) {
 function decisionLogHref(pad2) {
   return `${padPath(pad2)}${decisionLogPath}`;
 }
-function fileOfPage(page) {
+function fileOfPage2(page) {
   return page.replace(/^pages\//, "");
 }
 var indexFile, progressTrackerPath, decisionLogPath;
@@ -9092,7 +9143,7 @@ function itemLinks(pad2, port) {
   return { pad: pad2, origin: port === void 0 ? void 0 : serverOrigin(port) };
 }
 function pageLink2(links, page, section) {
-  return linkTo(links, pageHref(links.pad, fileOfPage(page), section));
+  return linkTo(links, pageHref(links.pad, fileOfPage2(page), section));
 }
 function padLink(links) {
   return linkTo(links, pageHref(links.pad, indexFile));
@@ -9131,9 +9182,9 @@ function numberedLines(lines, first, last) {
   const width = String(last).length;
   return lines.slice(first - 1, last).map((text3, index) => `    ${String(first + index).padStart(width)} | ${text3}`.trimEnd());
 }
-function outlineText(page, headings, links) {
+function outlineText(page, file, headings, links) {
   if (headings.length === 0) {
-    return `${page} doesn't have any headings`;
+    return `${file} doesn't have any headings`;
   }
   const width = String(Math.max(...headings.map((heading2) => heading2.line))).length;
   const lines = headings.map(
@@ -9148,13 +9199,15 @@ function pageListText(pages, links) {
   if (pages.length === 0) {
     return "there aren't any pages in pages/ yet";
   }
-  const pageWidth = Math.max(...pages.map((summary) => summary.page.length));
+  const numberWidth = Math.max(...pages.map((summary) => summary.number?.length ?? 0));
+  const fileWidth = Math.max(...pages.map((summary) => summary.file.length));
   const titleWidth = Math.max(...pages.map((summary) => titleOf(summary).length));
   const threadsWidth = Math.max(...pages.map((summary) => openThreadsText(summary).length));
   const lines = pages.map(
     (summary) => withLink(
       [
-        summary.page.padEnd(pageWidth),
+        ...numberWidth === 0 ? [] : [numberColumn(summary, numberWidth)],
+        summary.file.padEnd(fileWidth),
         titleOf(summary).padEnd(titleWidth),
         openThreadsText(summary).padEnd(threadsWidth)
       ].join("  "),
@@ -9165,6 +9218,9 @@ function pageListText(pages, links) {
 }
 function withLink(line, link2) {
   return link2 === void 0 ? line.trimEnd() : `${line}  ${link2}`;
+}
+function numberColumn(summary, width) {
+  return summary.number === void 0 ? " ".repeat(width) : summary.number.padEnd(width);
 }
 function titleOf(summary) {
   return summary.title ?? "(no title)";
@@ -9181,14 +9237,63 @@ var init_page_text = __esm({
   }
 });
 
+// src/rendered-page/page-description.ts
+function pageDescription(markdown) {
+  const tokens = pageMarkdownParser.parse(markdown, {});
+  const titleAt = tokens.findIndex((token) => token.type === "heading_open" && token.tag === "h1");
+  const paragraphAt = tokens.findIndex(
+    (token, index) => index > titleAt && token.type === "paragraph_open" && token.level === 0
+  );
+  const text3 = paragraphText(paragraphAt === -1 ? void 0 : tokens[paragraphAt + 1]);
+  return text3 === "" ? void 0 : firstSentencePattern.exec(text3)?.[0] ?? text3;
+}
+function paragraphText(inline2) {
+  return (inline2?.children ?? []).map(plainText).join("").replaceAll(/\s+/g, " ").trim();
+}
+var firstSentencePattern;
+var init_page_description = __esm({
+  "src/rendered-page/page-description.ts"() {
+    "use strict";
+    init_markdown_it();
+    init_page_headings();
+    init_page_markdown_parser();
+    firstSentencePattern = /^.*?[.!?](?=\s|$)/;
+  }
+});
+
 // src/nick-views/nick-views.ts
 function pageSummaries(folder) {
   const openThreads = folder.read((pad2) => pad2.readThreads()).filter((thread) => thread.waitsFor !== "nobody");
-  return pagesInOrder(folder.pages()).map((page) => ({
-    page,
-    title: pageTitle(folder.readPageLines(page)),
-    openThreads: openThreads.filter((thread) => thread.page === page).length
-  }));
+  const inbox = nickInboxItems(folder);
+  const files = pageFilesOnce(folder.pageFiles());
+  const waitingOn = (pages) => ({
+    decisions: inbox.decisions.filter((decision) => pages.includes(decision.page)).length,
+    replies: inbox.threads.filter((thread) => pages.includes(thread.page)).length
+  });
+  return files.map((file) => {
+    const lines = folder.readPageLines(file.page);
+    const pagesUnder = files.filter((other) => isUnderNumber(other.number, file.number));
+    return {
+      page: file.page,
+      file: file.file,
+      number: file.number,
+      parent: parentOf(file, files),
+      title: pageTitle(lines),
+      description: pageDescription(lines.join("\n")),
+      openThreads: openThreads.filter((thread) => thread.page === file.page).length,
+      waitingForNick: waitingOn([file.page]),
+      waitingForNickWithSubPages: waitingOn([file, ...pagesUnder].map((each) => each.page))
+    };
+  });
+}
+function pageFilesOnce(files) {
+  return files.filter(
+    (file, index) => files.findIndex((other) => other.page === file.page) === index
+  );
+}
+function parentOf(file, files) {
+  const parentNumber = parentNumberOf(file.number);
+  return parentNumber === void 0 ? void 0 : files.find((other) => other.number === parentNumber)?.page;
 }
 function viewPage(folder, requested) {
   const page = findPage(folder.pages(), requested, folder.name);
@@ -9222,7 +9327,7 @@ function withPositions(folder, threads) {
 function nickInboxItems(folder) {
   return {
     threads: withPositions(folder, nickInbox(folder.read((pad2) => pad2.readThreads()))),
-    decisions: pagesInOrder(folder.pages()).flatMap(
+    decisions: folder.pages().flatMap(
       (page) => viewPage(folder, page).decisions.flatMap(
         (decision) => decision.answer === void 0 && decision.question !== void 0 ? [{ page, id: decision.id, line: decision.firstLine, question: decision.question }] : []
       )
@@ -9248,10 +9353,12 @@ var init_nick_views = __esm({
     init_decision_answer();
     init_decision_log();
     init_nick_inbox();
+    init_page_files();
     init_page_markdown();
     init_page_text();
     init_progress_tracker();
     init_decision_block();
+    init_page_description();
     init_page_headings();
     init_page_links();
     init_rendered_page();
@@ -9266,7 +9373,7 @@ var toolBuild;
 var init_tool_build = __esm({
   "src/local-server/tool-build.ts"() {
     "use strict";
-    toolBuild = "4c4d2398a181d0d5";
+    toolBuild = "d85059ba6ecbd17f";
   }
 });
 
@@ -10282,17 +10389,34 @@ var init_raw_colours = __esm({
 });
 
 // src/page-check/page-check.ts
-function pageCheckProblems(pages, checkedPages, proseProblems) {
+function pageCheckProblems(pages, files, checkedPages, proseProblems) {
   const duplicates = duplicateDecisions(pages);
   return pages.filter((page) => checkedPages.includes(page.page)).flatMap((checked) => [
+    ...files.filter((file) => file.page === checked.page).flatMap((file) => numberProblems(file, files)),
     ...[
       ...checked.rendered.problems,
       ...checked.rendered.links.flatMap((link2) => linkProblems(link2, pages)),
-      ...duplicates.filter((duplicate) => duplicate.page === checked.page),
+      ...duplicates.filter((duplicate) => duplicate.page === checked.file),
       ...checked.rendered.htmlBlocks.flatMap(rawColourProblems)
-    ].toSorted(byLine).map((problem2) => ({ page: checked.page, line: problem2.line, text: problem2.text })),
-    ...proseProblems(checked.page).map((text3) => ({ page: checked.page, line: void 0, text: text3 }))
+    ].toSorted(byLine).map((problem2) => ({ page: checked.file, line: problem2.line, text: problem2.text })),
+    ...proseProblems(checked).map((text3) => ({ page: checked.file, line: void 0, text: text3 }))
   ]);
+}
+function numberProblems(file, files) {
+  const name = fileOfPage2(file.page);
+  const first = files.find((other) => other.page === file.page);
+  const parentNumber = parentNumberOf(file.number);
+  return [
+    ...file.number === void 0 && file.page !== indexPage2 ? [
+      `the page doesn't have a number. Rename the file to <number>-${name}, where the number is the place of the page in the order`
+    ] : [],
+    ...first !== void 0 && first.file !== file.file ? [
+      `the page has the same name as ${first.file} after its number. Give one of the 2 pages another name`
+    ] : [],
+    ...parentNumber !== void 0 && !files.some((other) => other.number === parentNumber) ? [
+      `the page is a sub page of page ${parentNumber}, which doesn't exist. Add a page ${parentNumber}-<name>.md or change the number of this page`
+    ] : []
+  ].map((text3) => ({ page: file.file, line: void 0, text: text3 }));
 }
 function linkProblems(link2, pages) {
   if (link2.kind === "other") {
@@ -10300,7 +10424,7 @@ function linkProblems(link2, pages) {
   }
   const target = pages.find((page) => page.page === link2.page);
   if (target === void 0) {
-    return [{ line: link2.line, text: `the link points to ${link2.page}, which doesn't exist` }];
+    return [{ line: link2.line, text: missingTargetText(link2.page, pages) }];
   }
   const headingId = link2.headingId;
   if (headingId === void 0 || target.rendered.headings.some((heading2) => heading2.id === headingId)) {
@@ -10312,6 +10436,10 @@ function linkProblems(link2, pages) {
       text: `the link points to the heading #${headingId} in ${link2.page}, which doesn't exist`
     }
   ];
+}
+function missingTargetText(linkedPage, pages) {
+  const { page, number } = pageFileOf(linkedPage);
+  return number !== void 0 && pages.some((other) => other.page === page) ? `the link includes the number ${number} of the page. Write the link as ${fileOfPage2(page)} so that it still works after the page is renumbered` : `the link points to ${linkedPage}, which doesn't exist`;
 }
 function rawColourProblems(block2) {
   const colours = rawColoursInHtml(block2.html);
@@ -10326,7 +10454,7 @@ function duplicateDecisions(pages) {
   const places = pages.flatMap(
     (page) => page.rendered.decisions.map((decision) => ({
       id: decision.id,
-      page: page.page,
+      page: page.file,
       line: decision.firstLine
     }))
   );
@@ -10346,15 +10474,19 @@ function threadsOnMissingPages(threads, pages) {
     text: `${thread.id} is still open on a page that doesn't exist any more. Restore the page or reply to ${thread.id} so that Nick can resolve it in his Inbox`
   }));
 }
+var indexPage2;
 var init_page_check = __esm({
   "src/page-check/page-check.ts"() {
     "use strict";
+    init_pad_paths();
+    init_page_files();
     init_page_links();
     init_page_problem();
     init_rendered_page();
     init_named_blocks();
     init_thread();
     init_raw_colours();
+    indexPage2 = "pages/index.md";
   }
 });
 
@@ -10438,18 +10570,22 @@ var init_prose_check = __esm({
 // src/agent-commands/check-commands.ts
 import { join as join5 } from "node:path";
 function checkPages(folder, requested, proseCheck) {
-  const pages = pagesInOrder(folder.pages());
+  const pages = folder.pages();
   const found = new Set(requested.map((page) => findPage(pages, page, folder.name)));
   const checkedPages = requested.length === 0 ? pages : pages.filter((page) => found.has(page));
-  const markdownOf = (page) => folder.readPageLines(page).join("\n");
-  const rendered = pages.map((page) => ({
-    page,
-    rendered: renderPage({
+  const rendered = pages.map((page) => {
+    const { file, lines } = folder.readPage(page);
+    const markdown = lines.join("\n");
+    return {
       page,
-      markdown: markdownOf(page),
-      readCustomFile: (file) => checkedPages.includes(page) ? folder.readCustomFile(file) : void 0
-    })
-  }));
+      file,
+      rendered: renderPage({
+        page,
+        markdown,
+        readCustomFile: (custom) => checkedPages.includes(page) ? folder.readCustomFile(custom) : void 0
+      })
+    };
+  });
   const orphans = requested.length === 0 ? threadsOnMissingPages(
     folder.read((pad2) => pad2.readThreads()),
     pages
@@ -10457,8 +10593,12 @@ function checkPages(folder, requested, proseCheck) {
   const problems = [
     ...pageCheckProblems(
       rendered,
+      folder.pageFiles(),
       checkedPages,
-      (page) => proseCheck === void 0 ? [] : proseCheck(join5(folder.path, page), markdownOf(page))
+      (checked) => proseCheck === void 0 ? [] : proseCheck(
+        join5(folder.path, checked.file),
+        folder.readPageLines(checked.page).join("\n")
+      )
     ),
     ...orphans
   ];
@@ -10477,24 +10617,24 @@ var init_check_commands = __esm({
 });
 
 // src/decisions/decision-text.ts
-function decisionInboxLines(decision, links) {
+function decisionInboxLines(decision, file, links) {
   return [
-    decisionHeader(decision),
+    decisionHeader(decision, file),
     ...decisionLinkLines(decision, links),
     `  ${answerLine(decision.answer)}`
   ];
 }
-function decisionShowLines(decision, links) {
+function decisionShowLines(decision, file, links) {
   const state = decision.outcome === void 0 ? "waits for the agent" : "done";
   return [
-    `${decisionHeader(decision)} \xB7 ${state}`,
+    `${decisionHeader(decision, file)} \xB7 ${state}`,
     ...decisionLinkLines(decision, links),
     `  ${answerLine(decision.answer)}`,
     ...decision.outcome === void 0 ? [] : [`  outcome: ${decision.outcome}`]
   ];
 }
-function decisionHeader(decision) {
-  return `[${decision.id}] decision \xB7 ${decision.page}:${decision.line} \xB7 "${decision.question}"`;
+function decisionHeader(decision, file) {
+  return `[${decision.id}] decision \xB7 ${file}:${decision.line} \xB7 "${decision.question}"`;
 }
 function decisionLinkLines(decision, links) {
   return linkLines(pageLink2(links, decision.page, decision.id), "  ");
@@ -10508,29 +10648,29 @@ var init_decision_text = __esm({
 });
 
 // src/threads/thread-text.ts
-function threadInboxLines(stored, pageLines, links) {
+function threadInboxLines(stored, page, links) {
   const padName = links.pad;
-  const thread = positionedThread(stored, pageLines.join("\n"));
+  const thread = positionedThread(stored, page.lines.join("\n"));
   const newMessages = messagesSinceAgentReply(thread);
   const earlierMessages = thread.messages.length - newMessages.length;
   return [
-    threadHeader(thread, pageLines),
+    threadHeader(thread, page),
     ...threadLinkLines(thread, links),
     ...selectedLines(thread),
     ...earlierMessages === 0 ? [] : [
       `  earlier: ${countedNoun(earlierMessages, "message")} (${showCommand(padName, thread.id)})`
     ],
     ...newMessages.map((entry) => `  ${authorNames[entry.author]}: ${indented(entry.text)}`),
-    ...blockLines(thread, pageLines, { length: "preview", padName })
+    ...blockLines(thread, page, { length: "preview", padName })
   ];
 }
-function threadShowLines(stored, pageLines, links) {
-  const thread = positionedThread(stored, pageLines.join("\n"));
+function threadShowLines(stored, page, links) {
+  const thread = positionedThread(stored, page.lines.join("\n"));
   return [
-    `${threadHeader(thread, pageLines)} \xB7 ${waitingTexts[thread.waitsFor]}`,
+    `${threadHeader(thread, page)} \xB7 ${waitingTexts[thread.waitsFor]}`,
     ...threadLinkLines(thread, links),
     ...selectedLines(thread),
-    ...blockLines(thread, pageLines, { length: "whole" }),
+    ...blockLines(thread, page, { length: "whole" }),
     ...thread.messages.map(timedMessageLine),
     ...thread.outcome === void 0 ? [] : [`  outcome: ${thread.outcome}`]
   ];
@@ -10538,17 +10678,17 @@ function threadShowLines(stored, pageLines, links) {
 function threadLinkLines(thread, links) {
   return linkLines(pageLink2(links, thread.page, thread.id), "  ");
 }
-function threadHeader(thread, pageLines) {
+function threadHeader(thread, page) {
   const name = `[${thread.id}] ${itemTypeNoun(thread.type)}`;
   const { anchor, position } = thread;
   if (anchor === void 0 || position === void 0) {
-    return `${name} \xB7 ${thread.page}`;
+    return `${name} \xB7 ${page.file}`;
   }
   if (position.kind === "detached") {
-    return `${name} \xB7 ${thread.page} \xB7 detached from ${lineWord(anchor)} ${lineRange(anchor)}`;
+    return `${name} \xB7 ${page.file} \xB7 detached from ${lineWord(anchor)} ${lineRange(anchor)}`;
   }
-  const location = `${thread.page}:${lineRange(position)}`;
-  const section = sectionAt(pageLines, position.firstLine);
+  const location = `${page.file}:${lineRange(position)}`;
+  const section = sectionAt(page.lines, position.firstLine);
   return section === void 0 ? `${name} \xB7 ${location}` : `${name} \xB7 ${location} \xB7 section "${section}"`;
 }
 function selectedLines({ anchor, position }) {
@@ -10566,15 +10706,15 @@ function quotedLine(label, text3) {
 function showCommand(padName, id) {
   return `scratch-pad show --pad ${padName} ${id}`;
 }
-function blockLines(thread, pageLines, shown) {
+function blockLines(thread, page, shown) {
   const { position } = thread;
   if (position === void 0) {
     return [];
   }
   if (position.kind === "detached") {
-    return pageLines.length === 0 ? [`  block: (${thread.page} doesn't exist any more)`] : [`  block: (the selected text isn't in ${thread.page} any more)`];
+    return page.lines.length === 0 ? [`  block: (${page.file} doesn't exist any more)`] : [`  block: (the selected text isn't in ${page.file} any more)`];
   }
-  const lines = numberedLines(pageLines, position.firstLine, position.lastLine);
+  const lines = numberedLines(page.lines, position.firstLine, position.lastLine);
   if (shown.length === "whole" || lines.length <= shortBlockLines) {
     return ["  block:", ...lines];
   }
@@ -10604,6 +10744,7 @@ var init_thread_text = __esm({
     init_local_time();
     init_item_id();
     init_item_links();
+    init_page_files();
     init_page_text();
     init_page_markdown();
     init_page_blocks();
@@ -10646,7 +10787,7 @@ function headerLine(selection, context) {
   return selection.seenBefore === 0 ? `nothing new in ${context.links.pad}` : `nothing new in ${context.links.pad} \xB7 ${countedNoun(selection.seenBefore, "item")} printed before (scratch-pad inbox --pad ${context.links.pad} --all)`;
 }
 function itemLines(item, context) {
-  return item.kind === "thread" ? threadInboxLines(item.thread, context.pageLines(item.thread.page), context.links) : decisionInboxLines(item.decision, context.links);
+  return item.kind === "thread" ? threadInboxLines(item.thread, context.readPage(item.thread.page), context.links) : decisionInboxLines(item.decision, context.readPage(item.decision.page).file, context.links);
 }
 function sideNotesText(sideNotes) {
   return `${countsText(sideNotes)} ${waitVerb(totalOf(sideNotes))} for a subagent`;
@@ -10671,6 +10812,7 @@ var init_agent_inbox_text = __esm({
     init_decision_text();
     init_item_id();
     init_item_links();
+    init_page_files();
     init_thread_text();
     init_agent_inbox();
   }
@@ -10795,7 +10937,7 @@ function printedInboxText(folder, selection, includeSeen, links) {
   return agentInboxText(selection, {
     links,
     includeSeen,
-    pageLines: (page) => folder.readPageLines(page)
+    readPage: (page) => folder.readPage(page)
   });
 }
 function scratchPadStatus(folder, links) {
@@ -10905,7 +11047,8 @@ function listPages(folder, links) {
 }
 function outlinePage(folder, requested, links) {
   const page = findPage(folder.pages(), requested, folder.name);
-  return outlineText(page, pageHeadings(folder.readPageLines(page).join("\n")), links);
+  const { file, lines } = folder.readPage(page);
+  return outlineText(page, file, pageHeadings(lines.join("\n")), links);
 }
 var init_page_commands = __esm({
   "src/agent-commands/page-commands.ts"() {
@@ -10975,12 +11118,13 @@ var init_progress_tracker_commands = __esm({
 function showItem(folder, id, links) {
   if (itemTypeOf(id) === "decision") {
     const decision = folder.read((pad2) => pad2.readDecisionAnswer(id));
-    return withLinksNote(links, decisionShowLines(decision, links).join("\n"));
+    const { file } = folder.readPage(decision.page);
+    return withLinksNote(links, decisionShowLines(decision, file, links).join("\n"));
   }
   const thread = folder.read((pad2) => pad2.readThread(id));
   return withLinksNote(
     links,
-    threadShowLines(thread, folder.readPageLines(thread.page), links).join("\n")
+    threadShowLines(thread, folder.readPage(thread.page), links).join("\n")
   );
 }
 function replyToThread(folder, id, text3, links) {

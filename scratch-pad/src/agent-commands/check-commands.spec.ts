@@ -21,7 +21,7 @@ function scratchPadWithRetryPage() {
   writeFileInPad(folder, 'custom/retry-steps.html', '<ol><li>retry</li></ol>')
   writeFileInPad(
     folder,
-    'pages/retry.md',
+    'pages/1-retry.md',
     [
       '# Retry',
       '',
@@ -38,7 +38,7 @@ describe('checkPages', () => {
   it('prints the problems of every page and counts them when no page is requested', () => {
     expect(checkPages(scratchPadWithRetryPage(), [], undefined)).toStrictEqual({
       text: [
-        "pages/retry.md:3  the link points to pages/queue.md, which doesn't exist",
+        "pages/1-retry.md:3  the link points to pages/queue.md, which doesn't exist",
         '1 problem in 2 pages',
       ].join('\n'),
       problemCount: 1,
@@ -51,7 +51,7 @@ describe('checkPages', () => {
     nickComments(folder, { type: 'comment', page: 'retry', anchor, text: 'Is this page needed?' })
     nickComments(folder, { type: 'comment', page: 'retry', anchor, text: 'Fine.' })
     nickResolves(folder, 'c-2')
-    rmSync(join(folder.path, 'pages/retry.md'))
+    rmSync(join(folder.path, 'pages/1-retry.md'))
 
     expect(checkPages(folder, [], undefined).text).toBe(
       [
@@ -66,13 +66,13 @@ describe('checkPages', () => {
     const folder = exportJobScratchPad(temporaryHome())
     writeFileInPad(
       folder,
-      'pages/schedule.md',
+      'pages/1-schedule.md',
       ':::decision d-7\nproposal: Export at night.\nalternative: Export every hour.\npick: proposal\n:::\n',
     )
 
     expect(checkPages(folder, ['schedule'], undefined)).toStrictEqual({
       text: [
-        "pages/schedule.md:1  decision d-7 doesn't have a heading above it (write the question as a heading)",
+        "pages/1-schedule.md:1  decision d-7 doesn't have a heading above it (write the question as a heading)",
         '1 problem in 1 page',
       ].join('\n'),
       problemCount: 1,
@@ -100,7 +100,7 @@ describe('checkPages', () => {
       `the page starts with ${text.split('\n')[0]}`,
     ])
 
-    expect(result.text.split('\n')[1]).toBe('pages/retry.md  the page starts with # Retry')
+    expect(result.text.split('\n')[1]).toBe('pages/1-retry.md  the page starts with # Retry')
   })
 
   it('checks every requested page once when several pages are requested', () => {
@@ -108,7 +108,7 @@ describe('checkPages', () => {
       checkPages(scratchPadWithRetryPage(), ['index', 'retry.md', 'retry'], undefined),
     ).toStrictEqual({
       text: [
-        "pages/retry.md:3  the link points to pages/queue.md, which doesn't exist",
+        "pages/1-retry.md:3  the link points to pages/queue.md, which doesn't exist",
         '1 problem in 2 pages',
       ].join('\n'),
       problemCount: 1,
@@ -132,7 +132,7 @@ describe('checkPages', () => {
     mkdirSync(join(folder.path, 'custom/retry-steps.html'))
 
     expect(checkPages(folder, ['retry'], undefined).text.split('\n')[1]).toBe(
-      "pages/retry.md:5  the :::html block reads custom/retry-steps.html, which doesn't exist",
+      "pages/1-retry.md:5  the :::html block reads custom/retry-steps.html, which doesn't exist",
     )
   })
 
@@ -142,6 +142,21 @@ describe('checkPages', () => {
     checkPages(folder, ['index'], undefined)
 
     expect(readCustomFile).not.toHaveBeenCalled()
+  })
+
+  it('prints the problems of the numbers in the file names when no page is requested', () => {
+    const folder = scratchPadWithRetryPage()
+    writeFileInPad(folder, 'pages/notes.md', '# Notes\n')
+    writeFileInPad(folder, 'pages/2-retry.md', '# Retry again\n')
+
+    expect(checkPages(folder, [], undefined).text).toBe(
+      [
+        'pages/2-retry.md  the page has the same name as pages/1-retry.md after its number. Give one of the 2 pages another name',
+        "pages/1-retry.md:3  the link points to pages/queue.md, which doesn't exist",
+        "pages/notes.md  the page doesn't have a number. Rename the file to <number>-notes.md, where the number is the place of the page in the order",
+        '3 problems in 3 pages',
+      ].join('\n'),
+    )
   })
 
   it("throws UnknownPageError when the requested page doesn't exist", () => {

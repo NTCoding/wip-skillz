@@ -1,10 +1,13 @@
 import { describe, expect, it } from 'vitest'
+import { pageFileOf } from '../pages/page-files'
 import { renderPage } from '../rendered-page/rendered-page'
 import { pageCheckProblems, type CheckedPage } from './page-check'
 
-function checkedPage(page: string, markdown: readonly string[]): CheckedPage {
+function checkedPage(file: string, markdown: readonly string[]): CheckedPage {
+  const { page } = pageFileOf(file)
   return {
     page,
+    file,
     rendered: renderPage({ page, markdown: markdown.join('\n'), readCustomFile: () => undefined }),
   }
 }
@@ -13,7 +16,7 @@ const exportJob = checkedPage('pages/export-job.md', ['# Export job', '', '## Re
 
 function problemsOfInvoicePage(markdown: readonly string[]) {
   const pages = [checkedPage('pages/invoice-template.md', markdown), exportJob]
-  return pageCheckProblems(pages, ['pages/invoice-template.md'], () => [])
+  return pageCheckProblems(pages, [], ['pages/invoice-template.md'], () => [])
 }
 
 const decision = (id: string): string[] => [
@@ -79,7 +82,7 @@ describe('pageCheckProblems', () => {
       checkedPage('pages/invoice-template.md', ['Intro', '', ...decision('d-2')]),
     ]
 
-    expect(pageCheckProblems(pages, ['pages/invoice-template.md'], () => [])).toStrictEqual([
+    expect(pageCheckProblems(pages, [], ['pages/invoice-template.md'], () => [])).toStrictEqual([
       {
         page: 'pages/invoice-template.md',
         line: 5,
@@ -95,7 +98,7 @@ describe('pageCheckProblems', () => {
     ]
 
     expect(
-      pageCheckProblems(pages, ['pages/invoice-template.md'], () => []).map(
+      pageCheckProblems(pages, [], ['pages/invoice-template.md'], () => []).map(
         (problem) => problem.page,
       ),
     ).toStrictEqual(['pages/invoice-template.md'])
@@ -107,10 +110,105 @@ describe('pageCheckProblems', () => {
     ]
 
     expect(
-      pageCheckProblems(pages, ['pages/invoice-template.md'], (page) => [
-        `${page} is too long`,
+      pageCheckProblems(pages, [], ['pages/invoice-template.md'], (checked) => [
+        `${checked.file} is too long`,
       ]).map((problem) => problem.line),
     ).toStrictEqual([1, 3, undefined])
+  })
+})
+
+describe('pageCheckProblems on the numbers of the pages', () => {
+  function problemsOfFiles(
+    files: readonly string[],
+    markdowns: Readonly<Record<string, string[]>> = {},
+  ) {
+    const pageFiles = files.map(pageFileOf)
+    const pages = pageFiles
+      .filter((file, index) => pageFiles.findIndex((other) => other.page === file.page) === index)
+      .map((file) => checkedPage(file.file, markdowns[file.file] ?? ['# Page']))
+    return pageCheckProblems(
+      pages,
+      pageFiles,
+      pages.map((page) => page.page),
+      () => [],
+    )
+  }
+
+  it("doesn't report anything when every page except the index page has a number and every sub page has its parent", () => {
+    expect(
+      problemsOfFiles([
+        'pages/index.md',
+        'pages/1-comment-on-the-export.md',
+        'pages/1.1-evidence.md',
+        'pages/1.1.1-raw-logs.md',
+        'pages/2-board-edge.md',
+      ]),
+    ).toStrictEqual([])
+  })
+
+  it("reports the page when a page other than the index page doesn't have a number", () => {
+    expect(problemsOfFiles(['pages/index.md', 'pages/notes.md'])).toStrictEqual([
+      {
+        page: 'pages/notes.md',
+        line: undefined,
+        text: "the page doesn't have a number. Rename the file to <number>-notes.md, where the number is the place of the page in the order",
+      },
+    ])
+  })
+
+  it('reports the second file when 2 files have the same name after their numbers', () => {
+    expect(problemsOfFiles(['pages/1-evidence.md', 'pages/2-evidence.md'])).toStrictEqual([
+      {
+        page: 'pages/2-evidence.md',
+        line: undefined,
+        text: 'the page has the same name as pages/1-evidence.md after its number. Give one of the 2 pages another name',
+      },
+    ])
+  })
+
+  it("reports the sub page when the page of its parent number doesn't exist", () => {
+    expect(problemsOfFiles(['pages/1-comment.md', 'pages/2.1-x.md'])).toStrictEqual([
+      {
+        page: 'pages/2.1-x.md',
+        line: undefined,
+        text: "the page is a sub page of page 2, which doesn't exist. Add a page 2-<name>.md or change the number of this page",
+      },
+    ])
+  })
+
+  it('reports the link when a link between pages includes the number of the page', () => {
+    const markdowns = {
+      'pages/1-comment.md': ['# Comment', '', 'See [the evidence](1.1-evidence.md).'],
+    }
+
+    expect(
+      problemsOfFiles(['pages/1-comment.md', 'pages/1.1-evidence.md'], markdowns),
+    ).toStrictEqual([
+      {
+        page: 'pages/1-comment.md',
+        line: 3,
+        text: 'the link includes the number 1.1 of the page. Write the link as evidence.md so that it still works after the page is renumbered',
+      },
+    ])
+  })
+
+  it('accepts the link when a link between pages is written without the number', () => {
+    const markdowns = {
+      'pages/1-comment.md': ['# Comment', '', 'See [the evidence](evidence.md#raw-logs).'],
+      'pages/1.1-evidence.md': ['# Evidence', '', '## Raw logs'],
+    }
+
+    expect(
+      problemsOfFiles(['pages/1-comment.md', 'pages/1.1-evidence.md'], markdowns),
+    ).toStrictEqual([])
+  })
+
+  it("reports the link as a missing page when the link includes a number and the page without the number doesn't exist", () => {
+    const markdowns = { 'pages/1-comment.md': ['[the queue](3-queue.md)'] }
+
+    expect(problemsOfFiles(['pages/1-comment.md'], markdowns)[0]?.text).toBe(
+      "the link points to pages/3-queue.md, which doesn't exist",
+    )
   })
 })
 

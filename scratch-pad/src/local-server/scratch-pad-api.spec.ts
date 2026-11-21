@@ -90,11 +90,31 @@ describe('respondToApiRequest for the server and the scratch pads', () => {
 })
 
 describe('respondToApiRequest for the pages', () => {
-  it('returns the pages with their titles and open threads when the pages are listed', () => {
+  it('returns the pages with their titles, descriptions, open threads and what waits for Nick when the pages are listed', () => {
     expect(jsonBody(get(homeWithExportJob(), `${padApi}/pages`))).toStrictEqual({
       pages: [
-        { page: 'pages/index.md', title: 'Export job', openThreads: 0 },
-        { page: 'pages/invoice-decisions.md', title: 'Invoice decisions', openThreads: 0 },
+        {
+          page: 'pages/index.md',
+          file: 'pages/index.md',
+          number: undefined,
+          parent: undefined,
+          title: 'Export job',
+          description: 'The export job retries 5 times.',
+          openThreads: 0,
+          waitingForNick: { decisions: 0, replies: 0 },
+          waitingForNickWithSubPages: { decisions: 0, replies: 0 },
+        },
+        {
+          page: 'pages/invoice-decisions.md',
+          file: 'pages/invoice-decisions.md',
+          number: undefined,
+          parent: undefined,
+          title: 'Invoice decisions',
+          description: undefined,
+          openThreads: 0,
+          waitingForNick: { decisions: 2, replies: 0 },
+          waitingForNickWithSubPages: { decisions: 2, replies: 0 },
+        },
       ],
     })
   })

@@ -3,6 +3,7 @@ import {
   existsSync,
   mkdirSync,
   readdirSync,
+  renameSync,
   rmSync,
   symlinkSync,
   writeFileSync,
@@ -360,6 +361,39 @@ describe('ScratchPadFolder', () => {
     ])
   })
 
+  it('lists each page once without its number in the order of the numbers', () => {
+    const folder = exportJobScratchPad(temporaryHome())
+    ;['2-board-edge.md', 'notes.md', '1.1-evidence.md', '1-comment.md', '3-evidence.md'].forEach(
+      (file) => writeFileInPad(folder, `pages/${file}`, '# x'),
+    )
+
+    expect(folder.pages()).toStrictEqual([
+      'pages/index.md',
+      'pages/comment.md',
+      'pages/evidence.md',
+      'pages/board-edge.md',
+      'pages/notes.md',
+    ])
+  })
+
+  it('reads the page from the file with its number when the page is asked for without the number', () => {
+    const folder = exportJobScratchPad(temporaryHome())
+    writeFileInPad(folder, 'pages/2-board-edge.md', '# Board edge\nThe edge of the board.')
+
+    expect(folder.readPage('pages/board-edge.md')).toStrictEqual({
+      file: 'pages/2-board-edge.md',
+      lines: ['# Board edge', 'The edge of the board.'],
+    })
+  })
+
+  it("returns the page as its file when the page doesn't exist", () => {
+    const folder = exportJobScratchPad(temporaryHome())
+    expect(folder.readPage('pages/missing.md')).toStrictEqual({
+      file: 'pages/missing.md',
+      lines: [],
+    })
+  })
+
   it('lists no pages when the pages folder is missing', () => {
     expect(new ScratchPadFolder(temporaryHome()).pages()).toStrictEqual([])
   })
@@ -427,6 +461,16 @@ describe('ScratchPadFolder.pageVersions', () => {
     const before = folder.pageVersions()
 
     writeFileInPad(folder, 'pages/queue.md', '# Queue of exports\n')
+
+    expect(folder.pageVersions().get('pages/queue.md')).not.toBe(before.get('pages/queue.md'))
+  })
+
+  it('returns a new version of a page when the agent has changed the number of the page', () => {
+    const folder = exportJobScratchPad(temporaryHome())
+    writeFileInPad(folder, 'pages/2-queue.md', '# Queue\n')
+    const before = folder.pageVersions()
+
+    renameSync(join(folder.path, 'pages/2-queue.md'), join(folder.path, 'pages/3-queue.md'))
 
     expect(folder.pageVersions().get('pages/queue.md')).not.toBe(before.get('pages/queue.md'))
   })

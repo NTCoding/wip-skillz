@@ -27,7 +27,7 @@ function environmentWithItems() {
 
 function environmentWithBrokenLink() {
   return environmentWithScratchPad((folder) => {
-    writeFileInPad(folder, 'pages/retry.md', '# Retry\n\nSee [the queue](queue.md).\n')
+    writeFileInPad(folder, 'pages/1-retry.md', '# Retry\n\nSee [the queue](queue.md).\n')
   })
 }
 
@@ -203,7 +203,7 @@ describe('the scratch-pad commands', () => {
     expect(await runScratchPad(['check'], environmentWithBrokenLink())).toStrictEqual({
       exitCode: 1,
       stdout:
-        "pages/retry.md:3  the link points to pages/queue.md, which doesn't exist\n1 problem in 2 pages\n",
+        "pages/1-retry.md:3  the link points to pages/queue.md, which doesn't exist\n1 problem in 2 pages\n",
       stderr: '',
     })
   })
@@ -222,7 +222,7 @@ describe('the scratch-pad commands', () => {
     ).toStrictEqual({
       exitCode: 1,
       stdout:
-        "pages/retry.md:3  the link points to pages/queue.md, which doesn't exist\n1 problem in 2 pages\n",
+        "pages/1-retry.md:3  the link points to pages/queue.md, which doesn't exist\n1 problem in 2 pages\n",
       stderr: '',
     })
   })

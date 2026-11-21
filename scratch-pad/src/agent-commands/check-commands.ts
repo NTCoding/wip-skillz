@@ -1,7 +1,7 @@
 import { join } from 'node:path'
 import { pageCheckProblems, threadsOnMissingPages } from '../page-check/page-check'
 import { pageCheckText } from '../page-check/page-check-text'
-import { findPage, pagesInOrder } from '../pages/page-markdown'
+import { findPage } from '../pages/page-markdown'
 import { type ProseCheck } from '../prose-check/prose-check'
 import { renderPage } from '../rendered-page/rendered-page'
 import { type ScratchPadFolder } from '../scratch-pad-folder/scratch-pad-folder'
@@ -16,19 +16,23 @@ export function checkPages(
   requested: readonly string[],
   proseCheck: ProseCheck | undefined,
 ): CheckResult {
-  const pages = pagesInOrder(folder.pages())
+  const pages = folder.pages()
   const found = new Set(requested.map((page) => findPage(pages, page, folder.name)))
   const checkedPages = requested.length === 0 ? pages : pages.filter((page) => found.has(page))
-  const markdownOf = (page: string) => folder.readPageLines(page).join('\n')
-  const rendered = pages.map((page) => ({
-    page,
-    rendered: renderPage({
+  const rendered = pages.map((page) => {
+    const { file, lines } = folder.readPage(page)
+    const markdown = lines.join('\n')
+    return {
       page,
-      markdown: markdownOf(page),
-      readCustomFile: (file) =>
-        checkedPages.includes(page) ? folder.readCustomFile(file) : undefined,
-    }),
-  }))
+      file,
+      rendered: renderPage({
+        page,
+        markdown,
+        readCustomFile: (custom) =>
+          checkedPages.includes(page) ? folder.readCustomFile(custom) : undefined,
+      }),
+    }
+  })
   const orphans =
     requested.length === 0
       ? threadsOnMissingPages(
@@ -37,8 +41,13 @@ export function checkPages(
         )
       : []
   const problems = [
-    ...pageCheckProblems(rendered, checkedPages, (page) =>
-      proseCheck === undefined ? [] : proseCheck(join(folder.path, page), markdownOf(page)),
+    ...pageCheckProblems(rendered, folder.pageFiles(), checkedPages, (checked) =>
+      proseCheck === undefined
+        ? []
+        : proseCheck(
+            join(folder.path, checked.file),
+            folder.readPageLines(checked.page).join('\n'),
+          ),
     ),
     ...orphans,
   ]

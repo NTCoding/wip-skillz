@@ -1,12 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import {
-  UnknownPageError,
-  findPage,
-  isPagePath,
-  pagesInOrder,
-  pageTitle,
-  sectionAt,
-} from './page-markdown'
+import { UnknownPageError, findPage, isPagePath, pageTitle, sectionAt } from './page-markdown'
 
 const page = [
   '# Export job',
@@ -66,22 +59,21 @@ describe('findPage', () => {
     },
   )
 
-  it('throws UnknownPageError that lists the pages in page order when the page does not exist', () => {
-    const find = () => findPage(pages.toReversed(), 'invoice', '2026-03-14-export-job')
+  it.each([
+    'pages/2-retry-policy.md',
+    '2-retry-policy.md',
+    '2-retry-policy',
+    '1.4-retry-policy.md',
+  ])('finds the page without its number when it is requested with a number as %s', (requested) => {
+    expect(findPage(pages, requested, '2026-03-14-export-job')).toBe('pages/retry-policy.md')
+  })
+
+  it('throws UnknownPageError that lists the pages when the page does not exist', () => {
+    const find = () => findPage(pages, 'invoice', '2026-03-14-export-job')
 
     expect(find).toThrow(UnknownPageError)
     expect(find).toThrow(
       "There isn't any page called invoice in 2026-03-14-export-job. The pages are: pages/index.md, pages/retry-policy.md",
     )
-  })
-})
-
-describe('pagesInOrder', () => {
-  it('lists the index page first and the other pages in alphabetical order', () => {
-    expect(pagesInOrder(['pages/retry.md', 'pages/index.md', 'pages/audit.md'])).toStrictEqual([
-      'pages/index.md',
-      'pages/audit.md',
-      'pages/retry.md',
-    ])
   })
 })

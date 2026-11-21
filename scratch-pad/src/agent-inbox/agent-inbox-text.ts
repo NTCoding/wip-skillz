@@ -2,13 +2,14 @@ import { countedNoun } from '../counted-noun'
 import { decisionInboxLines } from '../decisions/decision-text'
 import { itemTypeNoun } from '../items/item-id'
 import { missingLinksLine, type ItemLinks } from '../item-links/item-links'
+import { type PageLines } from '../pages/page-files'
 import { threadInboxLines } from '../threads/thread-text'
 import { type AgentInboxItem, type AgentInboxSelection, type ItemCount } from './agent-inbox'
 
 export interface AgentInboxTextContext {
   readonly links: ItemLinks
   readonly includeSeen: boolean
-  readonly pageLines: (page: string) => readonly string[]
+  readonly readPage: (page: string) => PageLines
 }
 
 export function agentInboxText(
@@ -52,8 +53,8 @@ function headerLine(selection: AgentInboxSelection, context: AgentInboxTextConte
 
 function itemLines(item: AgentInboxItem, context: AgentInboxTextContext): string[] {
   return item.kind === 'thread'
-    ? threadInboxLines(item.thread, context.pageLines(item.thread.page), context.links)
-    : decisionInboxLines(item.decision, context.links)
+    ? threadInboxLines(item.thread, context.readPage(item.thread.page), context.links)
+    : decisionInboxLines(item.decision, context.readPage(item.decision.page).file, context.links)
 }
 
 function sideNotesText(sideNotes: readonly ItemCount[]): string {

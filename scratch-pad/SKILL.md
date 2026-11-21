@@ -105,9 +105,17 @@ The server builds the sidebar and the table of contents from your headings. It a
 Follow these rules on every page:
 
 - Write plain Markdown by default, because most pages only need text and tables.
-- Link to another page with a relative link, like `[the retry limit](retry-limit.md#wait-between-retries)`.
+- Start every page with one sentence under its title that describes the page, because the table of contents shows that sentence.
+- Link to another page without its number so that the link still works after the page is renumbered. This is an example: `[the retry limit](retry-limit.md#wait-between-retries)`.
 - Keep a bullet point to one or two sentences. Write a longer point as a paragraph or a section.
 - Write a proposal in its own `:::decision` block rather than in a bullet point.
+- Don't write a list of the pages on the index page. The server draws the table of contents under your overview on the index page.
+
+### Number the pages
+
+The number at the start of a file name sets the place of the page in the scratch pad. A top level page has one number, like `pages/1-how-the-job-runs.md`. A sub page has the number of its parent page followed by a dot and its own number. So `pages/1.1-retry-limit.md` is a sub page of page 1 and `pages/1.1.1-wait-between-retries.md` is a sub page of page 1.1. Every file stays in the `pages` folder, whatever its depth. `index.md` is the only page that doesn't have a number.
+
+The order of the numbers is the narrative of the scratch pad. You decide that order because it's the order in which Nick reads the pages. You can change the number of a page at any time. But never change the name after the number of an existing page, because the links and Nick's comments use that name. The address of a page in the browser doesn't contain the number. For example, the address of `pages/1.1-retry-limit.md` ends with `retry-limit.md` and it won't change if you give the page another number.
 
 ### Ask Nick to decide something
 
@@ -248,12 +256,13 @@ link: http://127.0.0.1:4747/2026-11-21-invoice-export/decisions
 
 ### Check a page before you tell Nick
 
-Run `check` before you tell Nick that a page is ready. It prints each broken link, each broken `:::decision` block and each id that's used twice. This is an example of what `check` prints:
+Run `check` before you tell Nick that a page is ready. It prints each broken link, each broken `:::decision` block and each id that's used twice. It also prints each problem with the number of a page, such as a page without a number. This is an example of what `check` prints:
 
 ```text
 $ scratch-pad check --pad 2026-11-21-invoice-export
-pages/retry-limit.md:3  the link points to pages/queue.md, which doesn't exist
-1 problem in 2 pages
+pages/1.1-retry-limit.md:3  the link points to pages/queue.md, which doesn't exist
+pages/notes.md  the page doesn't have a number. Rename the file to <number>-notes.md, where the number is the place of the page in the order
+2 problems in 4 pages
 ```
 
 If the environment variable `SCRATCH_PAD_PROSE_CHECK` is set to a script, `check` will run that script on each page's text as well.

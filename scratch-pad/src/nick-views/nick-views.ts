@@ -1,10 +1,12 @@
 import { type Answer } from '../decisions/decision-answer'
 import { type DecisionLogEntry } from '../decisions/decision-log'
 import { nickInbox } from '../nick-inbox/nick-inbox'
-import { findPage, pagesInOrder, pageTitle } from '../pages/page-markdown'
-import { type PageSummary } from '../pages/page-text'
+import { isUnderNumber, parentNumberOf, type PageFile } from '../pages/page-files'
+import { findPage, pageTitle } from '../pages/page-markdown'
+import { type PageSummary, type WaitingForNick } from '../pages/page-text'
 import { type ProgressTracker } from '../progress-tracker/progress-tracker'
 import { type DecisionBlock } from '../rendered-page/decision-block'
+import { pageDescription } from '../rendered-page/page-description'
 import { type Heading } from '../rendered-page/page-headings'
 import { type PageLink } from '../rendered-page/page-links'
 import { renderPage, type RenderedPage } from '../rendered-page/rendered-page'
@@ -41,11 +43,40 @@ export function pageSummaries(folder: ScratchPadFolder): PageSummary[] {
   const openThreads = folder
     .read((pad) => pad.readThreads())
     .filter((thread) => thread.waitsFor !== 'nobody')
-  return pagesInOrder(folder.pages()).map((page) => ({
-    page,
-    title: pageTitle(folder.readPageLines(page)),
-    openThreads: openThreads.filter((thread) => thread.page === page).length,
-  }))
+  const inbox = nickInboxItems(folder)
+  const files = pageFilesOnce(folder.pageFiles())
+  const waitingOn = (pages: readonly string[]): WaitingForNick => ({
+    decisions: inbox.decisions.filter((decision) => pages.includes(decision.page)).length,
+    replies: inbox.threads.filter((thread) => pages.includes(thread.page)).length,
+  })
+  return files.map((file) => {
+    const lines = folder.readPageLines(file.page)
+    const pagesUnder = files.filter((other) => isUnderNumber(other.number, file.number))
+    return {
+      page: file.page,
+      file: file.file,
+      number: file.number,
+      parent: parentOf(file, files),
+      title: pageTitle(lines),
+      description: pageDescription(lines.join('\n')),
+      openThreads: openThreads.filter((thread) => thread.page === file.page).length,
+      waitingForNick: waitingOn([file.page]),
+      waitingForNickWithSubPages: waitingOn([file, ...pagesUnder].map((each) => each.page)),
+    }
+  })
+}
+
+function pageFilesOnce(files: readonly PageFile[]): PageFile[] {
+  return files.filter(
+    (file, index) => files.findIndex((other) => other.page === file.page) === index,
+  )
+}
+
+function parentOf(file: PageFile, files: readonly PageFile[]): string | undefined {
+  const parentNumber = parentNumberOf(file.number)
+  return parentNumber === undefined
+    ? undefined
+    : files.find((other) => other.number === parentNumber)?.page
 }
 
 export function viewPage(folder: ScratchPadFolder, requested: string): ViewedPage {
@@ -86,13 +117,15 @@ export function withPositions(
 export function nickInboxItems(folder: ScratchPadFolder): NickInboxItems {
   return {
     threads: withPositions(folder, nickInbox(folder.read((pad) => pad.readThreads()))),
-    decisions: pagesInOrder(folder.pages()).flatMap((page) =>
-      viewPage(folder, page).decisions.flatMap((decision) =>
-        decision.answer === undefined && decision.question !== undefined
-          ? [{ page, id: decision.id, line: decision.firstLine, question: decision.question }]
-          : [],
+    decisions: folder
+      .pages()
+      .flatMap((page) =>
+        viewPage(folder, page).decisions.flatMap((decision) =>
+          decision.answer === undefined && decision.question !== undefined
+            ? [{ page, id: decision.id, line: decision.firstLine, question: decision.question }]
+            : [],
+        ),
       ),
-    ),
   }
 }
 

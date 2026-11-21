@@ -18,7 +18,7 @@ Every command prints a few short lines. If a command fails, it will print a mess
 | `show <id>`              | Prints one whole thread or decision                                                                                                                   |
 | `reply <id> <text>`      | Adds your reply to a thread, which then waits for Nick                                                                                                |
 | `done <id> <outcome>`    | Closes a note or a decision with one line about the change                                                                                            |
-| `pages`                  | Lists the pages with their titles and their open threads                                                                                              |
+| `pages`                  | Lists the pages in the order of their numbers with their titles and their open threads                                                                |
 | `outline <page>`         | Prints the headings of a page with their line numbers                                                                                                 |
 | `check [page...]`        | Prints the problems in the given pages or in every page, such as a broken link                                                                        |
 | `goal <text>`            | Sets the progress tracker's goal                                                                                                                      |
@@ -28,6 +28,8 @@ Every command prints a few short lines. If a command fails, it will print a mess
 | `task done <number>`     | Finishes a task and starts the next task that's still to do                                                                                           |
 | `decide <text>`          | Adds a decision from the chat to the log of decisions                                                                                                 |
 | `export [--out <file>]`  | Writes one HTML file that opens without the server. The default file is `export.html` in the scratch pad.                                             |
+
+Each command accepts a page as the file name with or without its number. So `1.1-retry-limit.md`, `retry-limit.md` and `retry-limit` all refer to the same page. In the output of the tool, a place in a file always has the file name with the number, like `pages/1.1-retry-limit.md:3`.
 
 The types for `--type` are `comment`, `decision`, `grammar` and `improvement`. You can pass several of them with a comma between them. Without `--type`, `inbox` and `wait` print the comments and the decisions in full but only one line for the notes, because the notes are read by a subagent.
 
@@ -117,7 +119,10 @@ An item whose text was deleted from the page is detached. For a detached item, t
 
 ```text
 $ scratch-pad pages --pad 2026-11-21-invoice-export
-pages/index.md  Invoice export  1 open thread  http://127.0.0.1:4747/2026-11-21-invoice-export/
+       pages/index.md                       Invoice export        1 open thread    http://127.0.0.1:4747/2026-11-21-invoice-export/
+1      pages/1-how-the-job-runs.md          How the job runs      no open threads  http://127.0.0.1:4747/2026-11-21-invoice-export/how-the-job-runs.md
+1.1    pages/1.1-retry-limit.md             Retry limit           no open threads  http://127.0.0.1:4747/2026-11-21-invoice-export/retry-limit.md
+1.1.1  pages/1.1.1-wait-between-retries.md  Wait between retries  no open threads  http://127.0.0.1:4747/2026-11-21-invoice-export/wait-between-retries.md
 
 $ scratch-pad outline --pad 2026-11-21-invoice-export index.md
 1  # Invoice export  http://127.0.0.1:4747/2026-11-21-invoice-export/#invoice-export
@@ -125,14 +130,18 @@ $ scratch-pad outline --pad 2026-11-21-invoice-export index.md
 5  ## Will the export job retry 8 times?  http://127.0.0.1:4747/2026-11-21-invoice-export/#will-the-export-job-retry-8-times
 ```
 
+`pages` prints the number of each page in its first column.
+
 `check` prints one line for each problem:
 
 ```text
 $ scratch-pad check --pad 2026-11-21-invoice-export
-pages/bad.md:3  the link points to pages/nowhere.md, which doesn't exist
-pages/bad.md:5  decision d-1 doesn't have the alternative: line
-pages/bad.md:5  decision d-1 is used twice (first on pages/index.md:9)
-3 problems in 2 pages
+pages/1-bad.md:3  the link points to pages/nowhere.md, which doesn't exist
+pages/1-bad.md:5  decision d-1 doesn't have the alternative: line
+pages/1-bad.md:5  decision d-1 is used twice (first on pages/index.md:9)
+pages/1-bad.md:7  the link includes the number 1.1 of the page. Write the link as retry-limit.md so that it still works after the page is renumbered
+pages/2.1-queue.md  the page is a sub page of page 2, which doesn't exist. Add a page 2-<name>.md or change the number of this page
+5 problems in 4 pages
 ```
 
 ## The folder of a scratch pad
@@ -142,13 +151,29 @@ Every scratch pad is a folder in `~/scratch-pads`. The name of the folder is `<y
 ```text
 ~/scratch-pads/2026-11-21-invoice-export/
   pages/index.md               # the first page
-  pages/retry-limit.md         # one Markdown file for each page
+  pages/1-how-the-job-runs.md  # one Markdown file for each page
+  pages/1.1-retry-limit.md     # a sub page of page 1
   custom/export-steps.html     # an optional file for a long :::html block
   pad.db                       # the threads, the tasks and the log of decisions
   export.html                  # written by the export command
 ```
 
 You only write the files in `pages` and in `custom`. Never edit `pad.db` yourself, because it's written by the tool and the server.
+
+## The numbers of the pages
+
+The number at the start of a page's file name sets the order of the pages and their parent pages. [Number the pages](SKILL.md#number-the-pages) in SKILL.md describes how you number them.
+
+Every list of pages is in the order of the numbers. Each number is compared part by part so page 1.10 comes after page 1.2. Page 2 comes after page 1.9. The index page comes first. A page without a number comes after the numbered pages, in the order of the file names.
+
+The id of a page is its file name without the number. The address of the page in the browser, the threads on the page and the decisions on the page all use that id. That's why the address and the threads of a page won't change if you change the number. The id of a page without a number is its whole file name, which is why an older scratch pad still works without any changes.
+
+`check` prints a problem for each of these:
+
+- a page other than `index.md` that doesn't have a number
+- 2 files that have the same name after their numbers
+- a sub page whose parent number doesn't exist, like `2.1-queue.md` without any `2-….md`
+- a link between pages that includes the number, like `[the retry limit](1.1-retry-limit.md)`
 
 ## The named blocks
 

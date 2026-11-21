@@ -19,12 +19,13 @@ export class DecisionReplyError extends ScratchPadError {
 export function showItem(folder: ScratchPadFolder, id: string, links: ItemLinks): string {
   if (itemTypeOf(id) === 'decision') {
     const decision = folder.read((pad) => pad.readDecisionAnswer(id))
-    return withLinksNote(links, decisionShowLines(decision, links).join('\n'))
+    const { file } = folder.readPage(decision.page)
+    return withLinksNote(links, decisionShowLines(decision, file, links).join('\n'))
   }
   const thread = folder.read((pad) => pad.readThread(id))
   return withLinksNote(
     links,
-    threadShowLines(thread, folder.readPageLines(thread.page), links).join('\n'),
+    threadShowLines(thread, folder.readPage(thread.page), links).join('\n'),
   )
 }
 

@@ -11,5 +11,6 @@ export function listPages(folder: ScratchPadFolder, links: ItemLinks): string {
 
 export function outlinePage(folder: ScratchPadFolder, requested: string, links: ItemLinks): string {
   const page = findPage(folder.pages(), requested, folder.name)
-  return outlineText(page, pageHeadings(folder.readPageLines(page).join('\n')), links)
+  const { file, lines } = folder.readPage(page)
+  return outlineText(page, file, pageHeadings(lines.join('\n')), links)
 }

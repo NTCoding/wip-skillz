@@ -13,7 +13,10 @@ import { agentInboxText, itemCountText, type AgentInboxTextContext } from './age
 const context: AgentInboxTextContext = {
   links: servedLinks,
   includeSeen: false,
-  pageLines: () => ['# Export job', '', '## Retry policy', '', 'The export job retries 5 times.'],
+  readPage: (page) => ({
+    file: page,
+    lines: ['# Export job', '', '## Retry policy', '', 'The export job retries 5 times.'],
+  }),
 }
 
 const empty: AgentInboxSelection = {

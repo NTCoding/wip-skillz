@@ -49,7 +49,7 @@ export function printedInboxText(
   return agentInboxText(selection, {
     links,
     includeSeen,
-    pageLines: (page) => folder.readPageLines(page),
+    readPage: (page) => folder.readPage(page),
   })
 }
 

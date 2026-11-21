@@ -30,7 +30,7 @@ describe('outlineText', () => {
   ]
 
   it('prints each heading with its line number padded to the widest number and its link', () => {
-    expect(outlineText('pages/index.md', headings, servedLinks)).toBe(
+    expect(outlineText('pages/index.md', 'pages/index.md', headings, servedLinks)).toBe(
       [
         ` 1  # Export job  ${exportJobAddress}#export-job`,
         `14  ## Retry policy  ${exportJobAddress}#retry-policy`,
@@ -39,31 +39,49 @@ describe('outlineText', () => {
   })
 
   it("prints that there aren't any links after the headings when the server isn't running", () => {
-    expect(outlineText('pages/index.md', headings, unservedLinks)).toBe(
+    expect(outlineText('pages/index.md', 'pages/index.md', headings, unservedLinks)).toBe(
       [' 1  # Export job', '14  ## Retry policy', missingLinksText].join('\n'),
     )
   })
 
   it('prints that the page has no headings when there are none', () => {
-    expect(outlineText('pages/notes.md', [], servedLinks)).toBe(
-      "pages/notes.md doesn't have any headings",
+    expect(outlineText('pages/notes.md', 'pages/3-notes.md', [], servedLinks)).toBe(
+      "pages/3-notes.md doesn't have any headings",
     )
   })
 })
 
 describe('pageListText', () => {
   const pages = [
-    { page: 'pages/index.md', title: 'Export job', openThreads: 2 },
-    { page: 'pages/retry-policy.md', title: undefined, openThreads: 0 },
-    { page: 'pages/limits.md', title: 'Limits', openThreads: 1 },
+    {
+      page: 'pages/index.md',
+      file: 'pages/index.md',
+      number: undefined,
+      title: 'Export job',
+      openThreads: 2,
+    },
+    {
+      page: 'pages/retry-policy.md',
+      file: 'pages/1-retry-policy.md',
+      number: '1',
+      title: undefined,
+      openThreads: 0,
+    },
+    {
+      page: 'pages/limits.md',
+      file: 'pages/1.1-limits.md',
+      number: '1.1',
+      title: 'Limits',
+      openThreads: 1,
+    },
   ]
 
-  it('prints one aligned line per page with its title, its open threads and its link', () => {
+  it('prints one aligned line per page with its number, its file, its title, its open threads and its link', () => {
     expect(pageListText(pages, servedLinks)).toBe(
       [
-        `pages/index.md         Export job  2 open threads   ${exportJobAddress}`,
-        `pages/retry-policy.md  (no title)  no open threads  ${exportJobAddress}retry-policy.md`,
-        `pages/limits.md        Limits      1 open thread    ${exportJobAddress}limits.md`,
+        `     pages/index.md           Export job  2 open threads   ${exportJobAddress}`,
+        `1    pages/1-retry-policy.md  (no title)  no open threads  ${exportJobAddress}retry-policy.md`,
+        `1.1  pages/1.1-limits.md      Limits      1 open thread    ${exportJobAddress}limits.md`,
       ].join('\n'),
     )
   })
@@ -71,11 +89,27 @@ describe('pageListText', () => {
   it("prints that there aren't any links after the pages when the server isn't running", () => {
     expect(pageListText(pages, unservedLinks)).toBe(
       [
-        'pages/index.md         Export job  2 open threads',
-        'pages/retry-policy.md  (no title)  no open threads',
-        'pages/limits.md        Limits      1 open thread',
+        '     pages/index.md           Export job  2 open threads',
+        '1    pages/1-retry-policy.md  (no title)  no open threads',
+        '1.1  pages/1.1-limits.md      Limits      1 open thread',
         missingLinksText,
       ].join('\n'),
+    )
+  })
+
+  it("leaves out the column of the numbers when the pages don't have any numbers", () => {
+    const unnumbered = [
+      {
+        page: 'pages/index.md',
+        file: 'pages/index.md',
+        number: undefined,
+        title: 'Export job',
+        openThreads: 0,
+      },
+    ]
+
+    expect(pageListText(unnumbered, unservedLinks)).toBe(
+      ['pages/index.md  Export job  no open threads', missingLinksText].join('\n'),
     )
   })
 

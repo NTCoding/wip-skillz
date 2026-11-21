@@ -1,8 +1,8 @@
 import { pageHeadings } from '../rendered-page/rendered-page'
 import { ScratchPadError } from '../scratch-pad-error'
+import { pageFileOf } from './page-files'
 
 const pagePattern = /^pages\/[^/]+\.md$/
-const indexPage = 'pages/index.md'
 
 export class UnknownPageError extends ScratchPadError {
   constructor(page: string, padName: string, pages: readonly string[]) {
@@ -23,20 +23,12 @@ export function isPagePath(page: string): boolean {
 }
 
 export function findPage(pages: readonly string[], requested: string, padName: string): string {
-  const candidates = [requested, `pages/${requested}`, `pages/${requested}.md`]
+  const candidates = [requested, `pages/${requested}`, `pages/${requested}.md`].map(
+    (candidate) => pageFileOf(candidate).page,
+  )
   const page = pages.find((candidate) => candidates.includes(candidate))
   if (page === undefined) {
-    throw new UnknownPageError(requested, padName, pagesInOrder(pages))
+    throw new UnknownPageError(requested, padName, pages)
   }
   return page
-}
-
-export function pagesInOrder(pages: readonly string[]): string[] {
-  return pages.toSorted(
-    (first, second) => pageOrder(first) - pageOrder(second) || first.localeCompare(second),
-  )
-}
-
-function pageOrder(page: string): number {
-  return page === indexPage ? 0 : 1
 }

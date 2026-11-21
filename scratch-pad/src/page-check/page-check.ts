@@ -1,3 +1,5 @@
+import { fileOfPage } from '../browser-page/pad-paths'
+import { pageFileOf, parentNumberOf, type PageFile } from '../pages/page-files'
 import { type PageLink } from '../rendered-page/page-links'
 import { byLine, type PageProblem } from '../rendered-page/page-problem'
 import { type RenderedPage } from '../rendered-page/rendered-page'
@@ -7,6 +9,7 @@ import { rawColoursInHtml } from './raw-colours'
 
 export interface CheckedPage {
   readonly page: string
+  readonly file: string
   readonly rendered: RenderedPage
 }
 
@@ -22,10 +25,13 @@ interface DecisionPlace {
   readonly line: number
 }
 
-type ProseProblems = (page: string) => readonly string[]
+type ProseProblems = (page: CheckedPage) => readonly string[]
+
+const indexPage = 'pages/index.md'
 
 export function pageCheckProblems(
   pages: readonly CheckedPage[],
+  files: readonly PageFile[],
   checkedPages: readonly string[],
   proseProblems: ProseProblems,
 ): ScratchPadProblem[] {
@@ -33,16 +39,42 @@ export function pageCheckProblems(
   return pages
     .filter((page) => checkedPages.includes(page.page))
     .flatMap((checked) => [
+      ...files
+        .filter((file) => file.page === checked.page)
+        .flatMap((file) => numberProblems(file, files)),
       ...[
         ...checked.rendered.problems,
         ...checked.rendered.links.flatMap((link) => linkProblems(link, pages)),
-        ...duplicates.filter((duplicate) => duplicate.page === checked.page),
+        ...duplicates.filter((duplicate) => duplicate.page === checked.file),
         ...checked.rendered.htmlBlocks.flatMap(rawColourProblems),
       ]
         .toSorted(byLine)
-        .map((problem) => ({ page: checked.page, line: problem.line, text: problem.text })),
-      ...proseProblems(checked.page).map((text) => ({ page: checked.page, line: undefined, text })),
+        .map((problem) => ({ page: checked.file, line: problem.line, text: problem.text })),
+      ...proseProblems(checked).map((text) => ({ page: checked.file, line: undefined, text })),
     ])
+}
+
+function numberProblems(file: PageFile, files: readonly PageFile[]): ScratchPadProblem[] {
+  const name = fileOfPage(file.page)
+  const first = files.find((other) => other.page === file.page)
+  const parentNumber = parentNumberOf(file.number)
+  return [
+    ...(file.number === undefined && file.page !== indexPage
+      ? [
+          `the page doesn't have a number. Rename the file to <number>-${name}, where the number is the place of the page in the order`,
+        ]
+      : []),
+    ...(first !== undefined && first.file !== file.file
+      ? [
+          `the page has the same name as ${first.file} after its number. Give one of the 2 pages another name`,
+        ]
+      : []),
+    ...(parentNumber !== undefined && !files.some((other) => other.number === parentNumber)
+      ? [
+          `the page is a sub page of page ${parentNumber}, which doesn't exist. Add a page ${parentNumber}-<name>.md or change the number of this page`,
+        ]
+      : []),
+  ].map((text) => ({ page: file.file, line: undefined, text }))
 }
 
 function linkProblems(link: PageLink, pages: readonly CheckedPage[]): PageProblem[] {
@@ -51,7 +83,7 @@ function linkProblems(link: PageLink, pages: readonly CheckedPage[]): PageProble
   }
   const target = pages.find((page) => page.page === link.page)
   if (target === undefined) {
-    return [{ line: link.line, text: `the link points to ${link.page}, which doesn't exist` }]
+    return [{ line: link.line, text: missingTargetText(link.page, pages) }]
   }
   const headingId = link.headingId
   if (
@@ -66,6 +98,13 @@ function linkProblems(link: PageLink, pages: readonly CheckedPage[]): PageProble
       text: `the link points to the heading #${headingId} in ${link.page}, which doesn't exist`,
     },
   ]
+}
+
+function missingTargetText(linkedPage: string, pages: readonly CheckedPage[]): string {
+  const { page, number } = pageFileOf(linkedPage)
+  return number !== undefined && pages.some((other) => other.page === page)
+    ? `the link includes the number ${number} of the page. Write the link as ${fileOfPage(page)} so that it still works after the page is renumbered`
+    : `the link points to ${linkedPage}, which doesn't exist`
 }
 
 function rawColourProblems(block: HtmlBlockSource): PageProblem[] {
@@ -84,7 +123,7 @@ function duplicateDecisions(pages: readonly CheckedPage[]): (PageProblem & { pag
   const places: DecisionPlace[] = pages.flatMap((page) =>
     page.rendered.decisions.map((decision) => ({
       id: decision.id,
-      page: page.page,
+      page: page.file,
       line: decision.firstLine,
     })),
   )
