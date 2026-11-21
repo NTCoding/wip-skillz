@@ -37,7 +37,7 @@ Nick starts the skill himself in one of these 3 ways:
 
 ### Link to everything that you mention in the chat
 
-Nick can't open anything on the scratch pad from the chat. So every time you mention a page in the chat, write the mention as a Markdown link to its address in the browser. Do the same every time you mention one of these things:
+Nick can only open a page from the chat through a link. So every time you mention a page in the chat, write the name of the page as a Markdown link to the page's address in the browser. Do the same every time you mention one of these things:
 
 - a heading
 - a decision
@@ -45,22 +45,13 @@ Nick can't open anything on the scratch pad from the chat. So every time you men
 - the progress tracker
 - the log of decisions
 
-Never mention any of them without its link, even if you only write its id.
+Never mention one of these things without its link, even if you only write an id like `d-1`.
 
-Copy each address from the output of the tool rather than build it yourself. This list shows which command prints which link:
+Copy each address from the output of the tool rather than build it yourself. [The links](reference.md#the-links) in reference.md lists which command prints which link.
 
-- `status` prints the address of the scratch pad and the address of the progress tracker.
-- `pages` prints the address of each page.
-- `outline` prints the address of each heading.
-- `wait`, `inbox` and `show` print a `link:` line under each decision and each thread.
-- `reply` and `done` print the link of the thread or the decision that they've changed.
-- `new` prints the address of the scratch pad.
-- `goal`, `tasks`, `task add`, `task start` and `task done` print the address of the progress tracker.
-- `decide` prints the address of the log of decisions.
+If the server isn't running, the tool won't print any links. It will print a line that tells you to run `start` instead. In that case, run `start` first. Then copy the address from a command that doesn't change anything, like `show`, `pages`, `outline`, `tasks` or `status`. Never run `decide`, `reply` or `done` a second time only to get a link, because each run adds another entry to the scratch pad.
 
-If the server isn't running, the tool will print a line that tells you to run `start` instead of the links. In that case, run `start` first. Then copy the address from a command that doesn't change anything, like `show`, `pages`, `outline`, `tasks` or `status`. Never run `decide`, `reply` or `done` a second time only to get a link, because each run adds another entry to the scratch pad.
-
-This is an example of a status update in the chat, with invented content. Every mention of a page or an item in it is a link:
+This is an example of a status update in the chat, with invented content. Everything that the update mentions is a link:
 
 ```markdown
 I've replied to [your comment on "every night"](http://127.0.0.1:4747/2026-11-21-invoice-export/#c-1). I've also rewritten [How the job runs](http://127.0.0.1:4747/2026-11-21-invoice-export/#how-the-job-runs) because you picked the proposal in [Will the export job retry 8 times?](http://127.0.0.1:4747/2026-11-21-invoice-export/#d-1).
@@ -105,17 +96,17 @@ The server builds the sidebar and the table of contents from your headings. It a
 Follow these rules on every page:
 
 - Write plain Markdown by default, because most pages only need text and tables.
-- Start every page with one sentence under its title that describes the page, because the table of contents shows that sentence. Write that sentence without an abbreviation that has a full stop, like "e.g.", because the description ends at the first full stop.
+- Start every page with one sentence under its title that describes the page, because the table of contents shows that sentence. Don't write an abbreviation with a full stop in that sentence, like "e.g.", because the table of contents cuts the sentence off at the first full stop.
 - Link to another page without its number so that the link still works after the page is renumbered. This is an example: `[the retry limit](retry-limit.md#wait-between-retries)`.
 - Keep a bullet point to one or two sentences. Write a longer point as a paragraph or a section.
 - Write a proposal in its own `:::decision` block rather than in a bullet point.
-- Don't write a list of the pages on the index page. The server draws the table of contents under your overview on the index page.
+- Don't write a list of the pages on the index page, because the server shows the table of contents under your overview on that page.
 
 ### Number the pages
 
-The number at the start of a file name sets the place of the page in the scratch pad. A top level page has one number, like `pages/1-how-the-job-runs.md`. A sub page has the number of its parent page followed by a dot and its own number. So `pages/1.1-retry-limit.md` is a sub page of page 1 and `pages/1.1.1-wait-between-retries.md` is a sub page of page 1.1. Every file stays in the `pages` folder, whatever its depth. `index.md` is the only page that doesn't have a number.
+The pages of a scratch pad tell a story that Nick reads in order. You decide that order with a number at the start of each file name, like `pages/1-how-the-job-runs.md`. The number of a sub page is the number of its parent page with a dot and one more number. So `pages/1.1-retry-limit.md` is a sub page of page 1 and `pages/1.1.1-wait-between-retries.md` is a sub page of page 1.1. Every file is in the `pages` folder however deep its page is. `index.md` is the only page that doesn't have a number.
 
-The order of the numbers is the narrative of the scratch pad. You decide that order because it's the order in which Nick reads the pages. You can change the number of a page at any time. But never change the name after the number of an existing page, because the links and Nick's comments use that name. The address of a page in the browser doesn't contain the number. For example, the address of `pages/1.1-retry-limit.md` ends with `retry-limit.md` and it won't change if you give the page another number.
+You can give a page a new number at any time. However, the rest of the file name has to stay the same for as long as the page exists, because every link to the page and every comment on the page uses that name. The number isn't part of the page's address in the browser. For example, the address of `pages/1.1-retry-limit.md` ends with `retry-limit.md`. A new number for the page doesn't change that address.
 
 ### Ask Nick to decide something
 
@@ -256,7 +247,7 @@ link: http://127.0.0.1:4747/2026-11-21-invoice-export/decisions
 
 ### Check a page before you tell Nick
 
-Run `check` before you tell Nick that a page is ready. It prints each broken link, each broken `:::decision` block and each id that's used twice. It also prints each problem with the number of a page, such as a page without a number. This is an example of what `check` prints:
+Run `check` before you tell Nick that a page is ready. It prints each broken link, each broken `:::decision` block and each id that's used twice. It also prints each page whose number is missing or wrong. This is an example of what `check` prints:
 
 ```text
 $ scratch-pad check --pad 2026-11-21-invoice-export

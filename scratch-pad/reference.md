@@ -18,7 +18,7 @@ Every command prints a few short lines. If a command fails, it will print a mess
 | `show <id>`              | Prints one whole thread or decision                                                                                                                   |
 | `reply <id> <text>`      | Adds your reply to a thread, which then waits for Nick                                                                                                |
 | `done <id> <outcome>`    | Closes a note or a decision with one line about the change                                                                                            |
-| `pages`                  | Lists the pages in the order of their numbers with their titles and their open threads                                                                |
+| `pages`                  | Lists the pages with their titles and their open threads, in the order of their numbers                                                               |
 | `outline <page>`         | Prints the headings of a page with their line numbers                                                                                                 |
 | `check [page...]`        | Prints the problems in the given pages or in every page, such as a broken link                                                                        |
 | `goal <text>`            | Sets the progress tracker's goal                                                                                                                      |
@@ -29,7 +29,7 @@ Every command prints a few short lines. If a command fails, it will print a mess
 | `decide <text>`          | Adds a decision from the chat to the log of decisions                                                                                                 |
 | `export [--out <file>]`  | Writes one HTML file that opens without the server. The default file is `export.html` in the scratch pad.                                             |
 
-Each command accepts a page as the file name with or without its number. So `1.1-retry-limit.md`, `retry-limit.md` and `retry-limit` all refer to the same page. In the output of the tool, a place in a file always has the file name with the number, like `pages/1.1-retry-limit.md:3`.
+You can pass a page to a command with or without its number. So `1.1-retry-limit.md`, `retry-limit.md` and `retry-limit` are the same page for every command. The tool's own output always has the full file name, like `pages/1.1-retry-limit.md:3` for line 3 of that page.
 
 The types for `--type` are `comment`, `decision`, `grammar` and `improvement`. You can pass several of them with a comma between them. Without `--type`, `inbox` and `wait` print the comments and the decisions in full but only one line for the notes, because the notes are read by a subagent.
 
@@ -60,7 +60,7 @@ link: http://127.0.0.1:4747/2026-11-21-invoice-export/#c-1
 
 ### The links
 
-Every command that mentions something Nick can open in the browser prints its address. The address of a decision or a thread ends with its id after a `#`, like `http://127.0.0.1:4747/2026-11-21-invoice-export/#d-1`. This table lists where each command prints the links:
+A command prints the address of each thing in its output that Nick can open in the browser. The address of a decision or a thread ends with its id after a `#`, like `http://127.0.0.1:4747/2026-11-21-invoice-export/#d-1`. This table lists where each command prints the links:
 
 | Command                                                | Where the link is                                                                                              |
 | ------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------- |
@@ -162,11 +162,13 @@ You only write the files in `pages` and in `custom`. Never edit `pad.db` yoursel
 
 ## The numbers of the pages
 
-The number at the start of a page's file name sets the order of the pages and their parent pages. [Number the pages](SKILL.md#number-the-pages) in SKILL.md describes how you number them.
+The tool reads the order of the pages and the parent of each sub page from the numbers at the start of the file names. [Number the pages](SKILL.md#number-the-pages) in SKILL.md describes how you number the pages.
 
-Every list of pages is in the order of the numbers. Each number is compared part by part so page 1.10 comes after page 1.2. Page 2 comes after page 1.9. The index page comes first. A page without a number comes after the numbered pages, in the order of the file names.
+Every list of pages follows the numbers. The tool compares 2 numbers part by part, which means that page 1.10 comes after page 1.2 and page 2 comes after page 1.9. The index page is always first. A page without a number comes after the numbered pages, in the order of the file names.
 
-The id of a page is its file name without the number. The address of the page in the browser, the threads on the page and the decisions on the page all use that id. That's why the address and the threads of a page won't change if you change the number. The id of a page without a number is its whole file name, which is why an older scratch pad still works without any changes. A file name of an older scratch pad can start with digits and a dash, like `2026-plan.md`. The tool reads those digits as a number. That's why the tool moves the threads and the decisions of that page to the id `pages/plan.md` the first time it opens the scratch pad.
+The id of a page is its file name without the number. The address of the page in the browser is built from that id. The threads and the decisions on the page are stored under that id too. That's why a new number doesn't change the address or the threads of a page.
+
+A page without a number has its whole file name as its id. The tool reads the digits before the first dash as a number so a file called `2026-plan.md` is page 2026 with the id `pages/plan.md`. If `pad.db` has a thread or a decision under the full file name of a page, the tool will move that thread or decision to the id of the page.
 
 `check` prints a problem for each of these:
 

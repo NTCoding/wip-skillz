@@ -68,17 +68,17 @@ Run `pnpm build` after every change to `src`, because the built tool in `dist/sc
 
 In a window that's narrower than 900px, an open sidebar would squeeze the text too much. So these 2 things change below 900px:
 
-- The sidebar has its own state, which is never saved. The sidebar is collapsed when the page opens, after every navigation and every time the window crosses 900px. So the choice that Nick saved in a wide window doesn't change. This state is kept in `sidebar-state.ts`.
-- An open sidebar is shown on top of the page rather than beside the page. The page behind the sidebar is faded by a scrim. If Nick clicks the scrim, the sidebar will collapse.
+- The sidebar has a separate state for a narrow window, which is never saved. The sidebar is collapsed when the page opens, after every navigation and every time the window crosses 900px. So the choice that Nick saved in a wide window doesn't change. The code for this state is in `sidebar-state.ts`.
+- An open sidebar is shown on top of the page rather than beside the page. The page behind the sidebar is faded. If Nick clicks the faded page, the sidebar will collapse.
 
 `narrowAppFrameQuery` in `app-frame.tsx` is `(width < 900px)`. The same width is written out in `app-frame.css`, because a media query can't read a custom property. `app-frame.spec.tsx` will fail if the 2 widths differ.
 
-The layout of the reading column depends on the width of the reading column, which is the area beside the sidebar, rather than on the width of the window:
+The reading column is the area beside the sidebar. Its layout depends on its own width rather than on the width of the window:
 
-- Below 1040px, the text is centred and the margin with the comments is hidden. Each thread is shown as a marker beside the text instead. If Nick clicks a marker, the card of the thread will open below its text.
+- Below 1040px, the text is centred and the margin with the comments is hidden. Each thread is shown as a marker beside the text instead. If Nick clicks a marker, the card of the thread will open below the text that the thread is about.
 - From 1040px, the margin is shown beside the text and the markers are hidden. The margin is `--lane-w-narrow` wide below 1152px and `--lane-w` wide from 1152px.
 
-The widths are written out in `reading-column.css` and `margin-lane.css`, because a container query can't read a custom property. `reading-column.spec.tsx` will fail if the 2 files switch at different widths.
+The widths are written out in `reading-column.css` and `margin-lane.css`, because a container query can't read a custom property. `reading-column.spec.tsx` will fail if the widths in the 2 files differ.
 
 ## Positions that are measured at runtime
 
