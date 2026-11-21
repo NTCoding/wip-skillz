@@ -34,9 +34,9 @@ describe('scratchPadsHome', () => {
     )
   })
 
-  it('returns the scratch-pads folder in HOME when SCRATCH_PADS_HOME is empty', () => {
+  it('returns the scratchpads folder in HOME when SCRATCH_PADS_HOME is empty', () => {
     expect(scratchPadsHome({ SCRATCH_PADS_HOME: '', HOME: '/users/jo' })).toBe(
-      '/users/jo/scratch-pads',
+      '/users/jo/scratchpads',
     )
   })
 

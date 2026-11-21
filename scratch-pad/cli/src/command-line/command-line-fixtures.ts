@@ -14,6 +14,7 @@ interface CommandLineResult {
 }
 
 interface ProcessSetUp {
+  readonly readStandardInput: () => Promise<string>
   readonly toolCommand: ToolCommand
   readonly stopSignal: AbortSignal
 }
@@ -24,6 +25,7 @@ type ScratchPadEnvironment = Environment & {
 }
 
 const noProcessSetUp: ProcessSetUp = {
+  readStandardInput: () => Promise.resolve(''),
   toolCommand: [process.execPath, '--eval', 'process.exit(9)'],
   stopSignal: new AbortController().signal,
 }

@@ -240,6 +240,9 @@ export class ScratchPadFolder {
     if (version < 1) {
       throw new BrokenPadDbError(this.name, "it doesn't contain the tables of a scratch pad")
     }
+    if (version < this.schema.version) {
+      this.migrate(db)
+    }
     const tables = readSavedValues(
       db,
       this.name,
@@ -249,9 +252,6 @@ export class ScratchPadFolder {
     const missing = padTables.find((table) => !tables.includes(table))
     if (missing !== undefined) {
       throw new BrokenPadDbError(this.name, `it doesn't contain the table ${missing}`)
-    }
-    if (version < this.schema.version) {
-      this.migrate(db)
     }
   }
 

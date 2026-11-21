@@ -6,14 +6,14 @@ import { htmlBlockFrameReady } from './html-block-frame'
 import { htmlBlockFrameDocument } from '../../html-block-frame-document'
 
 describe('HtmlBlock', () => {
-  it('renders the HTML of the agent in a sandboxed frame without the same origin when it is rendered', () => {
+  it('loads the frame from the server without a sandbox attribute when it is rendered', () => {
     render(<HtmlBlock html="<ol><li>Read the invoices</li></ol>" onNavigate={() => undefined} />)
     const frame = screen.getByTitle('HTML block')
-    expect(frame.getAttribute('sandbox')).toBe('allow-scripts')
+    expect(frame.getAttribute('sandbox')).toBeNull()
     expect(frame.getAttribute('src')).toBe('/browser-page/html-block-frame.html')
   })
 
-  it('puts the document of the frame in its srcdoc when the page doesn’t have a server', () => {
+  it('puts the document of the frame in a sandboxed srcdoc without the same origin when the page doesn’t have a server', () => {
     render(
       <HtmlBlock
         html="<ol><li>Read the invoices</li></ol>"
@@ -24,6 +24,7 @@ describe('HtmlBlock', () => {
     const frame = screen.getByTitle('HTML block')
     expect(frame.getAttribute('src')).toBeNull()
     expect(frame.getAttribute('srcdoc')).toBe(htmlBlockFrameDocument)
+    expect(frame.getAttribute('sandbox')).toBe('allow-scripts')
   })
 
   it('opens the same frame at full size when Nick presses the control', async () => {

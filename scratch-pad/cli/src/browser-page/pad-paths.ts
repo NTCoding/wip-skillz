@@ -2,6 +2,7 @@
 export const indexFile = 'index.md'
 export const progressTrackerPath = 'progress-tracker'
 export const decisionLogPath = 'decisions'
+export const improvementsPath = 'improvements'
 
 export function padPath(pad: string): string {
   return `/${encodeURIComponent(pad)}/`
@@ -22,4 +23,13 @@ export function decisionLogHref(pad: string): string {
 
 export function fileOfPage(page: string): string {
   return page.replace(/^pages\//, '')
+}
+
+export function improvementsHref(pad: string, section?: string): string {
+  const path = `${padPath(pad)}${improvementsPath}`
+  return section === undefined ? path : `${path}#${encodeURIComponent(section)}`
+}
+
+export function improvementAnchor(number: number): string {
+  return `improvement-${number}`
 }

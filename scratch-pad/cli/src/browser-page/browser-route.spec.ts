@@ -3,6 +3,8 @@ import {
   decisionLogHref,
   exportedAddresses,
   fileOfPage,
+  improvementAnchor,
+  improvementsHref,
   pageHref,
   progressTrackerHref,
   routeOf,
@@ -39,6 +41,19 @@ describe('routeOf', () => {
     expect(routeOf({ pathname: '/pad/decisions', hash: '' })).toStrictEqual({
       kind: 'decision-log',
       pad: 'pad',
+    })
+  })
+
+  it('returns the improvements and the entry in the hash when the address ends in improvements', () => {
+    expect(routeOf({ pathname: '/pad/improvements', hash: '#improvement-2' })).toStrictEqual({
+      kind: 'improvements',
+      pad: 'pad',
+      section: 'improvement-2',
+    })
+    expect(routeOf({ pathname: '/pad/improvements', hash: '' })).toStrictEqual({
+      kind: 'improvements',
+      pad: 'pad',
+      section: undefined,
     })
   })
 
@@ -81,9 +96,14 @@ describe('the addresses of the browser page', () => {
     )
   })
 
-  it('returns the addresses of the 2 tabs when they are asked for', () => {
+  it('returns the addresses of the 3 tabs when they are asked for', () => {
     expect(progressTrackerHref('pad')).toBe('/pad/progress-tracker')
     expect(decisionLogHref('pad')).toBe('/pad/decisions')
+    expect(improvementsHref('pad')).toBe('/pad/improvements')
+  })
+
+  it('returns the address of an improvement on the improvements when it is asked for', () => {
+    expect(improvementsHref('pad', improvementAnchor(2))).toBe('/pad/improvements#improvement-2')
   })
 
   it('returns the file of a page when the page is in pages/', () => {
@@ -100,6 +120,7 @@ describe('servedAddresses', () => {
       '/pad/progress-tracker',
       '/pad/decisions',
     ])
+    expect(addresses.improvementsHref('improvement-1')).toBe('/pad/improvements#improvement-1')
     expect(addresses.htmlBlockFrame).toBe('server')
   })
 
@@ -126,6 +147,10 @@ describe('exportedAddresses', () => {
       '#/progress-tracker',
       '#/decisions',
     ])
+    expect([
+      addresses.improvementsHref(),
+      addresses.improvementsHref('improvement-1'),
+    ]).toStrictEqual(['#/improvements', '#/improvements/improvement-1'])
   })
 
   it('puts the frame of an html block in the page when the scratch pad is exported', () => {
@@ -160,6 +185,16 @@ describe('exportedAddresses', () => {
     expect(addresses.routeOf({ pathname: exportPath, hash: '#/decisions' })).toStrictEqual({
       kind: 'decision-log',
       pad: 'pad',
+    })
+  })
+
+  it('returns the improvements and the entry when the hash names them', () => {
+    expect(
+      addresses.routeOf({ pathname: exportPath, hash: '#/improvements/improvement-1' }),
+    ).toStrictEqual({
+      kind: 'improvements',
+      pad: 'pad',
+      section: 'improvement-1',
     })
   })
 })

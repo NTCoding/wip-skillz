@@ -9,6 +9,7 @@ import {
   ThreadCard,
   ThreadDraft,
   threadKindLabels,
+  type ImprovementEdit,
   type MarginItem,
   type ThreadKindName,
   type ThreadState,
@@ -31,6 +32,8 @@ export interface PageActions {
   readonly replyToThread: (id: string, message: string) => Promise<Thread>
   readonly resolveThread: (id: string) => Promise<Thread>
   readonly answerDecision: (id: string, page: string, answer: Answer) => Promise<void>
+  readonly editImprovement: (number: number, edit: ImprovementEdit) => Promise<void>
+  readonly deleteImprovement: (number: number) => Promise<void>
 }
 
 type PageContext = Omit<

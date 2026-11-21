@@ -2,6 +2,7 @@ import { once } from 'node:events'
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http'
 import { type AddressInfo } from 'node:net'
 import { inspect } from 'node:util'
+import { UnknownImprovementError } from '../improvements/improvements'
 import { UnknownPageError } from '../pages/page-markdown'
 import { ScratchPadError } from '../scratch-pad-error'
 import {
@@ -63,6 +64,7 @@ const notFoundErrors = [
   UnknownThreadError,
   UnknownDecisionError,
   UnknownDecisionBlockError,
+  UnknownImprovementError,
 ]
 
 const padDbErrors = [

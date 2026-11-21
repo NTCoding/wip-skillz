@@ -70,6 +70,29 @@ const decisionLogEntry = z.object({
 
 export const decisionLogResponse = z.object({ decisions: z.array(decisionLogEntry) })
 
+const improvement = z.object({
+  number: z.number(),
+  time: z.string(),
+  title: z.string(),
+  details: optionalText,
+  html: optionalText,
+  links: z.array(pageLink),
+})
+
+const improvementNote = z.object({
+  id: z.string(),
+  type: z.enum(['grammar', 'improvement']),
+  page: z.string(),
+  text: z.string(),
+  time: z.string(),
+  outcome: optionalText,
+})
+
+export const improvementsResponse = z.object({
+  improvements: z.array(improvement),
+  notes: z.array(improvementNote),
+})
+
 const threadType = z.enum(['comment', 'grammar', 'improvement'])
 
 const anchor = z.object({
@@ -124,6 +147,12 @@ export const nickInboxResponse = z.object({
 
 export const decisionAnswerResponse = z.object({ decision: z.object({ id: z.string() }) })
 
+export const improvementEditResponse = z.object({
+  improvement: z.object({ number: z.number() }),
+})
+
+export const improvementDeleteResponse = z.object({ deleted: z.number() })
+
 export const errorResponse = z.object({ error: z.string() })
 
 export const exportedPadData = z.object({
@@ -132,6 +161,7 @@ export const exportedPadData = z.object({
   threads: z.array(thread),
   progressTracker: progressTrackerResponse,
   decisionLog: z.array(decisionLogEntry),
+  improvements: improvementsResponse,
 })
 
 export const padChange = z.discriminatedUnion('kind', [
@@ -139,6 +169,7 @@ export const padChange = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('thread'), id: z.string() }),
   z.object({ kind: z.literal('decision'), id: z.string() }),
   z.object({ kind: z.literal('decision-log') }),
+  z.object({ kind: z.literal('improvements') }),
   z.object({ kind: z.literal('progress-tracker') }),
 ])
 
@@ -146,6 +177,7 @@ export type PageSummary = z.infer<typeof pageSummary>
 export type ViewedPage = z.infer<typeof viewedPageResponse>
 export type ProgressTracker = z.infer<typeof progressTrackerResponse>
 export type DecisionLogEntry = z.infer<typeof decisionLogEntry>
+export type Improvements = z.infer<typeof improvementsResponse>
 export type PadChange = z.infer<typeof padChange>
 export type Answer = z.infer<typeof answer>
 export type ThreadType = z.infer<typeof threadType>

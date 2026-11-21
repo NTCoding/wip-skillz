@@ -3,11 +3,14 @@ import { type DecisionBlock } from '../rendered-page/decision-block'
 import {
   nickAnswersDecision,
   nickComments,
+  nickDeletesImprovement,
+  nickEditsImprovement,
   nickReplies,
   nickResolves,
 } from '../nick-actions/nick-actions'
 import {
   decisionLogOf,
+  improvementsOf,
   nickInboxItems,
   pageSummaries,
   progressTrackerOf,
@@ -28,6 +31,7 @@ import { toolBuild } from './tool-build'
 import {
   answerRequestFrom,
   commentRequestFrom,
+  improvementEditFrom,
   RequestBody,
   type AnswerRequest,
 } from './request-body'
@@ -175,6 +179,7 @@ const routes: readonly Route[] = [
   padRoute('GET', '/nick-inbox', (folder) => json(nickInboxItems(folder))),
   padRoute('GET', '/progress-tracker', (folder) => json(progressTrackerOf(folder))),
   padRoute('GET', '/decision-log', (folder) => json({ decisions: decisionLogOf(folder) })),
+  padRoute('GET', '/improvements', (folder) => json(improvementsOf(folder))),
   padRoute('GET', '/changes', (folder) => ({ kind: 'changes', folder })),
   padRoute('POST', '/threads', (folder, request) =>
     json(threadBody(folder, nickComments(folder, commentRequestFrom(bodyOf(request)))), 201),
@@ -190,6 +195,19 @@ const routes: readonly Route[] = [
       decision: nickAnswersDecisionBlock(folder, id, answerRequestFrom(bodyOf(request))),
     }),
   ),
+  padRoute('POST', '/improvements/([0-9]+)', (folder, request, number) =>
+    json({
+      improvement: nickEditsImprovement(
+        folder,
+        Number(number),
+        improvementEditFrom(bodyOf(request)),
+      ),
+    }),
+  ),
+  padRoute('POST', '/improvements/([0-9]+)/delete', (folder, _request, number) => {
+    nickDeletesImprovement(folder, Number(number))
+    return json({ deleted: Number(number) })
+  }),
   {
     method: 'GET',
     path: /^\/browser-page\/scratch-pad\.js$/,

@@ -11,7 +11,6 @@ import { type WriterName } from './two-processes-writer-fixtures'
 interface WriterProcess {
   readonly writer: WriterName
   readonly count: number
-  readonly schema?: 'second-version'
 }
 
 export interface WriterOutput {
@@ -50,13 +49,7 @@ export async function runTwoWriters(
 }
 
 function startWriter(bundle: string, padPath: string, run: WriterProcess): StartedWriter {
-  const child = spawn(process.execPath, [
-    bundle,
-    run.writer,
-    padPath,
-    String(run.count),
-    ...(run.schema === undefined ? [] : [run.schema]),
-  ])
+  const child = spawn(process.execPath, [bundle, run.writer, padPath, String(run.count)])
   const lines: string[] = []
   const errors = text(child.stderr)
   const stdout = createInterface({ input: child.stdout })

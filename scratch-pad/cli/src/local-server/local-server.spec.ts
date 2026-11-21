@@ -85,6 +85,15 @@ describe('serveScratchPads', () => {
     })
   })
 
+  it('returns 404 with the error when the improvement doesn’t exist', async () => {
+    const server = await startedServer(homeWithExportJob())
+
+    await expect(postTo(server, `${padApi}/improvements/3/delete`, '{}')).resolves.toMatchObject({
+      status: 404,
+      body: `{"error":"There isn't any improvement 3 because there aren't any improvements yet."}`,
+    })
+  })
+
   it('returns 400 with the error when the body of a write is invalid', async () => {
     const server = await startedServer(homeWithExportJob())
 
@@ -211,6 +220,49 @@ describe('serveScratchPads', () => {
       headers: { 'content-security-policy': htmlBlockFramePolicy },
       body: htmlBlockFrameDocument,
     })
+  })
+
+  it('sends a sandbox or forbids every frame in the policy of every HTML response, so an HTML response can’t open a way out of the sandbox', async () => {
+    const server = await startedServer(homeWithExportJob())
+    const pathOfEveryKindOfResponse = [
+      '/',
+      `/${exportJobPadName}`,
+      `/${exportJobPadName}/`,
+      `/${exportJobPadName}/index.md`,
+      htmlBlockFramePath,
+      '/browser-page/scratch-pad.js',
+      '/browser-page/scratch-pad.css',
+      '/api/server',
+      `${padApi}/pages`,
+      '/api/retries',
+    ]
+    const responses = await Promise.all(
+      pathOfEveryKindOfResponse.map(async (path) => ({ path, ...(await getFrom(server, path)) })),
+    )
+    const htmlResponses = responses.filter((response) =>
+      response.contentType.startsWith('text/html'),
+    )
+    const sandboxedOrNeverFramed = (policy: unknown): boolean => {
+      const directives = String(policy)
+        .split(';')
+        .map((directive) => directive.trim())
+      return (
+        directives.some((directive) => /^sandbox(\s|$)/.test(directive)) ||
+        directives.includes("frame-ancestors 'none'")
+      )
+    }
+
+    expect(htmlResponses.map((response) => response.path)).toStrictEqual([
+      '/',
+      `/${exportJobPadName}/`,
+      `/${exportJobPadName}/index.md`,
+      htmlBlockFramePath,
+    ])
+    expect(
+      htmlResponses
+        .filter((response) => !sandboxedOrNeverFramed(response.headers['content-security-policy']))
+        .map((response) => response.path),
+    ).toStrictEqual([])
   })
 
   it('throws ServerListenError when another server listens on the port', async () => {

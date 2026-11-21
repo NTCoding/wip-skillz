@@ -12,6 +12,7 @@ export const padTables = [
   'decision_log',
   'events',
   'agent_inbox',
+  'improvements',
 ] as const
 
 function oneOf(column: string, values: readonly string[]): string {
@@ -104,7 +105,22 @@ export interface PadSchema {
   readonly migrations: readonly PadMigration[]
 }
 
-export const padSchema: PadSchema = { version: 1, firstTables: firstPadTables, migrations: [] }
+// AUTOINCREMENT never gives a new improvement the number of a deleted one, so an old link to an
+// improvement never opens another improvement.
+const improvementsTable = `
+CREATE TABLE improvements (
+  number INTEGER PRIMARY KEY AUTOINCREMENT CHECK (number >= 1),
+  time TEXT NOT NULL,
+  title TEXT NOT NULL,
+  details TEXT
+) STRICT;
+`
+
+export const padSchema: PadSchema = {
+  version: 2,
+  firstTables: firstPadTables,
+  migrations: [{ version: 2, sql: improvementsTable }],
+}
 
 export function padMigrationsAfter(schema: PadSchema, version: number): string {
   const steps = schema.migrations.filter((migration) => migration.version > version)

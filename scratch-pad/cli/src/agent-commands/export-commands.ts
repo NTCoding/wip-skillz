@@ -5,6 +5,7 @@ import { exportedBrowserPageHtml } from '../local-server/browser-page'
 import { type BrowserPageBundle } from '../local-server/browser-page-bundle'
 import {
   decisionLogOf,
+  improvementsOf,
   pageSummaries,
   progressTrackerOf,
   threadsOfPage,
@@ -41,6 +42,7 @@ export function exportScratchPad(folder: ScratchPadFolder, options: ExportOption
       threads,
       progressTracker,
       decisionLog: decisionLogOf(folder),
+      improvements: improvementsOf(folder),
     },
     bundle: options.bundle,
   })

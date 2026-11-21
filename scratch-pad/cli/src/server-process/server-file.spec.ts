@@ -50,7 +50,7 @@ describe('removeServerFile', () => {
 
 describe('writeServerFile', () => {
   it('creates the home folder when the home folder does not exist yet', () => {
-    const home = join(temporaryHome(), 'scratch-pads')
+    const home = join(temporaryHome(), 'scratchpads')
     writeServerFile(home, { pid: 4321, port: 4747 })
 
     expect(readServerFile(home)).toStrictEqual({ pid: 4321, port: 4747 })

@@ -38,7 +38,7 @@ export function scratchPadsHome(environment: Environment): string {
   if (userHome === undefined || userHome === '') {
     throw new MissingHomeError()
   }
-  return join(userHome, 'scratch-pads')
+  return join(userHome, 'scratchpads')
 }
 
 export function scratchPadNames(home: string): string[] {

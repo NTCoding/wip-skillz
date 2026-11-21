@@ -68,8 +68,8 @@ describe('two processes of version 2 that start on a pad.db of version 1 at the 
     outputs.push(
       ...(await runTwoWriters(
         folder,
-        { writer: 'agent-adds-tasks', count: 20, schema: 'second-version' },
-        { writer: 'nick-comments', count: 20, schema: 'second-version' },
+        { writer: 'agent-adds-tasks', count: 20 },
+        { writer: 'nick-comments', count: 20 },
       )),
     )
   }, timeout)

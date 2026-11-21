@@ -71,7 +71,7 @@ describe('ScratchPadFolder.create', () => {
   })
 
   it('stores the version of the tables in pad.db when the scratch pad is created', () => {
-    expect(pragma(exportJobScratchPad(temporaryHome()), 'user_version')).toBe(1)
+    expect(pragma(exportJobScratchPad(temporaryHome()), 'user_version')).toBe(2)
   })
 
   it('migrates pad.db to version 2 when a scratch pad of version 1 is read by a schema of version 2', () => {
@@ -339,12 +339,12 @@ describe('ScratchPadFolder', () => {
 
   it('throws NewerPadDbError when the tables come from a newer scratch-pad', () => {
     const folder = exportJobScratchPad(temporaryHome())
-    runSqlOnPadDb(folder, 'PRAGMA user_version = 2')
+    runSqlOnPadDb(folder, 'PRAGMA user_version = 3')
     const read = () => folder.read((pad) => pad.readEvents())
 
     expect(read).toThrow(NewerPadDbError)
     expect(read).toThrow(
-      'pad.db in 2026-03-14-export-job has the tables of version 2, but this scratch-pad only knows version 1. Update scratch-pad.',
+      'pad.db in 2026-03-14-export-job has the tables of version 3, but this scratch-pad only knows version 2. Update scratch-pad.',
     )
   })
 

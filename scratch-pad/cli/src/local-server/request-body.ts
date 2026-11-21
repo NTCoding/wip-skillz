@@ -1,4 +1,5 @@
 import { type Answer } from '../decisions/decision-answer'
+import { type ImprovementEdit } from '../improvements/improvements'
 import { ScratchPadError } from '../scratch-pad-error'
 import { threadTypes, type Anchor, type ThreadType } from '../threads/thread'
 
@@ -112,6 +113,10 @@ export function answerRequestFrom(body: RequestBody): AnswerRequest {
   throw new InvalidRequestBodyError(
     'it needs either "choice" with proposal or alternative, or "written" with the answer',
   )
+}
+
+export function improvementEditFrom(body: RequestBody): ImprovementEdit {
+  return { title: body.messageText('title'), details: body.optionalText('details') }
 }
 
 function anchorFrom(body: RequestBody): Anchor | undefined {

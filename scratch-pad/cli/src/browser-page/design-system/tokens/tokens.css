@@ -271,6 +271,8 @@
   --inbox-count-size: 18px;
   --field-min-h: 34px;
   --field-max-h: 160px;
+  --field-details-min-h: 120px;
+  --field-details-max-h: 480px;
   --outline-top: 120px;
   --outline-w: 56px;
   --outline-bar-w: 16px;

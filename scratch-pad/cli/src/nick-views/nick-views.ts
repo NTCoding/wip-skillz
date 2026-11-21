@@ -9,7 +9,7 @@ import { type DecisionBlock } from '../rendered-page/decision-block'
 import { pageDescription } from '../rendered-page/page-description'
 import { type Heading } from '../rendered-page/page-headings'
 import { type PageLink } from '../rendered-page/page-links'
-import { renderPage, type RenderedPage } from '../rendered-page/rendered-page'
+import { renderDetails, renderPage, type RenderedPage } from '../rendered-page/rendered-page'
 import { type ScratchPadFolder } from '../scratch-pad-folder/scratch-pad-folder'
 import { type Thread } from '../threads/thread'
 import { positionedThread, type PositionedThread } from '../threads/thread-position'
@@ -32,6 +32,29 @@ interface UnansweredDecision {
   readonly id: string
   readonly line: number
   readonly question: string
+}
+
+interface ImprovementOnTab {
+  readonly number: number
+  readonly time: string
+  readonly title: string
+  readonly details: string | undefined
+  readonly html: string | undefined
+  readonly links: readonly PageLink[]
+}
+
+interface NoteOnTab {
+  readonly id: string
+  readonly type: 'grammar' | 'improvement'
+  readonly page: string
+  readonly text: string
+  readonly time: string
+  readonly outcome: string | undefined
+}
+
+interface ImprovementsTab {
+  readonly improvements: readonly ImprovementOnTab[]
+  readonly notes: readonly NoteOnTab[]
 }
 
 interface NickInboxItems {
@@ -135,6 +158,47 @@ export function progressTrackerOf(folder: ScratchPadFolder): ProgressTracker {
 
 export function decisionLogOf(folder: ScratchPadFolder): DecisionLogEntry[] {
   return folder.read((pad) => pad.readDecisionLog())
+}
+
+export function improvementsOf(folder: ScratchPadFolder): ImprovementsTab {
+  const { improvements, threads } = folder.read((pad) => ({
+    improvements: pad.readImprovements(),
+    threads: pad.readThreads(),
+  }))
+  return {
+    improvements: improvements.map((improvement) => {
+      const details =
+        improvement.details === undefined
+          ? undefined
+          : renderDetails({
+              page: 'pages/index.md',
+              markdown: improvement.details,
+              readCustomFile: (file) => folder.readCustomFile(file),
+            })
+      return {
+        number: improvement.number,
+        time: improvement.time,
+        title: improvement.title,
+        details: improvement.details,
+        html: details?.html,
+        links: details?.links ?? [],
+      }
+    }),
+    notes: threads.flatMap((thread) =>
+      thread.type === 'comment'
+        ? []
+        : [
+            {
+              id: thread.id,
+              type: thread.type,
+              page: thread.page,
+              text: thread.messages[0].text,
+              time: thread.messages[0].time,
+              outcome: thread.outcome,
+            },
+          ],
+    ),
+  }
 }
 
 function renderedPage(folder: ScratchPadFolder, page: string): RenderedPage {

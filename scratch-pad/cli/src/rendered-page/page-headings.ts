@@ -21,13 +21,30 @@ interface HeadingScan {
   readonly drafts: readonly HeadingDraft[]
 }
 
+interface HeadingToken {
+  readonly token: Token
+  readonly heading: Heading
+}
+
 export function addHeadingIds(tokens: readonly Token[]): Heading[] {
+  return headingTokens(tokens).map(({ token, heading }) => {
+    token.attrSet('id', heading.id)
+    return heading
+  })
+}
+
+export function headingsOf(tokens: readonly Token[]): Heading[] {
+  return headingTokens(tokens).map(({ heading }) => heading)
+}
+
+function headingTokens(tokens: readonly Token[]): HeadingToken[] {
   const start: HeadingScan = { line: 1, open: undefined, drafts: [] }
   const { drafts } = withChildren(tokens).reduce(scanHeading, start)
-  return drafts.reduce<Heading[]>((headings, draft) => {
+  return drafts.reduce<HeadingToken[]>((found, draft) => {
+    const headings = found.map(({ heading }) => heading)
     const id = uniqueId(headingIdOf(draft.text) || 'section', headings)
-    draft.token.attrSet('id', id)
-    return [...headings, { level: draft.level, text: draft.text, id, line: draft.line }]
+    const heading = { level: draft.level, text: draft.text, id, line: draft.line }
+    return [...found, { token: draft.token, heading }]
   }, [])
 }
 

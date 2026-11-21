@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   answerRequestFrom,
   commentRequestFrom,
+  improvementEditFrom,
   InvalidRequestBodyError,
   jsonObjectFrom,
   longestMessage,
@@ -169,6 +170,30 @@ describe('answerRequestFrom', () => {
     expect(() => answerRequestFrom(RequestBody.parse(text))).toThrow(InvalidRequestBodyError)
     expect(() => answerRequestFrom(RequestBody.parse(text))).toThrow(
       'it needs either "choice" with proposal or alternative, or "written" with the answer',
+    )
+  })
+})
+
+describe('improvementEditFrom', () => {
+  it('returns the title and the details of the edit', () => {
+    expect(
+      improvementEditFrom(
+        RequestBody.parse('{"title": "The export skips files.", "details": "Run it."}'),
+      ),
+    ).toStrictEqual({ title: 'The export skips files.', details: 'Run it.' })
+  })
+
+  it('returns the edit without details when the details are null', () => {
+    expect(
+      improvementEditFrom(
+        RequestBody.parse('{"title": "The export skips files.", "details": null}'),
+      ),
+    ).toStrictEqual({ title: 'The export skips files.', details: undefined })
+  })
+
+  it('throws InvalidRequestBodyError when the title is missing', () => {
+    expect(() => improvementEditFrom(RequestBody.parse('{"details": "Run it."}'))).toThrow(
+      '"title" is missing',
     )
   })
 })

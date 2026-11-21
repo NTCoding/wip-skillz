@@ -1,4 +1,7 @@
 import { afterEach, describe, expect, it } from 'vitest'
+import { logImprovementFromChat } from '../agent-commands/improvement-commands'
+import { UnknownImprovementError } from '../improvements/improvements'
+import { unservedLinks } from '../item-links/item-links-fixtures'
 import { UnknownPageError } from '../pages/page-markdown'
 import { PadDbFailureError } from '../scratch-pad-folder/pad-db-errors'
 import {
@@ -13,6 +16,8 @@ import {
   AnchorOutsidePageError,
   nickAnswersDecision,
   nickComments,
+  nickDeletesImprovement,
+  nickEditsImprovement,
   nickReplies,
   nickResolves,
   UnknownBlockError,
@@ -372,3 +377,62 @@ function answeredThenChanged() {
   })
   return folder
 }
+
+function padWithOneImprovement() {
+  const folder = exportJobScratchPad(temporaryHome())
+  logImprovementFromChat(folder, 'The export skips files.', '## Steps', unservedLinks)
+  return folder
+}
+
+describe('nickEditsImprovement', () => {
+  it('saves and returns the improvement with the new title and details', () => {
+    const folder = padWithOneImprovement()
+    const edited = { number: 1, time, title: 'The export skips custom files.', details: 'Run it.' }
+
+    expect(
+      nickEditsImprovement(folder, 1, {
+        title: 'The export skips custom files.',
+        details: 'Run it.',
+      }),
+    ).toStrictEqual(edited)
+    expect(folder.read((pad) => pad.readImprovements())).toStrictEqual([edited])
+  })
+
+  it('appends an improvement-edited event by Nick', () => {
+    const folder = padWithOneImprovement()
+
+    nickEditsImprovement(folder, 1, { title: 'The export skips custom files.', details: undefined })
+
+    expect(folder.read((pad) => pad.readEvents().at(-1))).toStrictEqual({
+      number: 2,
+      time,
+      kind: 'improvement-edited',
+      by: 'nick',
+      item: undefined,
+    })
+  })
+})
+
+describe('nickDeletesImprovement', () => {
+  it('removes the improvement and appends an improvement-deleted event by Nick', () => {
+    const folder = padWithOneImprovement()
+
+    nickDeletesImprovement(folder, 1)
+
+    expect(
+      folder.read((pad) => ({
+        improvements: pad.readImprovements(),
+        event: pad.readEvents().at(-1),
+      })),
+    ).toStrictEqual({
+      improvements: [],
+      event: { number: 2, time, kind: 'improvement-deleted', by: 'nick', item: undefined },
+    })
+  })
+
+  it('throws UnknownImprovementError when the number is unknown', () => {
+    expect(() => nickDeletesImprovement(padWithOneImprovement(), 2)).toThrow(
+      UnknownImprovementError,
+    )
+  })
+})

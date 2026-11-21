@@ -182,6 +182,7 @@ describe('runCommandLine', () => {
           },
         },
         stderr: { write: () => true },
+        readStandardInput: () => Promise.resolve(''),
         toolCommand: [process.execPath],
         stopSignal: new AbortController().signal,
       })

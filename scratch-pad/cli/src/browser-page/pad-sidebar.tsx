@@ -90,6 +90,13 @@ export function PadSidebar(props: PadSidebarProps) {
             current={props.view === 'decision-log'}
             onNavigate={onNavigate}
           />
+          <SidebarLink
+            href={addresses.improvementsHref()}
+            icon="improvement"
+            title="Improvements"
+            current={props.view === 'improvements'}
+            onNavigate={onNavigate}
+          />
         </>
       }
       heading="Pages"

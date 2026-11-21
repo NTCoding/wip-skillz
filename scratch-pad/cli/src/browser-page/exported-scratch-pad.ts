@@ -37,6 +37,7 @@ export function exportedScratchPad(json: string): ScratchPadReading {
     nickInbox: () => Promise.resolve({ threads: [], decisions: [] }),
     progressTracker: () => Promise.resolve(data.progressTracker),
     decisionLog: () => Promise.resolve(data.decisionLog),
+    improvements: () => Promise.resolve(data.improvements),
     onChange: () => () => undefined,
   }
 }

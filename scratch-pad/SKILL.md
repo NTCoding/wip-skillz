@@ -29,6 +29,8 @@ Nick has invoked this skill so you begin with the scratch pad rather than with a
 
 From now on, write everything for Nick on the pages of the scratch pad. That includes your replies, your analysis, your questions, your proposals and the decisions that Nick has to make.
 
+Write everything on the scratch pad, including the side topics. A side topic like a bug in the tool or a spec for another agent is an [improvement](#log-an-improvement). Log it with `improve` instead of writing it to another folder. Then give Nick the link that `improve` prints.
+
 The chat is only for short status updates, such as the address of the scratch pad or a link to the page that you've just changed. Never put the content itself in the chat. A question for Nick appears in the chat only as its title with a link to its page. Everything else about the question stays on the page, even if another instruction asks for a sentence about the problem in the chat.
 
 Nick starts the skill himself in one of these 3 ways:
@@ -46,12 +48,13 @@ Nick can only open a page from the chat through a link. So every time you mentio
 - a thread
 - the progress tracker
 - the log of decisions
+- an improvement
 
 Never mention one of these things without its link, even if you only write an id like `d-1`.
 
 Copy each address from the output of the tool rather than build it yourself. [The links](reference.md#the-links) in reference.md lists which command prints which link.
 
-If the server isn't running, the tool won't print any links. It will print a line that tells you to run `start` instead. In that case, run `start` first. Then copy the address from a command that doesn't change anything, like `show`, `pages`, `outline`, `tasks` or `status`. Never run `decide`, `reply` or `done` a second time only to get a link, because each run adds another entry to the scratch pad.
+If the server isn't running, the tool won't print any links. It will print a line that tells you to run `start` instead. In that case, run `start` first. Then copy the address from a command that doesn't change anything, like `show`, `pages`, `outline`, `tasks` or `status`. Never run `decide`, `improve`, `reply` or `done` a second time only to get a link, because each run adds another entry to the scratch pad.
 
 This is an example of a status update in the chat, with invented content. Everything that the update mentions is a link:
 
@@ -65,7 +68,7 @@ Create the scratch pad and start the server, then give Nick the address that `st
 
 ```text
 $ scratch-pad new "Invoice export"
-created /Users/nick/scratch-pads/2026-11-21-invoice-export
+created /Users/nick/scratchpads/2026-11-21-invoice-export
 select it with --pad 2026-11-21-invoice-export or SCRATCH_PAD=2026-11-21-invoice-export
 there aren't any links because the server isn't running (scratch-pad start --pad 2026-11-21-invoice-export)
 
@@ -247,6 +250,40 @@ decision 2 is logged
 link: http://127.0.0.1:4747/2026-11-21-invoice-export/decisions
 ```
 
+### Log an improvement
+
+An improvement is a change to the harness, the skill, the tool or the UX rather than to the topic of the scratch pad. To log an improvement, run `improve` and provide a title of one sentence. Write the details in Markdown on standard input, for example through a heredoc. The details can be as long as you need. They can even be a whole spec. This is an example:
+
+```text
+$ scratch-pad improve --pad 2026-11-21-invoice-export "The export command skips the custom files." <<'EOF'
+## Steps
+
+1. Write custom/export-steps.html.
+2. Run export.
+3. Open export.html. The :::html block is empty.
+EOF
+improvement 1 is logged
+link: http://127.0.0.1:4747/2026-11-21-invoice-export/improvements#improvement-1
+```
+
+If Nick asks you to change or remove an improvement, run `improvement edit` or `improvement delete` and provide the improvement's number. The edit command takes the new title and reads the new details from standard input. It replaces all of the old details so you have to write the details again in full, not just the part that changed:
+
+```text
+$ scratch-pad improvement edit --pad 2026-11-21-invoice-export 1 "The export command skips the custom HTML files." <<'EOF'
+## Steps
+
+1. Write custom/export-steps.html.
+2. Run export.
+EOF
+improvement 1 is edited
+link: http://127.0.0.1:4747/2026-11-21-invoice-export/improvements#improvement-1
+$ scratch-pad improvement delete --pad 2026-11-21-invoice-export 1
+improvement 1 is deleted
+link: http://127.0.0.1:4747/2026-11-21-invoice-export/improvements
+```
+
+Nick sees each improvement on the Improvements tab of the browser page. The tab also lists every grammar note and improvement note that Nick has written on a page.
+
 ### Check a page before you tell Nick
 
 Run `check` before you tell Nick that a page is ready. It prints each broken link, each broken `:::decision` block and each id that's used twice. It also prints each page whose number is missing or wrong. This is an example of what `check` prints:
@@ -266,11 +303,11 @@ When Nick wants a file that somebody can read without the server, run `export`. 
 
 ```text
 $ scratch-pad export --pad 2026-11-21-invoice-export
-exported 3 pages and 4 threads to /Users/nick/scratch-pads/2026-11-21-invoice-export/export.html
+exported 3 pages and 4 threads to /Users/nick/scratchpads/2026-11-21-invoice-export/export.html
 ```
 
 Pass `--out <file>` to write the file somewhere else.
 
 ## Leave the server running when you finish
 
-When you've finished, leave the server running, because another session might still be waiting for Nick on another scratch pad. So don't run `stop` unless you started the server yourself on purpose, for example to test the tool. Even after the server has been stopped, every scratch pad is kept in `~/scratch-pads` so the next session can continue it with `start` and `inbox --all`.
+When you've finished, leave the server running, because another session might still be waiting for Nick on another scratch pad. So don't run `stop` unless you started the server yourself on purpose, for example to test the tool. Even after the server has been stopped, every scratch pad is kept in `~/scratchpads` so the next session can continue it with `start` and `inbox --all`.

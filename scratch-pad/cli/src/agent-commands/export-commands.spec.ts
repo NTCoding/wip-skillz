@@ -60,6 +60,16 @@ describe('exportScratchPad', () => {
     expect(data.decisionLog.map((entry) => entry.source)).toStrictEqual(['page'])
   })
 
+  it('writes the improvements in the data that the browser page reads when the scratch pad is exported', () => {
+    const folder = scratchPadWithTwoPages()
+    exportScratchPad(folder, { out: undefined, bundle })
+    const data = exportedPadData.parse(
+      exportedData(readFileSync(join(folder.path, 'export.html'), 'utf8')),
+    )
+
+    expect(data.improvements.notes.map((note) => note.id)).toStrictEqual(['g-1'])
+  })
+
   it('writes the file that --out names and creates its folder when the folder doesn’t exist', () => {
     const folder = scratchPadWithTwoPages()
     const path = join(temporaryHome(), 'shared', 'retry-policy.html')

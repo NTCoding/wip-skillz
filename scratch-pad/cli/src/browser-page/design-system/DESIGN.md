@@ -108,7 +108,7 @@ A component that measures the page can't be tested in a real layout, because the
 
 ## The frame of an html block
 
-`HtmlBlock` shows the HTML of an `:::html` block in an iframe. The agent writes that HTML so the page has to treat the HTML as untrusted. That's why the iframe has `sandbox="allow-scripts"` but doesn't have `allow-same-origin`. The scripts and the styles of the block still work inside the frame, but they can't read or change anything outside the frame or call the API.
+`HtmlBlock` shows the HTML of an `:::html` block in an iframe. The agent writes that HTML so the page has to treat the HTML as untrusted. That's why the frame is sandboxed with `allow-scripts` but without `allow-same-origin`. The frame that the server sends is sandboxed by the `sandbox` directive in the Content-Security-Policy header of the frame document, because the Claude desktop app blocks every iframe that has a `sandbox` attribute. An export doesn't have a server so the frame in an export is sandboxed by `sandbox="allow-scripts"` on the iframe. The scripts and the styles of the block still work inside the frame, but they can't read or change anything outside the frame or call the API.
 
 The page and the frame talk to each other in these steps:
 
