@@ -13,7 +13,14 @@ import {
 import { basename, dirname, join, sep } from 'node:path'
 import { DatabaseSync } from 'node:sqlite'
 import { type PageVersions } from '../pad-changes/pad-change'
-import { pageFileOf, pageFilesInOrder, type PageFile, type PageLines } from '../pages/page-files'
+import {
+  pageFileOf,
+  pageFilesInOrder,
+  storedPageIds,
+  type PageFile,
+  type PageLines,
+  type StoredPageId,
+} from '../pages/page-files'
 import { isPagePath } from '../pages/page-markdown'
 import { isCustomHtmlPath } from '../rendered-page/html-block'
 import { ScratchPadError } from '../scratch-pad-error'
@@ -166,8 +173,33 @@ export class ScratchPadFolder {
     }
     return this.usePadDb((db) => {
       this.checkPadDb(db)
+      this.attachStoredPages(db)
       return use(db)
     })
+  }
+
+  private attachStoredPages(db: DatabaseSync): void {
+    if (this.storedPageIds(db).length === 0) {
+      return
+    }
+    db.exec('BEGIN IMMEDIATE')
+    rolledBackOnError(db, () =>
+      this.storedPageIds(db).forEach(({ stored, page }) => {
+        db.prepare('UPDATE threads SET page = ? WHERE page = ?').run(page, stored)
+        db.prepare('UPDATE decisions SET page = ? WHERE page = ?').run(page, stored)
+      }),
+    )
+    db.exec('COMMIT')
+  }
+
+  private storedPageIds(db: DatabaseSync): StoredPageId[] {
+    const stored = readSavedValues(
+      db,
+      this.name,
+      'threads',
+      'SELECT page FROM threads UNION SELECT page FROM decisions',
+    ).map((row) => row.text('page'))
+    return storedPageIds(stored, this.pageFiles())
   }
 
   private usePadDb<T>(use: (db: DatabaseSync) => T): T {

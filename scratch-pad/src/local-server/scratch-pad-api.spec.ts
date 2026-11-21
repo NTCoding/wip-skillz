@@ -99,7 +99,7 @@ describe('respondToApiRequest for the pages', () => {
           number: undefined,
           parent: undefined,
           title: 'Export job',
-          description: 'The export job retries 5 times.',
+          description: undefined,
           openThreads: 0,
           waitingForNick: { decisions: 0, replies: 0 },
           waitingForNickWithSubPages: { decisions: 0, replies: 0 },

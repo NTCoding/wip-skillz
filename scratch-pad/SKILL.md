@@ -105,7 +105,7 @@ The server builds the sidebar and the table of contents from your headings. It a
 Follow these rules on every page:
 
 - Write plain Markdown by default, because most pages only need text and tables.
-- Start every page with one sentence under its title that describes the page, because the table of contents shows that sentence.
+- Start every page with one sentence under its title that describes the page, because the table of contents shows that sentence. Write that sentence without an abbreviation that has a full stop, like "e.g.", because the description ends at the first full stop.
 - Link to another page without its number so that the link still works after the page is renumbered. This is an example: `[the retry limit](retry-limit.md#wait-between-retries)`.
 - Keep a bullet point to one or two sentences. Write a longer point as a paragraph or a section.
 - Write a proposal in its own `:::decision` block rather than in a bullet point.

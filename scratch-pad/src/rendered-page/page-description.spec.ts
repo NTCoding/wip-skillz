@@ -30,18 +30,56 @@ describe('pageDescription', () => {
     ).toBe('The job writes export.csv each night.')
   })
 
-  it('skips the paragraphs above the title and the paragraphs inside a list or a quote', () => {
-    expect(
-      pageDescription(
-        'Draft.\n\n# Export job\n\n- A bullet point.\n\n> A quote.\n\n## Retry policy\n\nThe job retries 5 times.\n',
-      ),
-    ).toBe('The job retries 5 times.')
+  it('skips a paragraph above the title', () => {
+    expect(pageDescription('Draft.\n\n# Export job\n\nThe job retries 5 times.\n')).toBe(
+      'The job retries 5 times.',
+    )
+  })
+
+  it.each([
+    ['a list', '# Export job\n\n- A bullet point.\n\nThe job retries 5 times.\n'],
+    ['a quote', '# Export job\n\n> A quote.\n\nThe job retries 5 times.\n'],
+    ['a heading', '# Export job\n\n## Retry policy\n\nThe job retries 5 times.\n'],
+    [
+      'a decision block',
+      '# Export job\n\n:::decision d-1\nproposal: a\nalternative: b\npick: a\n:::\n\nThe job retries 5 times.\n',
+    ],
+  ])('returns undefined when the first block after the title is %s', (_block, markdown) => {
+    expect(pageDescription(markdown)).toBeUndefined()
+  })
+
+  it('ignores a full stop inside inline code', () => {
+    expect(pageDescription('# Export job\n\nRun `make. all` first. Then wait.\n')).toBe(
+      'Run make. all first.',
+    )
+  })
+
+  it('ignores a full stop inside the text of a link', () => {
+    expect(pageDescription('# Export job\n\nSee [v. 2 notes](notes.md) here. Then wait.\n')).toBe(
+      'See v. 2 notes here.',
+    )
+  })
+
+  it('ends the sentence at a full stop inside emphasis', () => {
+    expect(pageDescription('# Export job\n\nThe job is **slow.** It waits.\n')).toBe(
+      'The job is slow.',
+    )
+  })
+
+  it('puts a space between the 2 words of a hard line break', () => {
+    expect(pageDescription('# Export job\n\nThe job runs\\\nevery night.\n')).toBe(
+      'The job runs every night.',
+    )
   })
 
   it("returns the first paragraph when the page doesn't have a title", () => {
     expect(pageDescription('The export job writes one file per shop.\n')).toBe(
       'The export job writes one file per shop.',
     )
+  })
+
+  it("returns undefined when the page doesn't have anything after its title", () => {
+    expect(pageDescription('# Export job\n')).toBeUndefined()
   })
 
   it("returns undefined when the page doesn't have a paragraph after its title", () => {

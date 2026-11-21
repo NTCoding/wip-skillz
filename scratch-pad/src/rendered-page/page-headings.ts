@@ -58,7 +58,7 @@ export function plainText(token: Token): string {
   if (token.type === 'text' || token.type === 'code_inline') {
     return token.content
   }
-  return token.type === 'softbreak' ? ' ' : ''
+  return token.type === 'softbreak' || token.type === 'hardbreak' ? ' ' : ''
 }
 
 function uniqueId(base: string, headings: readonly Heading[], number = 1): string {

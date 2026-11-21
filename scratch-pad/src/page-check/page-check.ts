@@ -57,6 +57,9 @@ export function pageCheckProblems(
 function numberProblems(file: PageFile, files: readonly PageFile[]): ScratchPadProblem[] {
   const name = fileOfPage(file.page)
   const first = files.find((other) => other.page === file.page)
+  const firstWithNumber = files.find(
+    (other) => file.number !== undefined && other.number === file.number,
+  )
   const parentNumber = parentNumberOf(file.number)
   return [
     ...(file.number === undefined && file.page !== indexPage
@@ -64,9 +67,19 @@ function numberProblems(file: PageFile, files: readonly PageFile[]): ScratchPadP
           `the page doesn't have a number. Rename the file to <number>-${name}, where the number is the place of the page in the order`,
         ]
       : []),
+    ...(file.hasLeadingZero
+      ? [
+          `the number of the page has a leading zero. Write the number as ${String(file.number)} so that it's read the same way everywhere`,
+        ]
+      : []),
     ...(first !== undefined && first.file !== file.file
       ? [
           `the page has the same name as ${first.file} after its number. Give one of the 2 pages another name`,
+        ]
+      : []),
+    ...(firstWithNumber !== undefined && firstWithNumber.file !== file.file
+      ? [
+          `the page has the same number ${String(file.number)} as ${firstWithNumber.file}. Give one of the 2 pages another number`,
         ]
       : []),
     ...(parentNumber !== undefined && !files.some((other) => other.number === parentNumber)

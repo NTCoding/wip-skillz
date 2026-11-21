@@ -51,6 +51,20 @@ function commentOnRetryPolicy(folder: ScratchPadFolder, text: string): void {
 }
 
 describe('pageSummaries', () => {
+  it('gives a sub page the parent whose number has a leading zero', () => {
+    const folder = exportJobScratchPad(temporaryHome())
+    writeFileInPad(folder, 'pages/01-m.md', '# M\n')
+    writeFileInPad(folder, 'pages/1.1-y.md', '# Y\n')
+
+    expect(
+      pageSummaries(folder).map((summary) => [summary.file, summary.number, summary.parent]),
+    ).toStrictEqual([
+      ['pages/index.md', undefined, undefined],
+      ['pages/01-m.md', '1', undefined],
+      ['pages/1.1-y.md', '1.1', 'pages/m.md'],
+    ])
+  })
+
   it('returns each page with its title and its open threads when Nick has commented', () => {
     const folder = exportJobScratchPad(temporaryHome())
     commentOnRetryPolicy(folder, 'Is 5 retries enough?')
@@ -62,7 +76,7 @@ describe('pageSummaries', () => {
         number: undefined,
         parent: undefined,
         title: 'Export job',
-        description: 'The export job retries 5 times.',
+        description: undefined,
         openThreads: 1,
         waitingForNick: { decisions: 0, replies: 0 },
         waitingForNickWithSubPages: { decisions: 0, replies: 0 },
@@ -140,7 +154,7 @@ describe('pageSummaries', () => {
   it('returns the first sentence after the title of each page as its description', () => {
     expect(pageSummaries(numberedScratchPad()).map((summary) => summary.description)).toStrictEqual(
       [
-        'The export job retries 5 times.',
+        undefined,
         'Nick commented on the export of the invoices.',
         'The logs show 3 failed exports.',
         undefined,

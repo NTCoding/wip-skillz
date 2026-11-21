@@ -166,12 +166,14 @@ The number at the start of a page's file name sets the order of the pages and th
 
 Every list of pages is in the order of the numbers. Each number is compared part by part so page 1.10 comes after page 1.2. Page 2 comes after page 1.9. The index page comes first. A page without a number comes after the numbered pages, in the order of the file names.
 
-The id of a page is its file name without the number. The address of the page in the browser, the threads on the page and the decisions on the page all use that id. That's why the address and the threads of a page won't change if you change the number. The id of a page without a number is its whole file name, which is why an older scratch pad still works without any changes.
+The id of a page is its file name without the number. The address of the page in the browser, the threads on the page and the decisions on the page all use that id. That's why the address and the threads of a page won't change if you change the number. The id of a page without a number is its whole file name, which is why an older scratch pad still works without any changes. A file name of an older scratch pad can start with digits and a dash, like `2026-plan.md`. The tool reads those digits as a number. That's why the tool moves the threads and the decisions of that page to the id `pages/plan.md` the first time it opens the scratch pad.
 
 `check` prints a problem for each of these:
 
 - a page other than `index.md` that doesn't have a number
 - 2 files that have the same name after their numbers
+- a number with a leading zero, like `01-how-the-job-runs.md`
+- 2 files that have the same number
 - a sub page whose parent number doesn't exist, like `2.1-queue.md` without any `2-….md`
 - a link between pages that includes the number, like `[the retry limit](1.1-retry-limit.md)`
 

@@ -6469,7 +6469,7 @@ function plainText(token) {
   if (token.type === "text" || token.type === "code_inline") {
     return token.content;
   }
-  return token.type === "softbreak" ? " " : "";
+  return token.type === "softbreak" || token.type === "hardbreak" ? " " : "";
 }
 function uniqueId(base, headings, number = 1) {
   const id = number === 1 ? base : `${base}-${number}`;
@@ -6726,7 +6726,17 @@ var init_rendered_page = __esm({
 // src/pages/page-files.ts
 function pageFileOf(file) {
   const match2 = numberedFilePattern.exec(file);
-  return match2 === null ? { page: file, file, number: void 0 } : { page: `pages/${String(match2[2])}`, file, number: match2[1] };
+  if (match2 === null) {
+    return { page: file, file, number: void 0, hasLeadingZero: false };
+  }
+  const written = String(match2[1]).split(".");
+  const parts = written.map((part) => part.replace(leadingZeroPattern, ""));
+  return {
+    page: `pages/${String(match2[2])}`,
+    file,
+    number: parts.join("."),
+    hasLeadingZero: parts.some((part, index) => part !== written[index])
+  };
 }
 function pageFilesInOrder(files) {
   return files.toSorted(
@@ -6740,6 +6750,13 @@ function parentNumberOf(number) {
 function isUnderNumber(number, parent) {
   return number !== void 0 && parent !== void 0 && number.startsWith(`${parent}.`);
 }
+function storedPageIds(stored, files) {
+  const pages = new Set(files.map((file) => file.page));
+  return [...new Set(stored)].flatMap((page) => {
+    const file = files.find((each) => each.file === page);
+    return file === void 0 || pages.has(page) ? [] : [{ stored: page, page: file.page }];
+  });
+}
 function placeOf(file) {
   if (file.page === indexPage) {
     return 0;
@@ -6747,17 +6764,21 @@ function placeOf(file) {
   return file.number === void 0 ? 2 : 1;
 }
 function numberParts(file) {
-  return file.number === void 0 ? [] : file.number.split(".").map(Number);
+  return file.number === void 0 ? [] : file.number.split(".");
 }
 function byNumber(first, second) {
   const differs = first.findIndex((part, index) => part !== second[index]);
-  return differs === -1 || differs >= second.length ? first.length - second.length : Number(first[differs]) - Number(second[differs]);
+  return differs === -1 || differs >= second.length ? first.length - second.length : byPart(String(first[differs]), String(second[differs]));
 }
-var numberedFilePattern, indexPage;
+function byPart(first, second) {
+  return first.length - second.length || first.localeCompare(second);
+}
+var numberedFilePattern, leadingZeroPattern, indexPage;
 var init_page_files = __esm({
   "src/pages/page-files.ts"() {
     "use strict";
     numberedFilePattern = /^pages\/(\d+(?:\.\d+)*)-([^/]+\.md)$/;
+    leadingZeroPattern = /^0+(?=\d)/;
     indexPage = "pages/index.md";
   }
 });
@@ -8131,8 +8152,32 @@ var init_scratch_pad_folder = __esm({
         }
         return this.usePadDb((db) => {
           this.checkPadDb(db);
+          this.attachStoredPages(db);
           return use(db);
         });
+      }
+      attachStoredPages(db) {
+        if (this.storedPageIds(db).length === 0) {
+          return;
+        }
+        db.exec("BEGIN IMMEDIATE");
+        rolledBackOnError(
+          db,
+          () => this.storedPageIds(db).forEach(({ stored, page }) => {
+            db.prepare("UPDATE threads SET page = ? WHERE page = ?").run(page, stored);
+            db.prepare("UPDATE decisions SET page = ? WHERE page = ?").run(page, stored);
+          })
+        );
+        db.exec("COMMIT");
+      }
+      storedPageIds(db) {
+        const stored = readSavedValues(
+          db,
+          this.name,
+          "threads",
+          "SELECT page FROM threads UNION SELECT page FROM decisions"
+        ).map((row) => row.text("page"));
+        return storedPageIds(stored, this.pageFiles());
       }
       usePadDb(use) {
         try {
@@ -9240,24 +9285,37 @@ var init_page_text = __esm({
 // src/rendered-page/page-description.ts
 function pageDescription(markdown) {
   const tokens = pageMarkdownParser.parse(markdown, {});
-  const titleAt = tokens.findIndex((token) => token.type === "heading_open" && token.tag === "h1");
-  const paragraphAt = tokens.findIndex(
-    (token, index) => index > titleAt && token.type === "paragraph_open" && token.level === 0
-  );
-  const text3 = paragraphText(paragraphAt === -1 ? void 0 : tokens[paragraphAt + 1]);
-  return text3 === "" ? void 0 : firstSentencePattern.exec(text3)?.[0] ?? text3;
+  const titleEnd = tokens.findIndex((token) => token.type === "heading_close" && token.tag === "h1");
+  const firstBlock = tokens[titleEnd + 1];
+  const text3 = firstBlock?.type === "paragraph_open" ? firstSentence(withChildren(tokens.slice(titleEnd + 2, titleEnd + 3))) : "";
+  return text3 === "" ? void 0 : text3;
 }
-function paragraphText(inline2) {
-  return (inline2?.children ?? []).map(plainText).join("").replaceAll(/\s+/g, " ").trim();
+function firstSentence(inlineTokens) {
+  const start = { linkDepth: 0, pieces: [] };
+  const { pieces } = inlineTokens.reduce(scanPiece, start);
+  const text3 = pieces.map((piece) => piece.text).join("");
+  const end = sentenceEnds(pieces).find((at) => /^\s?$/.test(text3.charAt(at + 1)));
+  return (end === void 0 ? text3 : text3.slice(0, end + 1)).replaceAll(/\s+/g, " ").trim();
 }
-var firstSentencePattern;
+function scanPiece(scan, token) {
+  const linkDepth = scan.linkDepth + (token.type === "link_open" ? 1 : 0) - (token.type === "link_close" ? 1 : 0);
+  const canEndSentence = token.type === "text" && scan.linkDepth === 0;
+  return { linkDepth, pieces: [...scan.pieces, { text: plainText(token), canEndSentence }] };
+}
+function sentenceEnds(pieces) {
+  return pieces.flatMap((piece, index) => {
+    const start = pieces.slice(0, index).reduce((length, each) => length + each.text.length, 0);
+    return piece.canEndSentence ? [...piece.text.matchAll(sentenceEndPattern)].map((match2) => start + match2.index) : [];
+  });
+}
+var sentenceEndPattern;
 var init_page_description = __esm({
   "src/rendered-page/page-description.ts"() {
     "use strict";
     init_markdown_it();
     init_page_headings();
     init_page_markdown_parser();
-    firstSentencePattern = /^.*?[.!?](?=\s|$)/;
+    sentenceEndPattern = /[.!?]/g;
   }
 });
 
@@ -9373,7 +9431,7 @@ var toolBuild;
 var init_tool_build = __esm({
   "src/local-server/tool-build.ts"() {
     "use strict";
-    toolBuild = "5c0f0144b0a5a4b7";
+    toolBuild = "41b86aca80668416";
   }
 });
 
@@ -10405,13 +10463,22 @@ function pageCheckProblems(pages, files, checkedPages, proseProblems) {
 function numberProblems(file, files) {
   const name = fileOfPage2(file.page);
   const first = files.find((other) => other.page === file.page);
+  const firstWithNumber = files.find(
+    (other) => file.number !== void 0 && other.number === file.number
+  );
   const parentNumber = parentNumberOf(file.number);
   return [
     ...file.number === void 0 && file.page !== indexPage2 ? [
       `the page doesn't have a number. Rename the file to <number>-${name}, where the number is the place of the page in the order`
     ] : [],
+    ...file.hasLeadingZero ? [
+      `the number of the page has a leading zero. Write the number as ${String(file.number)} so that it's read the same way everywhere`
+    ] : [],
     ...first !== void 0 && first.file !== file.file ? [
       `the page has the same name as ${first.file} after its number. Give one of the 2 pages another name`
+    ] : [],
+    ...firstWithNumber !== void 0 && firstWithNumber.file !== file.file ? [
+      `the page has the same number ${String(file.number)} as ${firstWithNumber.file}. Give one of the 2 pages another number`
     ] : [],
     ...parentNumber !== void 0 && !files.some((other) => other.number === parentNumber) ? [
       `the page is a sub page of page ${parentNumber}, which doesn't exist. Add a page ${parentNumber}-<name>.md or change the number of this page`

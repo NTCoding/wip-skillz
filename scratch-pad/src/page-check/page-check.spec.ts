@@ -166,6 +166,26 @@ describe('pageCheckProblems on the numbers of the pages', () => {
     ])
   })
 
+  it('reports the page when its number has a leading zero and gives the sub page the parent without the zero', () => {
+    expect(problemsOfFiles(['pages/01-m.md', 'pages/1.1-y.md'])).toStrictEqual([
+      {
+        page: 'pages/01-m.md',
+        line: undefined,
+        text: "the number of the page has a leading zero. Write the number as 1 so that it's read the same way everywhere",
+      },
+    ])
+  })
+
+  it('reports the second file when 2 files have the same number', () => {
+    expect(problemsOfFiles(['pages/2-a.md', 'pages/2-b.md'])).toStrictEqual([
+      {
+        page: 'pages/2-b.md',
+        line: undefined,
+        text: 'the page has the same number 2 as pages/2-a.md. Give one of the 2 pages another number',
+      },
+    ])
+  })
+
   it("reports the sub page when the page of its parent number doesn't exist", () => {
     expect(problemsOfFiles(['pages/1-comment.md', 'pages/2.1-x.md'])).toStrictEqual([
       {
