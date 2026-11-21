@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  InvalidImprovementNumberError,
   InvalidPortError,
   InvalidSecondsError,
   InvalidTaskNumberError,
@@ -7,6 +8,7 @@ import {
   OptionValueError,
   UnknownItemTypeError,
   UnknownOptionError,
+  improvementNumber,
   inboxTypes,
   milliseconds,
   parseCommandWords,
@@ -210,6 +212,27 @@ describe('taskNumber', () => {
       )
     },
   )
+})
+
+describe('improvementNumber', () => {
+  const usage = 'improvement delete <number>'
+
+  it('returns the number', () => {
+    expect(improvementNumber(['3'], 0, usage)).toBe(3)
+  })
+
+  it('throws InvalidImprovementNumberError when the number is 0', () => {
+    expect(() => improvementNumber(['0'], 0, usage)).toThrow(InvalidImprovementNumberError)
+    expect(() => improvementNumber(['0'], 0, usage)).toThrow(
+      `"0" isn't an improvement number. Usage: scratch-pad ${usage}`,
+    )
+  })
+
+  it('throws MissingArgumentError when the number is missing', () => {
+    expect(() => improvementNumber([], 0, usage)).toThrow(
+      `The improvement number is missing. Usage: scratch-pad ${usage}`,
+    )
+  })
 })
 
 describe('inboxTypes', () => {

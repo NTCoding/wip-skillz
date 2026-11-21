@@ -2,13 +2,22 @@ import { type HtmlBlockFrameSource } from './design-system/design-system'
 import {
   decisionLogHref,
   decisionLogPath,
+  improvementsHref,
+  improvementsPath,
   indexFile,
   pageHref,
   progressTrackerHref,
   progressTrackerPath,
 } from './pad-paths'
 
-export { decisionLogHref, fileOfPage, pageHref, progressTrackerHref } from './pad-paths'
+export {
+  decisionLogHref,
+  fileOfPage,
+  improvementAnchor,
+  improvementsHref,
+  pageHref,
+  progressTrackerHref,
+} from './pad-paths'
 
 export type BrowserRoute =
   | {
@@ -19,6 +28,7 @@ export type BrowserRoute =
     }
   | { readonly kind: 'progress-tracker'; readonly pad: string }
   | { readonly kind: 'decision-log'; readonly pad: string }
+  | { readonly kind: 'improvements'; readonly pad: string; readonly section: string | undefined }
 
 interface BrowserLocation {
   readonly pathname: string
@@ -40,12 +50,11 @@ function routeFrom(pad: string, file: string, section: string): BrowserRoute {
   if (file === decisionLogPath) {
     return { kind: 'decision-log', pad }
   }
-  return {
-    kind: 'page',
-    pad,
-    file: file === '' ? indexFile : file,
-    section: section === '' ? undefined : section,
+  const sectionOrNone = section === '' ? undefined : section
+  if (file === improvementsPath) {
+    return { kind: 'improvements', pad, section: sectionOrNone }
   }
+  return { kind: 'page', pad, file: file === '' ? indexFile : file, section: sectionOrNone }
 }
 
 function firstAndRest(path: string): string[] {
@@ -62,6 +71,7 @@ export interface PadAddresses {
   readonly pageHref: (file: string, section?: string) => string
   readonly progressTrackerHref: string
   readonly decisionLogHref: string
+  readonly improvementsHref: (section?: string) => string
   readonly htmlBlockFrame: HtmlBlockFrameSource
 }
 
@@ -71,6 +81,7 @@ export function servedAddresses(pad: string): PadAddresses {
     pageHref: (file, section) => pageHref(pad, file, section),
     progressTrackerHref: progressTrackerHref(pad),
     decisionLogHref: decisionLogHref(pad),
+    improvementsHref: (section) => improvementsHref(pad, section),
     htmlBlockFrame: 'server',
   }
 }
@@ -80,14 +91,17 @@ export function servedAddresses(pad: string): PadAddresses {
 export function exportedAddresses(pad: string): PadAddresses {
   return {
     routeOf: (location) => exportedRouteOf(pad, location.hash),
-    pageHref: (file, section) => {
-      const page = `#/${encodeURIComponent(file)}`
-      return section === undefined ? page : `${page}/${encodeURIComponent(section)}`
-    },
+    pageHref: (file, section) => exportedHref(file, section),
     progressTrackerHref: `#/${progressTrackerPath}`,
     decisionLogHref: `#/${decisionLogPath}`,
+    improvementsHref: (section) => exportedHref(improvementsPath, section),
     htmlBlockFrame: 'inline',
   }
+}
+
+function exportedHref(file: string, section: string | undefined): string {
+  const view = `#/${encodeURIComponent(file)}`
+  return section === undefined ? view : `${view}/${encodeURIComponent(section)}`
 }
 
 function exportedRouteOf(pad: string, hash: string): BrowserRoute {

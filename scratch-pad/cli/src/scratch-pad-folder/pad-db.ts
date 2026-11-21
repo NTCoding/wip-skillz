@@ -3,12 +3,14 @@ import { type LastPrintedEvents } from '../agent-inbox/agent-inbox'
 import { type DecisionAnswer } from '../decisions/decision-answer'
 import { type DecisionLogEntry } from '../decisions/decision-log'
 import { type NewEvent, type ScratchPadEvent } from '../events/scratch-pad-event'
+import { type Improvement, type NewImprovement } from '../improvements/improvements'
 import { type ProgressTracker } from '../progress-tracker/progress-tracker'
 import { type Thread } from '../threads/thread'
 import { StoredAgentInbox } from './stored-agent-inbox'
 import { StoredDecisionAnswers } from './stored-decision-answers'
 import { StoredDecisionLog } from './stored-decision-log'
 import { StoredEvents } from './stored-events'
+import { StoredImprovements } from './stored-improvements'
 import { StoredProgressTracker } from './stored-progress-tracker'
 import { StoredThreads } from './stored-threads'
 
@@ -17,6 +19,7 @@ export class PadDb {
   private readonly threads: StoredThreads
   private readonly decisionAnswers: StoredDecisionAnswers
   private readonly decisionLog: StoredDecisionLog
+  private readonly improvements: StoredImprovements
   private readonly events: StoredEvents
   private readonly agentInbox: StoredAgentInbox
 
@@ -25,6 +28,7 @@ export class PadDb {
     this.threads = new StoredThreads(db, padName)
     this.decisionAnswers = new StoredDecisionAnswers(db, padName)
     this.decisionLog = new StoredDecisionLog(db, padName)
+    this.improvements = new StoredImprovements(db, padName)
     this.events = new StoredEvents(db, padName)
     this.agentInbox = new StoredAgentInbox(db, padName)
   }
@@ -75,6 +79,22 @@ export class PadDb {
 
   saveDecisionLogEntry(entry: DecisionLogEntry): void {
     this.decisionLog.save(entry)
+  }
+
+  readImprovements(): Improvement[] {
+    return this.improvements.read()
+  }
+
+  saveImprovement(improvement: NewImprovement): Improvement {
+    return this.improvements.save(improvement)
+  }
+
+  updateImprovement(improvement: Improvement): void {
+    this.improvements.update(improvement)
+  }
+
+  deleteImprovement(number: number): void {
+    this.improvements.delete(number)
   }
 
   readLastPrintedEvents(): LastPrintedEvents {

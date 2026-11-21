@@ -6,8 +6,6 @@ import { replyToThread } from '../agent-commands/thread-commands'
 import { nickAnswersDecision, nickComments, nickReplies } from '../nick-actions/nick-actions'
 import { itemLinks, type ItemLinks } from '../item-links/item-links'
 import { ScratchPadError } from '../scratch-pad-error'
-import { padSchema } from './pad-schema'
-import { secondVersionPadSchema } from './pad-schema-fixtures'
 import { ScratchPadFolder } from './scratch-pad-folder'
 
 const writerNames = [
@@ -115,7 +113,7 @@ export async function runWriterProcess(
   go: Readable,
   print: (line: string) => void,
 ): Promise<void> {
-  const [writerText, padPath, countText, schemaText] = args
+  const [writerText, padPath, countText] = args
   const writer = writerNames.find((name) => name === writerText)
   if (writer === undefined || padPath === undefined || countText === undefined) {
     throw new WriterArgumentsError(args)
@@ -123,10 +121,7 @@ export async function runWriterProcess(
   print('ready')
   await once(go, 'data')
   runWriter(writer, {
-    folder: new ScratchPadFolder(
-      padPath,
-      schemaText === 'second-version' ? secondVersionPadSchema : padSchema,
-    ),
+    folder: new ScratchPadFolder(padPath),
     count: Number(countText),
     deadline: Date.now() + readInboxTimeoutMilliseconds,
     print,

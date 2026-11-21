@@ -146,6 +146,26 @@ describe('htmlBlockFrameScript', () => {
     await vi.waitFor(() => expect(fromFrame).toStrictEqual([{ height: 0 }]))
   })
 
+  it('reports the height of the frame when the written document is ready, even if the frame is never resized', async () => {
+    vi.stubGlobal(
+      'ResizeObserver',
+      class {
+        observe(): void {
+          return undefined
+        }
+      },
+    )
+    vi.spyOn(document.documentElement, 'getBoundingClientRect').mockReturnValue(
+      DOMRect.fromRect({ height: 120 }),
+    )
+    const channel = new MessageChannel()
+    const fromFrame = messagesOn(channel.port2)
+    Reflect.set(window, 'htmlBlockPort', channel.port1)
+    htmlBlockFrameScript()
+    document.dispatchEvent(new Event('DOMContentLoaded'))
+    await vi.waitFor(() => expect(fromFrame).toStrictEqual([{ height: 120 }]))
+  })
+
   it('does nothing when the frame doesn’t have a port to the page', () => {
     expect(() => htmlBlockFrameScript()).not.toThrow()
   })

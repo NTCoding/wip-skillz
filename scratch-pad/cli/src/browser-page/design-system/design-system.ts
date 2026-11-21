@@ -16,6 +16,15 @@ export { HtmlBlock, type HtmlBlockFrameSource } from './components/html-block/ht
 export { Icon } from './components/icon/icon'
 export { IconButton } from './components/icon-button/icon-button'
 export { ImageBlock } from './components/image-block/image-block'
+export {
+  ImprovementForm,
+  type ImprovementEdit,
+} from './components/improvement-form/improvement-form'
+export {
+  ImprovementList,
+  type ImprovementActions,
+  type ImprovementRow,
+} from './components/improvement-list/improvement-list'
 export { Inbox, type InboxEntry } from './components/inbox/inbox'
 export { LinkPreview, type PreviewContent } from './components/link-preview/link-preview'
 export { MarginCard } from './components/margin-card/margin-card'

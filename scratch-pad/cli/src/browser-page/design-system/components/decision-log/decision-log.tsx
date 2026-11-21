@@ -1,3 +1,4 @@
+import { timeFormat } from '../../time-format'
 import './decision-log.css'
 
 export interface DecisionLogRow {
@@ -11,14 +12,6 @@ export interface DecisionLogRow {
 interface DecisionLogProps {
   readonly entries: readonly DecisionLogRow[]
 }
-
-const timeFormat = new Intl.DateTimeFormat('en-GB', {
-  day: 'numeric',
-  month: 'short',
-  year: 'numeric',
-  hour: '2-digit',
-  minute: '2-digit',
-})
 
 const sourceLabels = { chat: 'In the chat', page: 'On a page' } as const
 

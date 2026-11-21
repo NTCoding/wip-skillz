@@ -41,6 +41,18 @@ describe('changesOfEvents', () => {
     ).toStrictEqual([{ kind: 'decision-log' }])
   })
 
+  it('returns the improvements when the agent logs an improvement', () => {
+    expect(changesOfEvents([event(1, 'improvement-logged')])).toStrictEqual([
+      { kind: 'improvements' },
+    ])
+  })
+
+  it('returns the improvements when an improvement is edited or deleted', () => {
+    expect(
+      changesOfEvents([event(1, 'improvement-edited'), event(2, 'improvement-deleted')]),
+    ).toStrictEqual([{ kind: 'improvements' }])
+  })
+
   it('returns one progress tracker change when the goal and the tasks change', () => {
     expect(
       changesOfEvents([

@@ -3,6 +3,9 @@ import {
   decisionAnswerResponse,
   decisionLogResponse,
   errorResponse,
+  improvementDeleteResponse,
+  improvementEditResponse,
+  improvementsResponse,
   nickInboxResponse,
   padChange,
   pagesResponse,
@@ -12,6 +15,7 @@ import {
   viewedPageResponse,
   type Answer,
   type DecisionLogEntry,
+  type Improvements,
   type NickInbox,
   type PadChange,
   type PageSummary,
@@ -21,6 +25,7 @@ import {
   type ViewedPage,
 } from './api-responses'
 import { BrowserPageError } from './browser-page-error'
+import { type ImprovementEdit } from './design-system/design-system'
 
 export interface NewThread {
   readonly type: ThreadType
@@ -45,6 +50,7 @@ export interface ScratchPadReading {
   readonly nickInbox: () => Promise<NickInbox>
   readonly progressTracker: () => Promise<ProgressTracker>
   readonly decisionLog: () => Promise<DecisionLogEntry[]>
+  readonly improvements: () => Promise<Improvements>
   readonly onChange: (listeners: ChangeListeners) => () => void
 }
 
@@ -53,6 +59,8 @@ export interface ScratchPadWriting {
   readonly replyToThread: (id: string, message: string) => Promise<Thread>
   readonly resolveThread: (id: string) => Promise<Thread>
   readonly answerDecision: (id: string, page: string, answer: Answer) => Promise<void>
+  readonly editImprovement: (number: number, edit: ImprovementEdit) => Promise<void>
+  readonly deleteImprovement: (number: number) => Promise<void>
 }
 
 export type ScratchPadConnection = ScratchPadReading & ScratchPadWriting
@@ -141,6 +149,7 @@ export function scratchPadConnection(pad: string, network: BrowserNetwork): Scra
     progressTracker: () => readJson(network, `${api}/progress-tracker`, progressTrackerResponse),
     decisionLog: async () =>
       (await readJson(network, `${api}/decision-log`, decisionLogResponse)).decisions,
+    improvements: () => readJson(network, `${api}/improvements`, improvementsResponse),
     startThread: async (thread) =>
       (await readJson(network, `${api}/threads`, threadResponse, postOf(thread))).thread,
     replyToThread: async (id, message) =>
@@ -154,6 +163,22 @@ export function scratchPadConnection(pad: string, network: BrowserNetwork): Scra
         `${api}/decisions/${encodeURIComponent(id)}`,
         decisionAnswerResponse,
         postOf({ page, ...answer }),
+      )
+    },
+    editImprovement: async (number, edit) => {
+      await readJson(
+        network,
+        `${api}/improvements/${number}`,
+        improvementEditResponse,
+        postOf(edit),
+      )
+    },
+    deleteImprovement: async (number) => {
+      await readJson(
+        network,
+        `${api}/improvements/${number}/delete`,
+        improvementDeleteResponse,
+        postOf({}),
       )
     },
     onChange: (listeners) => {

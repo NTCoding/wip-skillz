@@ -15,6 +15,7 @@ const responses: Readonly<Record<string, unknown>> = {
   [`/api/scratch-pads/${exportPad}/pages/index.md`]: indexPage,
   [`/api/scratch-pads/${exportPad}/progress-tracker`]: progressTracker,
   [`/api/scratch-pads/${exportPad}/decision-log`]: { decisions: [] },
+  [`/api/scratch-pads/${exportPad}/improvements`]: { improvements: [], notes: [] },
 }
 
 class FakeEventSource {

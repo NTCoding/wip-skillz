@@ -64,6 +64,12 @@ export class InvalidTaskNumberError extends ScratchPadError {
   }
 }
 
+export class InvalidImprovementNumberError extends ScratchPadError {
+  constructor(text: string, usage: string) {
+    super(`"${text}" isn't an improvement number. Usage: scratch-pad ${usage}`)
+  }
+}
+
 export class UnknownItemTypeError extends ScratchPadError {
   constructor(type: string) {
     super(`"${type}" isn't a type. The types are: ${itemTypes.join(', ')}`)
@@ -136,12 +142,21 @@ export function restOfWords(
   return text
 }
 
-export function taskNumber(words: readonly string[], index: number, usage: string): number {
-  const text = requiredWord(words, index, 'task number', usage)
+function positiveNumber(text: string, invalid: () => ScratchPadError): number {
   if (!/^[1-9]\d*$/.test(text)) {
-    throw new InvalidTaskNumberError(text, usage)
+    throw invalid()
   }
   return Number(text)
+}
+
+export function taskNumber(words: readonly string[], index: number, usage: string): number {
+  const text = requiredWord(words, index, 'task number', usage)
+  return positiveNumber(text, () => new InvalidTaskNumberError(text, usage))
+}
+
+export function improvementNumber(words: readonly string[], index: number, usage: string): number {
+  const text = requiredWord(words, index, 'improvement number', usage)
+  return positiveNumber(text, () => new InvalidImprovementNumberError(text, usage))
 }
 
 export function inboxTypes(typeOption: string | undefined): readonly ItemType[] {

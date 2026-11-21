@@ -1,6 +1,7 @@
 import { vi } from 'vitest'
 import {
   type DecisionLogEntry,
+  type Improvements,
   type NickInbox,
   type PadChange,
   type PageSummary,
@@ -217,6 +218,36 @@ export const decisionLog: DecisionLogEntry[] = [
   },
 ]
 
+export const improvements: Improvements = {
+  improvements: [
+    {
+      number: 1,
+      time: '2026-11-20T21:30:00.000Z',
+      title: 'The export command skips the custom files.',
+      details: '## Steps\n\nRun the export of [the invoice template](invoice-template.md).',
+      html: '<h2>Steps</h2>\n<p>Run the export of <a href="invoice-template.md">the invoice template</a>.</p>\n',
+      links: [
+        {
+          kind: 'page',
+          href: 'invoice-template.md',
+          page: 'pages/invoice-template.md',
+          headingId: undefined,
+        },
+      ],
+    },
+  ],
+  notes: [
+    {
+      id: 'g-1',
+      type: 'grammar',
+      page: 'pages/index.md',
+      text: 'Write who shows it.',
+      time: '2026-11-20T21:10:00.000Z',
+      outcome: undefined,
+    },
+  ],
+}
+
 export const retryQuestion: Thread = {
   id: 'c-1',
   type: 'comment',
@@ -325,6 +356,8 @@ const fakeActions = {
   resolveThread: (id: string) =>
     Promise.resolve<Thread>({ ...retryQuestion, id, waitsFor: 'nobody' }),
   answerDecision: () => Promise.resolve(),
+  editImprovement: () => Promise.resolve(),
+  deleteImprovement: () => Promise.resolve(),
 }
 
 export function fakeConnection(): FakeConnection {
@@ -349,6 +382,7 @@ export function fakeConnection(): FakeConnection {
     ...fakeActions,
     progressTracker: () => Promise.resolve(progressTracker),
     decisionLog: () => Promise.resolve(decisionLog),
+    improvements: () => Promise.resolve(improvements),
     onChange: (changeListeners) => {
       listeners.add(changeListeners)
       return () => {
@@ -374,6 +408,7 @@ export const exportedPadJson = JSON.stringify(
     threads: [retryQuestion, toneNote],
     progressTracker,
     decisionLog,
+    improvements,
   },
   (_key, value: unknown) => value ?? null,
 )

@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import {
   decisionLogLink,
+  improvementLink,
+  improvementsLink,
   itemLinks,
   linkLines,
   padLink,
@@ -55,6 +57,14 @@ describe('the links of the views', () => {
       `${exportJobAddress}progress-tracker`,
       `${exportJobAddress}decisions`,
     ])
+  })
+
+  it('returns the address of an improvement on the improvements', () => {
+    expect(improvementLink(servedLinks, 3)).toBe(`${exportJobAddress}improvements#improvement-3`)
+  })
+
+  it('returns the address of the improvements without an anchor', () => {
+    expect(improvementsLink(servedLinks)).toBe(`${exportJobAddress}improvements`)
   })
 })
 

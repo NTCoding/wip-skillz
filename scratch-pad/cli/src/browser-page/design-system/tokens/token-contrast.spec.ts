@@ -104,7 +104,7 @@ const pairs = (
     ...onSurfaces('--grammar-ink', ['--surface-raised']),
     ...onSurfaces('--improvement-ink', ['--surface-raised']),
     ...onSurfaces('--thread-sent', ['--surface-raised']),
-    ...onSurfaces('--thread-replied', ['--surface-raised']),
+    ...onSurfaces('--thread-replied', ['--surface-reading', '--surface-raised']),
     { text: '--text', background: '--tint' },
     { text: '--text', background: '--tint-strong' },
     { text: '--text-nav', background: '--tint', surface: '--surface-sidebar' },

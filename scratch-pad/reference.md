@@ -6,28 +6,31 @@ This file describes the details that aren't in [SKILL.md](SKILL.md), such as the
 
 Every command prints a few short lines. If a command fails, it will exit with a code that isn't zero. Before it exits, it will print a message to the error stream so that you know how to fix the problem.
 
-| Command                  | What it does                                                                                                                                          |
-| ------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `new <topic>`            | Creates a scratch pad with an index page and a progress tracker                                                                                       |
-| `start [--port <port>]`  | Starts the server in the background and prints the address. It never starts a second server, but it restarts a server that's running another version. |
-| `stop`                   | Stops the server, which is shared by every scratch pad. It doesn't take `--pad`.                                                                      |
-| `serve [--port <port>]`  | Runs the server in the foreground. `start` runs this command in the background.                                                                       |
-| `status`                 | Prints the current task and what's waiting for the agent and for Nick. It will also print the scratch pad's address if the server is running.         |
-| `inbox [--type <types>]` | Prints the new items that are waiting for the agent. `--all` also prints the items that were printed before.                                          |
-| `wait`                   | Waits until Nick has been quiet for 10 seconds and then prints the new items in the same way as `inbox`                                               |
-| `show <id>`              | Prints one whole thread or decision                                                                                                                   |
-| `reply <id> <text>`      | Adds your reply to a thread, which then waits for Nick                                                                                                |
-| `done <id> <outcome>`    | Closes a note or a decision with one line about what you changed                                                                                      |
-| `pages`                  | Lists the pages with their titles and their open threads, in the order of their numbers                                                               |
-| `outline <page>`         | Prints the headings of a page with their line numbers                                                                                                 |
-| `check [page...]`        | Prints each problem in the given pages or in every page. A broken link is one example of a problem.                                                   |
-| `goal <text>`            | Sets the progress tracker's goal                                                                                                                      |
-| `tasks`                  | Lists the tasks with their states                                                                                                                     |
-| `task add <title>`       | Adds a task to the progress tracker                                                                                                                   |
-| `task start <number>`    | Starts a task                                                                                                                                         |
-| `task done <number>`     | Finishes a task and starts the next task that's still to do                                                                                           |
-| `decide <text>`          | Adds a decision from the chat to the log of decisions                                                                                                 |
-| `export [--out <file>]`  | Writes one HTML file that a reader can open without the server. The default file is `export.html` in the scratch pad.                                 |
+| Command                             | What it does                                                                                                                                          |
+| ----------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `new <topic>`                       | Creates a scratch pad with an index page and a progress tracker                                                                                       |
+| `start [--port <port>]`             | Starts the server in the background and prints the address. It never starts a second server, but it restarts a server that's running another version. |
+| `stop`                              | Stops the server, which is shared by every scratch pad. It doesn't take `--pad`.                                                                      |
+| `serve [--port <port>]`             | Runs the server in the foreground. `start` runs this command in the background.                                                                       |
+| `status`                            | Prints the current task and what's waiting for the agent and for Nick. It will also print the scratch pad's address if the server is running.         |
+| `inbox [--type <types>]`            | Prints the new items that are waiting for the agent. `--all` also prints the items that were printed before.                                          |
+| `wait`                              | Waits until Nick has been quiet for 10 seconds and then prints the new items in the same way as `inbox`                                               |
+| `show <id>`                         | Prints one whole thread or decision                                                                                                                   |
+| `reply <id> <text>`                 | Adds your reply to a thread, which then waits for Nick                                                                                                |
+| `done <id> <outcome>`               | Closes a note or a decision with one line about what you changed                                                                                      |
+| `pages`                             | Lists the pages with their titles and their open threads, in the order of their numbers                                                               |
+| `outline <page>`                    | Prints the headings of a page with their line numbers                                                                                                 |
+| `check [page...]`                   | Prints each problem in the given pages or in every page. A broken link is one example of a problem.                                                   |
+| `goal <text>`                       | Sets the progress tracker's goal                                                                                                                      |
+| `tasks`                             | Lists the tasks with their states                                                                                                                     |
+| `task add <title>`                  | Adds a task to the progress tracker                                                                                                                   |
+| `task start <number>`               | Starts a task                                                                                                                                         |
+| `task done <number>`                | Finishes a task and starts the next task that's still to do                                                                                           |
+| `decide <text>`                     | Adds a decision from the chat to the log of decisions                                                                                                 |
+| `improve <title>`                   | Logs an improvement to the harness, the skill, the tool or the UX. It reads the Markdown details from standard input.                                 |
+| `improvement edit <number> <title>` | Replaces the title and the details of an improvement. It reads the new Markdown details from standard input.                                          |
+| `improvement delete <number>`       | Deletes an improvement                                                                                                                                |
+| `export [--out <file>]`             | Writes one HTML file that a reader can open without the server. The default file is `export.html` in the scratch pad.                                 |
 
 You can pass a page to a command with or without its number. So `1.1-retry-limit.md`, `retry-limit.md` and `retry-limit` are the same page for every command. But the tool's own output always shows the full file name, like `pages/1.1-retry-limit.md:3` for line 3 of that page.
 
@@ -40,7 +43,7 @@ The types for `--type` are `comment`, `decision`, `grammar` and `improvement`. Y
 - `--quiet <seconds>` changes how long Nick has to be quiet, which is 10 seconds by default.
 - `--timeout <seconds>` ends the wait after that many seconds, even if there aren't any new items.
 
-Put `--pad` before the text of `new`, `goal`, `task add`, `decide`, `reply` or `done`, because an option after the text is read as part of the text:
+Put `--pad` before the text of `new`, `goal`, `task add`, `decide`, `improve`, `improvement edit`, `reply` or `done`, because an option after the text is read as part of the text:
 
 ```text
 $ scratch-pad reply --pad 2026-11-21-invoice-export c-1 "Every shop can pick a time."
@@ -52,7 +55,7 @@ link: http://127.0.0.1:4747/2026-11-21-invoice-export/#c-1
 
 | Variable                  | What it changes                                                                                             |
 | ------------------------- | ----------------------------------------------------------------------------------------------------------- |
-| `SCRATCH_PADS_HOME`       | The folder that contains every scratch pad. The default folder is `~/scratch-pads`.                         |
+| `SCRATCH_PADS_HOME`       | The folder that contains every scratch pad. The default folder is `~/scratchpads`.                          |
 | `SCRATCH_PAD`             | The scratch pad that a command works on when `--pad` isn't given                                            |
 | `SCRATCH_PAD_PROSE_CHECK` | A script that `check` runs on each page's text. It prints each place where that text breaks a writing rule. |
 
@@ -72,6 +75,8 @@ When a command's output includes something that Nick can open in the browser, th
 | `new`                                                  | A `link:` line to the scratch pad                                                                              |
 | `goal`, `tasks`, `task add`, `task start`, `task done` | A `link:` line to the progress tracker                                                                         |
 | `decide`                                               | A `link:` line to the log of decisions                                                                         |
+| `improve` and `improvement edit`                       | A `link:` line to the improvement on the Improvements tab                                                      |
+| `improvement delete`                                   | A `link:` line to the Improvements tab                                                                         |
 
 An address only works while the server is running. If the server isn't running, the command will print this line instead of the links:
 
@@ -85,7 +90,7 @@ If the server is running, `status` prints the scratch pad's address in the brows
 
 ```text
 $ scratch-pad status --pad 2026-11-21-invoice-export
-2026-11-21-invoice-export · /Users/nick/scratch-pads/2026-11-21-invoice-export
+2026-11-21-invoice-export · /Users/nick/scratchpads/2026-11-21-invoice-export
 in the browser: http://127.0.0.1:4747/2026-11-21-invoice-export/
 task 1 of 2: Design the export job
 link: http://127.0.0.1:4747/2026-11-21-invoice-export/progress-tracker
@@ -144,15 +149,15 @@ pages/2.1-queue.md  the page is a sub page of page 2, which doesn't exist. Add a
 
 ## The folder of a scratch pad
 
-Every scratch pad is a folder in `~/scratch-pads`. The name of the folder is `<yyyy-mm-dd>-<topic>`:
+Every scratch pad is a folder in `~/scratchpads`. The name of the folder is `<yyyy-mm-dd>-<topic>`:
 
 ```text
-~/scratch-pads/2026-11-21-invoice-export/
+~/scratchpads/2026-11-21-invoice-export/
   pages/index.md               # the first page
   pages/1-how-the-job-runs.md  # one Markdown file for each page
   pages/1.1-retry-limit.md     # a sub page of page 1
   custom/export-steps.html     # an optional file for a long :::html block
-  pad.db                       # the threads, the tasks and the log of decisions
+  pad.db                       # the threads, the tasks, the log of decisions and the improvements
   export.html                  # written by the export command
 ```
 
@@ -221,7 +226,7 @@ The export is one HTML file that a reader can open from the disk without the ser
 The file shows:
 
 - every page in the Medium theme, together with the sidebar and the table of contents
-- the progress tracker and the log of decisions
+- the progress tracker, the log of decisions and the improvements
 - each thread beside its block
 
 A reader can follow every link between the pages. But inside an `:::html` block, a link to another page of the scratch pad doesn't work, whereas a link to another site still works.

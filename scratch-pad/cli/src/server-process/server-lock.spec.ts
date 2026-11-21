@@ -38,7 +38,7 @@ describe('ServerLock', () => {
   })
 
   it('returns a lock when the home folder does not exist yet', () => {
-    expect(claimed(join(temporaryHome(), 'scratch-pads'))).toBeInstanceOf(ServerLock)
+    expect(claimed(join(temporaryHome(), 'scratchpads'))).toBeInstanceOf(ServerLock)
   })
 
   it('throws BrokenServerLockError when the lock file is not a lock', () => {

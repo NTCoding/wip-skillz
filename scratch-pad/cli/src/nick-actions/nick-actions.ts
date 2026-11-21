@@ -5,6 +5,12 @@ import {
   type NewDecisionAnswer,
 } from '../decisions/decision-answer'
 import { logDecision } from '../decisions/decision-log'
+import {
+  editImprovement,
+  findImprovement,
+  type Improvement,
+  type ImprovementEdit,
+} from '../improvements/improvements'
 import { nextItemId } from '../items/item-id'
 import { findPage } from '../pages/page-markdown'
 import { pageBlocksOf } from '../rendered-page/page-blocks'
@@ -119,5 +125,27 @@ export function nickAnswersDecision(
     pad.saveDecisionLogEntry(logged.entry)
     pad.appendEvent({ time, kind: 'decision-answered', by: 'nick', item: decision.id })
     return decision
+  })
+}
+
+export function nickEditsImprovement(
+  folder: ScratchPadFolder,
+  number: number,
+  edit: ImprovementEdit,
+): Improvement {
+  const time = new Date().toISOString()
+  return folder.change((pad) => {
+    const improvement = editImprovement(pad.readImprovements(), number, edit)
+    pad.updateImprovement(improvement)
+    pad.appendEvent({ time, kind: 'improvement-edited', by: 'nick', item: undefined })
+    return improvement
+  })
+}
+
+export function nickDeletesImprovement(folder: ScratchPadFolder, number: number): void {
+  const time = new Date().toISOString()
+  folder.change((pad) => {
+    pad.deleteImprovement(findImprovement(pad.readImprovements(), number).number)
+    pad.appendEvent({ time, kind: 'improvement-deleted', by: 'nick', item: undefined })
   })
 }

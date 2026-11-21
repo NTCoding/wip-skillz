@@ -172,13 +172,18 @@ describe('respondToApiRequest for the pages', () => {
     })
   })
 
-  it('returns the progress tracker and the log of decisions when they are asked for', () => {
+  it('returns the progress tracker, the log of decisions and the improvements when they are asked for', () => {
     const home = homeWithExportJob()
 
     expect([
       jsonBody(get(home, `${padApi}/progress-tracker`)),
       jsonBody(get(home, `${padApi}/decision-log`)),
-    ]).toStrictEqual([{ title: 'Export job', goal: undefined, tasks: [] }, { decisions: [] }])
+      jsonBody(get(home, `${padApi}/improvements`)),
+    ]).toStrictEqual([
+      { title: 'Export job', goal: undefined, tasks: [] },
+      { decisions: [] },
+      { improvements: [], notes: [] },
+    ])
   })
 
   it('returns the stream of changes of the scratch pad when the changes are asked for', () => {

@@ -1,6 +1,8 @@
 import {
   decisionLogHref,
   fileOfPage,
+  improvementAnchor,
+  improvementsHref,
   indexFile,
   pageHref,
   progressTrackerHref,
@@ -33,6 +35,14 @@ export function progressTrackerLink(links: ItemLinks): string | undefined {
 
 export function decisionLogLink(links: ItemLinks): string | undefined {
   return linkTo(links, decisionLogHref(links.pad))
+}
+
+export function improvementLink(links: ItemLinks, number: number): string | undefined {
+  return linkTo(links, improvementsHref(links.pad, improvementAnchor(number)))
+}
+
+export function improvementsLink(links: ItemLinks): string | undefined {
+  return linkTo(links, improvementsHref(links.pad))
 }
 
 export function linkLines(link: string | undefined, indent = ''): string[] {

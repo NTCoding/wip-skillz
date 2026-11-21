@@ -6,6 +6,7 @@ import {
   exportedPadJson,
   exportPad,
   fakeNarrowWindow,
+  improvements,
   invoiceTemplatePage,
   progressTracker,
 } from './browser-page-fixtures'
@@ -48,6 +49,10 @@ describe('exportedScratchPad', () => {
     ])
     expect(await exported.progressTracker()).toStrictEqual(progressTracker)
     expect(await exported.decisionLog()).toStrictEqual(decisionLog)
+  })
+
+  it('returns the improvements from the data of the export', async () => {
+    expect(await exported.improvements()).toStrictEqual(improvements)
   })
 
   it('returns an empty Inbox and doesn’t return any threads when the page doesn’t have any', async () => {
@@ -148,6 +153,9 @@ describe('ScratchPadApp in an export', () => {
     renderExport('#/progress-tracker')
     await screen.findByRole('heading', { level: 1, name: 'Progress tracker' })
     expect(screen.getByRole('link', { name: 'Decisions' }).getAttribute('href')).toBe('#/decisions')
+    expect(screen.getByRole('link', { name: 'Improvements' }).getAttribute('href')).toBe(
+      '#/improvements',
+    )
   })
 
   it('doesn’t offer to comment on a selection when the export is opened', async () => {
@@ -162,5 +170,12 @@ describe('ScratchPadApp in an export', () => {
     fireEvent.mouseUp(document.body)
     expect(document.getSelection()?.toString()).toBe('export job')
     expect(screen.queryByRole('button', { name: 'Comment' })).toBeNull()
+  })
+
+  it('doesn’t show the edit and delete buttons of an improvement when the export is opened', async () => {
+    renderExport('#/improvements')
+    await screen.findByRole('heading', { level: 1, name: 'Improvements' })
+    expect(screen.queryByRole('button', { name: 'Edit improvement 1' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Delete improvement 1' })).toBeNull()
   })
 })

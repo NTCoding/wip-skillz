@@ -12,7 +12,7 @@ import {
   temporaryHome,
   writeFileInPad,
 } from '../scratch-pad-folder/scratch-pad-folder-fixtures'
-import { type Environment } from '../scratch-pads-home/scratch-pads-home'
+import { chooseScratchPad, type Environment } from '../scratch-pads-home/scratch-pads-home'
 import { builtTool, homeForServer, stopServers } from '../server-process/server-process-fixtures'
 import { runCommandLine } from './command-line'
 import { environmentWithScratchPad, runScratchPad } from './command-line-fixtures'
@@ -183,6 +183,66 @@ describe('the scratch-pad commands', () => {
     )
   })
 
+  it('improve prints the number of the logged improvement', async () => {
+    expect(await output(['improve', 'The export skips the custom files.'])).toBe(
+      `improvement 1 is logged\n${missingLinksText}\n`,
+    )
+  })
+
+  it('improve logs the Markdown details from standard input', async () => {
+    const environment = environmentWithItems()
+    await runScratchPad(['improve', 'The export skips the custom files.'], environment, {
+      readStandardInput: () => Promise.resolve('## Steps\n\n1. Run export.\n'),
+    })
+
+    expect(
+      chooseScratchPad(environment.SCRATCH_PADS_HOME, environment.SCRATCH_PAD).read((pad) =>
+        pad.readImprovements().map((improvement) => improvement.details),
+      ),
+    ).toStrictEqual(['## Steps\n\n1. Run export.'])
+  })
+
+  it('improvement edit replaces the title and reads the new Markdown details from standard input', async () => {
+    const environment = environmentWithItems()
+    await output(['improve', 'The export skips files.'], environment)
+
+    expect(
+      await runScratchPad(
+        ['improvement', 'edit', '1', '--pad', environment.SCRATCH_PAD, 'The export skips', '--all'],
+        environment,
+        { readStandardInput: () => Promise.resolve('Run export twice.\n') },
+      ),
+    ).toStrictEqual({
+      exitCode: 0,
+      stdout: `improvement 1 is edited\n${missingLinksText}\n`,
+      stderr: '',
+    })
+    expect(
+      chooseScratchPad(environment.SCRATCH_PADS_HOME, environment.SCRATCH_PAD).read((pad) =>
+        pad.readImprovements().map(({ title, details }) => ({ title, details })),
+      ),
+    ).toStrictEqual([{ title: 'The export skips --all', details: 'Run export twice.' }])
+  })
+
+  it('improvement delete removes the improvement', async () => {
+    const environment = environmentWithItems()
+    await output(['improve', 'The export skips files.'], environment)
+
+    expect(await output(['improvement', 'delete', '1'], environment)).toBe(
+      `improvement 1 is deleted\n${missingLinksText}\n`,
+    )
+  })
+
+  it('improvement delete returns 1 and prints the error when the number is unknown', async () => {
+    expect(
+      await runScratchPad(['improvement', 'delete', '4'], environmentWithItems()),
+    ).toStrictEqual({
+      exitCode: 1,
+      stdout: '',
+      stderr: "There isn't any improvement 4 because there aren't any improvements yet.\n",
+    })
+  })
+
   it('inbox prints one line for the decision when only comments are requested and a decision waits', async () => {
     expect((await output(['inbox', '--type', 'comment'])).split('\n').at(-4)).toBe(
       '1 decision waits for the agent (scratch-pad inbox --pad 2026-03-14-export-job --type decision) · 1 grammar note waits for a subagent',
@@ -329,7 +389,12 @@ describe('the server commands and wait', () => {
       `pages/index.md  Export job  no open threads  ${pad}`,
     )
     await expect(linkOf(['tasks'])).resolves.toBe(`link: ${pad}progress-tracker`)
-    await expect(linkOf(['decide', 'Keep 5 retries.'])).resolves.toBe(`link: ${pad}decisions`)
+    await expect(
+      Promise.all([
+        linkOf(['decide', 'Keep 5 retries.']),
+        linkOf(['improve', 'The export skips the custom files.']),
+      ]),
+    ).resolves.toStrictEqual([`link: ${pad}decisions`, `link: ${pad}improvements#improvement-1`])
     await expect(linkOf(['new', 'invoice template'])).resolves.toMatch(
       /^link: http:\/\/127\.0\.0\.1:\d+\/\d{4}-\d{2}-\d{2}-invoice-template\/$/,
     )
@@ -351,6 +416,7 @@ describe('the server commands and wait', () => {
       environment: { SCRATCH_PADS_HOME: home },
       stdout: { write: (text: string) => (output.stdout += text) },
       stderr: { write: (text: string) => (output.stderr += text) },
+      readStandardInput: () => Promise.resolve(''),
       toolCommand: toolCommand(),
       stopSignal: stopping.signal,
     })

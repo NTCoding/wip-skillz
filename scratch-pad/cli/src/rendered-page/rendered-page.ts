@@ -1,7 +1,8 @@
 import { type DecisionBlock } from './decision-block'
 import { type CustomFileReader } from './html-block'
 import { renderNamedBlocks, type HtmlBlockSource } from './named-blocks'
-import { addHeadingIds, type Heading } from './page-headings'
+import { type Token } from 'markdown-it'
+import { addHeadingIds, headingsOf, type Heading } from './page-headings'
 import { linksOf, type PageLink } from './page-links'
 import { pageMarkdownParser } from './page-markdown-parser'
 import { byLine, type PageProblem } from './page-problem'
@@ -23,10 +24,23 @@ export interface RenderedPage {
 }
 
 export function renderPage(source: PageSource): RenderedPage {
+  return rendered(source, addHeadingIds)
+}
+
+// The details of every improvement are shown on the same tab so a heading in the details
+// doesn't have an id that could clash with another heading or with an anchor on the tab.
+export function renderDetails(source: PageSource): RenderedPage {
+  return rendered(source, headingsOf)
+}
+
+function rendered(
+  source: PageSource,
+  headingsFrom: (tokens: readonly Token[]) => Heading[],
+): RenderedPage {
   const tokens = pageMarkdownParser.parse(source.markdown, {})
   const lines = source.markdown.split('\n')
   markTopLevelBlocks(tokens, lines)
-  const headings = addHeadingIds(tokens)
+  const headings = headingsFrom(tokens)
   const links = linksOf(tokens, source.page)
   const namedBlocks = renderNamedBlocks(tokens, lines, {
     headings,

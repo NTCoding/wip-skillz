@@ -5,6 +5,7 @@ export type PadChange =
   | { readonly kind: 'thread'; readonly id: string }
   | { readonly kind: 'decision'; readonly id: string }
   | { readonly kind: 'decision-log' }
+  | { readonly kind: 'improvements' }
   | { readonly kind: 'progress-tracker' }
 
 export type PageVersions = ReadonlyMap<string, string>
@@ -31,6 +32,9 @@ const changesOfKind: Readonly<
   'decision-answered': decisionChange,
   'decision-followed': () => [],
   'decision-logged': () => [{ kind: 'decision-log' }],
+  'improvement-logged': () => [{ kind: 'improvements' }],
+  'improvement-edited': () => [{ kind: 'improvements' }],
+  'improvement-deleted': () => [{ kind: 'improvements' }],
   'goal-set': () => progressTrackerChange,
   'task-added': () => progressTrackerChange,
   'task-started': () => progressTrackerChange,

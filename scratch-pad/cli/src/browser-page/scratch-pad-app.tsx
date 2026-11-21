@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   type Answer,
   type DecisionLogEntry,
+  type Improvements,
   type NickInbox,
   type PadChange,
   type PageSummary,
@@ -18,6 +19,7 @@ import {
   PageList,
   StatusPill,
   TopBar,
+  type ImprovementEdit,
   type Navigate,
   type PreviewContent,
 } from './design-system/design-system'
@@ -37,7 +39,7 @@ import {
   type ScratchPadWriting,
 } from './scratch-pad-connection'
 import { useSidebarState, type NarrowWindow } from './sidebar-state'
-import { DecisionLogView, LoadingView, ProgressTrackerView } from './pad-views'
+import { DecisionLogView, ImprovementsView, LoadingView, ProgressTrackerView } from './pad-views'
 
 interface ScratchPadAppProps {
   readonly pad: string
@@ -71,6 +73,9 @@ function breadcrumbOf(
   if (route.kind === 'decision-log') {
     return { parents: [], current: 'Decisions' }
   }
+  if (route.kind === 'improvements') {
+    return { parents: [], current: 'Improvements' }
+  }
   if (route.file === 'index.md') {
     return { parents: [], current: undefined }
   }
@@ -98,6 +103,7 @@ interface RouteViewProps {
   readonly route: BrowserRoute
   readonly tracker: LoadedValue<ProgressTracker>
   readonly log: LoadedValue<DecisionLogEntry[]>
+  readonly improvements: LoadedValue<Improvements>
   readonly page: LoadedValue<ViewedPage>
   readonly pages: LoadedValue<PageSummary[]>
   readonly threads: readonly Thread[]
@@ -127,6 +133,19 @@ function RouteView(props: RouteViewProps) {
       <DecisionLogView entries={log.value} />
     ) : (
       <LoadingView loaded={log} />
+    )
+  }
+  if (route.kind === 'improvements') {
+    const { improvements } = props
+    return improvements.status === 'loaded' ? (
+      <ImprovementsView
+        improvements={improvements.value}
+        openEntry={route.section}
+        context={pageContext}
+        actions={actions}
+      />
+    ) : (
+      <LoadingView loaded={improvements} />
     )
   }
   if (page.status === 'failed' && isMissing(props.pages, route.file)) {
@@ -189,6 +208,14 @@ function usePageActions(
         await writing.answerDecision(id, page, answer)
         changed({ kind: 'decision', id })
       },
+      editImprovement: async (number: number, edit: ImprovementEdit) => {
+        await writing.editImprovement(number, edit)
+        changed({ kind: 'improvements' })
+      },
+      deleteImprovement: async (number: number) => {
+        await writing.deleteImprovement(number)
+        changed({ kind: 'improvements' })
+      },
     }
   }, [writing, changed])
 }
@@ -225,6 +252,7 @@ export function ScratchPadApp(props: ScratchPadAppProps) {
   const pages = useLoadedValue(pad, revisions.pages, connection.pages)
   const tracker = useLoadedValue(pad, revisions.progressTracker, connection.progressTracker)
   const log = useLoadedValue(pad, revisions.decisionLog, connection.decisionLog)
+  const improvements = useLoadedValue(pad, revisions.improvements, connection.improvements)
   const inbox = useLoadedValue(pad, revisions.nickInbox, connection.nickInbox)
   const page = useLoadedValue(file, pageRevisionOf(revisions, file), connection.page)
   const threads = useLoadedValue(file, revisions.threads, connection.threads)
@@ -236,7 +264,12 @@ export function ScratchPadApp(props: ScratchPadAppProps) {
     address,
   )
   useScrollOnNavigation(
-    scrollTargetOf(route, viewedPage, threads.status !== 'loading'),
+    scrollTargetOf(
+      route,
+      viewedPage,
+      threads.status !== 'loading',
+      improvements.status !== 'loading',
+    ),
     navigations,
   )
   useEffect(() => {
@@ -301,6 +334,7 @@ export function ScratchPadApp(props: ScratchPadAppProps) {
         route={route}
         tracker={tracker}
         log={log}
+        improvements={improvements}
         page={page}
         pages={pages}
         threads={loadedOr(threads, [])}

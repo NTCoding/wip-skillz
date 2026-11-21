@@ -46,9 +46,13 @@ export function htmlBlockFrameScript(): void {
       port.postMessage({ link: link.getAttribute('href') })
     }
   })
-  const resizes = new ResizeObserver(() => {
+  const postHeight = (): void => {
     port.postMessage({ height: document.documentElement.getBoundingClientRect().height })
-  })
+  }
+  // Chrome doesn't run the ResizeObserver of a frame below the viewport until it is scrolled into
+  // view. That's why the frame also posts its height on DOMContentLoaded of the written document.
+  document.addEventListener('DOMContentLoaded', postHeight)
+  const resizes = new ResizeObserver(postHeight)
   resizes.observe(document.documentElement)
 }
 

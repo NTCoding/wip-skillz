@@ -52,10 +52,10 @@ describe('pageElements', () => {
     )
   })
 
-  it('renders an html block in a sandboxed frame and offers the full size when the page has an html block', () => {
+  it('renders an html block in the frame from the server and offers the full size when the page has an html block', () => {
     const { container } = renderPage(indexPage)
     const frame = container.querySelector('[data-lines="19-20"] iframe')
-    expect(frame?.getAttribute('sandbox')).toBe('allow-scripts')
+    expect(frame?.getAttribute('src')).toBe('/browser-page/html-block-frame.html')
     expect(container.querySelector('ol.export-steps')).toBeNull()
     expect(screen.getByRole('button', { name: 'Open the HTML block at full size' }).tagName).toBe(
       'BUTTON',

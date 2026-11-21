@@ -42,7 +42,14 @@ export function scrollTargetOf(
   route: BrowserRoute,
   page: ViewedPage | undefined,
   threadsRead: boolean,
+  improvementsRead: boolean,
 ): string | undefined {
+  if (route.kind === 'improvements') {
+    if (!improvementsRead) {
+      return undefined
+    }
+    return route.section === undefined ? route.kind : `${route.kind}#${route.section}`
+  }
   if (route.kind !== 'page') {
     return route.kind
   }

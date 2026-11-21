@@ -13,7 +13,6 @@ import { DatabaseSync } from 'node:sqlite'
 import { afterEach, beforeEach, vi } from 'vitest'
 import { newProgressTracker } from '../progress-tracker/progress-tracker'
 import { newPadDbSql, padSchema } from './pad-schema'
-import { secondVersionPadSchema } from './pad-schema-fixtures'
 import { ScratchPadFolder } from './scratch-pad-folder'
 
 const temporaryHomes: string[] = []
@@ -45,12 +44,12 @@ export function exportJobScratchPad(home: string): ScratchPadFolder {
 }
 
 export function firstVersionScratchPad(home: string): ScratchPadFolder {
-  const folder = new ScratchPadFolder(join(home, '2026-03-14-export-job'), secondVersionPadSchema)
+  const folder = new ScratchPadFolder(join(home, '2026-03-14-export-job'))
   mkdirSync(join(folder.path, 'pages'), { recursive: true })
   writeFileSync(join(folder.path, 'pages', 'index.md'), exportJobIndexPage)
   const db = new DatabaseSync(join(folder.path, 'pad.db'))
   try {
-    db.exec(newPadDbSql(padSchema))
+    db.exec(padSchema.firstTables)
     db.exec(
       `INSERT INTO progress_tracker (id, title) VALUES (1, 'Export job');
        INSERT INTO threads (id, type, page, first_line, last_line, selected_text, waits_for)

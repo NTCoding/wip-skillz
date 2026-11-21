@@ -21,6 +21,13 @@ interface HtmlBlockProps {
   readonly onComment?: (() => void) | undefined
 }
 
+// An export doesn't have a server to send a header so the sandbox attribute sandboxes this frame.
+const inlineFrame = { srcDoc: htmlBlockFrameDocument, sandbox: 'allow-scripts' }
+
+// The sandbox directive in the policy of the server's response sandboxes this frame. This frame
+// doesn't have a sandbox attribute, because the Claude desktop app blocks every frame that has one.
+const serverFrame = { src: htmlBlockFrameSource }
+
 function HtmlBlockFrame({ html, onNavigate, frameSource }: HtmlBlockFrameProps) {
   const connect = useCallback(
     (frame: HTMLIFrameElement | null) =>
@@ -31,10 +38,7 @@ function HtmlBlockFrame({ html, onNavigate, frameSource }: HtmlBlockFrameProps) 
     <iframe
       ref={connect}
       className="html-block"
-      {...(frameSource === 'inline'
-        ? { srcDoc: htmlBlockFrameDocument }
-        : { src: htmlBlockFrameSource })}
-      sandbox="allow-scripts"
+      {...(frameSource === 'inline' ? inlineFrame : serverFrame)}
       title="HTML block"
     />
   )

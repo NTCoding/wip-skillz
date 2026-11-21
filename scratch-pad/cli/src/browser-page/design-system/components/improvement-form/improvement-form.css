@@ -1,0 +1,56 @@
+.improvement-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xl);
+  font-family: var(--font-ui);
+}
+
+.improvement-form__label {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  color: var(--text-2);
+  font-size: var(--fs-sm);
+  line-height: var(--lh-sm);
+}
+
+.improvement-form__field {
+  display: block;
+  width: 100%;
+  min-height: var(--field-min-h);
+  padding: var(--space-sm) var(--space-2xl);
+  border: var(--hairline) solid var(--field-border);
+  border-radius: var(--r-md);
+  outline: 0;
+  background: var(--surface-raised);
+  color: var(--text);
+  font-family: var(--font-ui);
+  font-size: var(--fs-ui);
+  line-height: var(--lh-ui);
+}
+
+.improvement-form__field--details {
+  min-height: var(--field-details-min-h);
+  max-height: var(--field-details-max-h);
+  font-family: var(--font-mono);
+  resize: vertical;
+  field-sizing: content;
+}
+
+.improvement-form__field:focus {
+  border-color: var(--field-focus);
+  box-shadow: 0 0 0 var(--line-w-thick) var(--field-focus-ring);
+}
+
+.improvement-form__problem {
+  margin: var(--space-0);
+  color: var(--warning-ink);
+  font-size: var(--fs-sm);
+  line-height: var(--lh-sm);
+}
+
+.improvement-form__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-sm);
+}

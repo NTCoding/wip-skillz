@@ -14,25 +14,18 @@ import { finishItem, replyToThread, showItem } from '../agent-commands/thread-co
 import { waitForAgentInbox } from '../agent-commands/wait-commands'
 import { browserPageBundle } from '../local-server/browser-page-bundle'
 import { toolBuild } from '../local-server/tool-build'
-import {
-  itemLinks,
-  padLink,
-  progressTrackerLink,
-  textWithLink,
-  type ItemLinks,
-} from '../item-links/item-links'
+import { padLink, progressTrackerLink, textWithLink } from '../item-links/item-links'
 import { type ScratchPadFolder } from '../scratch-pad-folder/scratch-pad-folder'
 import { proseCheckFrom } from '../prose-check/prose-check'
-import { createScratchPad, type Environment } from '../scratch-pads-home/scratch-pads-home'
+import { createScratchPad } from '../scratch-pads-home/scratch-pads-home'
 import { scratchPadCreatedText } from '../scratch-pads-home/scratch-pads-home-text'
 import {
-  runningServer,
   serveInThisProcess,
   startServerProcess,
   stopServerProcess,
-  type ToolCommand,
 } from '../server-process/server-process'
 import { servingText, startedServerText, stoppedServerText } from '../server-process/server-text'
+import { linksOf, pad, type CommandInput, type ScratchPadCommand } from './command-input'
 import {
   inboxTypes,
   milliseconds,
@@ -40,49 +33,14 @@ import {
   requiredWord,
   restOfWords,
   taskNumber,
-  type CommandOptions,
-  type OptionName,
 } from './command-words'
+import { improvementCommands } from './improvement-commands'
 
-export interface CommandInput {
-  readonly words: readonly string[]
-  readonly options: CommandOptions
-  readonly usage: string
-  readonly environment: Environment
-  readonly home: () => string
-  readonly folder: () => ScratchPadFolder
-  readonly selectedFolder: () => ScratchPadFolder | undefined
-  readonly toolCommand: ToolCommand
-  readonly stopSignal: AbortSignal
-  readonly log: (text: string) => void
-}
-
-export interface ScratchPadCommand {
-  readonly usage: string
-  readonly summary: string
-  readonly options: readonly OptionName[]
-  readonly wordsBeforeText?: number
-  readonly run: (input: CommandInput) => CommandResult | Promise<CommandResult>
-}
-
-type CommandResult = string | CommandOutput
-
-export interface CommandOutput {
-  readonly text: string
-  readonly exitCode: number
-}
-
-const pad: readonly OptionName[] = ['pad']
 const defaultPort = 4747
 const checkMilliseconds = 250
 const startMilliseconds = 5000
 const stopMilliseconds = 5000
 const defaultQuietMilliseconds = 10_000
-
-async function linksOf(input: CommandInput, folder: ScratchPadFolder): Promise<ItemLinks> {
-  const running = await runningServer(input.home())
-  return itemLinks(folder.name, running?.port)
-}
 
 async function withTrackerLink(
   input: CommandInput,
@@ -365,6 +323,7 @@ export const scratchPadCommands: ReadonlyMap<string, ScratchPadCommand> = new Ma
       },
     },
   ],
+  ...improvementCommands,
   [
     'export',
     {

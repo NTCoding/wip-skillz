@@ -6,11 +6,8 @@ import {
   type Environment,
 } from '../scratch-pads-home/scratch-pads-home'
 import { parseCommandWords, type CommandWords } from './command-words'
-import {
-  scratchPadCommands,
-  type CommandOutput,
-  type ScratchPadCommand,
-} from './scratch-pad-commands'
+import { type CommandOutput, type ScratchPadCommand } from './command-input'
+import { scratchPadCommands } from './scratch-pad-commands'
 
 interface OutputStream {
   write(text: string): unknown
@@ -21,6 +18,7 @@ interface CommandLine {
   readonly environment: Environment
   readonly stdout: OutputStream
   readonly stderr: OutputStream
+  readonly readStandardInput: () => Promise<string>
   readonly toolCommand: ToolCommand
   readonly stopSignal: AbortSignal
 }
@@ -60,8 +58,8 @@ export function helpText(): string {
     ...commands.map((command) => `  ${command.usage.padEnd(width)}  ${command.summary}`),
     '',
     'The scratch pad comes from --pad <folder name or path>, else from SCRATCH_PAD.',
-    'The scratch pads are in SCRATCH_PADS_HOME, else in ~/scratch-pads.',
-    'An option after the text of new, goal, task add, decide, reply or done is part of the text.',
+    'The scratch pads are in SCRATCH_PADS_HOME, else in ~/scratchpads.',
+    'An option after the text of new, goal, task add, decide, improve, improvement edit, reply or done is part of the text.',
   ].join('\n')
 }
 
@@ -86,6 +84,7 @@ async function runCommand(commandLine: CommandLine): Promise<CommandOutput> {
     folder: () => chooseScratchPad(home(), selector),
     selectedFolder: () =>
       selector === undefined || selector === '' ? undefined : chooseScratchPad(home(), selector),
+    readStandardInput: commandLine.readStandardInput,
     toolCommand: commandLine.toolCommand,
     stopSignal: commandLine.stopSignal,
     log: (text) => commandLine.stderr.write(`${text}\n`),

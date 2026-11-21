@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest'
 import {
   decisionLog,
   exportPad,
+  improvements,
   pageSummaries,
   progressTracker,
   retryQuestion,
@@ -76,6 +77,15 @@ describe('scratchPadConnection', () => {
     )
     await expect(tracker.progressTracker()).resolves.toStrictEqual(progressTracker)
     await expect(log.decisionLog()).resolves.toStrictEqual(decisionLog)
+  })
+
+  it('reads the improvements from their address when they are asked for', async () => {
+    const body = JSON.stringify(improvements, (_key, value: unknown) => value ?? null)
+    const network = networkReturning(new Response(body))
+    await expect(scratchPadConnection(exportPad, network).improvements()).resolves.toStrictEqual(
+      improvements,
+    )
+    expect(network.fetched).toStrictEqual([`${api}/improvements`])
   })
 
   it('throws ScratchPadRequestError with the error of the server when the server returns an error', async () => {
@@ -232,6 +242,29 @@ describe('scratchPadConnection for threads and decisions', () => {
         method: 'POST',
         body: '{"page":"pages/index.md","choice":"proposal"}',
       },
+    ])
+  })
+
+  it('posts the title and the details of the edit to the address of the improvement', async () => {
+    const network = networkWith({ improvement: { number: 3 } })
+    await scratchPadConnection(exportPad, network).editImprovement(3, {
+      title: 'The export skips files.',
+      details: 'Run it.',
+    })
+    expect(network.sent).toStrictEqual([
+      {
+        url: `${api}/improvements/3`,
+        method: 'POST',
+        body: '{"title":"The export skips files.","details":"Run it."}',
+      },
+    ])
+  })
+
+  it('posts to the delete address of the improvement when Nick deletes it', async () => {
+    const network = networkWith({ deleted: 3 })
+    await scratchPadConnection(exportPad, network).deleteImprovement(3)
+    expect(network.sent).toStrictEqual([
+      { url: `${api}/improvements/3/delete`, method: 'POST', body: '{}' },
     ])
   })
 })
