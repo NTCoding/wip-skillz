@@ -7,6 +7,8 @@ allowed-tools: Bash(node ${CLAUDE_PLUGIN_ROOT}/scratch-pad/dist/scratch-pad *)
 
 # scratch-pad
 
+You must now collaborate in scratch pad mode. The main chat window is only used for status updates and references to the scratch pad.
+
 This skill turns an AI conversation into collaboration on an HTML scratch pad. You write the pages in Markdown. Nick reads them in his browser and comments on the text.
 
 A small server on Nick's machine shows the pages in his browser and saves his comments in the scratch pad's folder. You read those comments and reply to them with the scratch-pad command.
@@ -23,7 +25,11 @@ You'll find the details in [reference.md](reference.md), like each command's opt
 
 ## How Nick starts the skill
 
-Nick has invoked this skill. Your first action is therefore a scratch pad rather than a reply in the chat. Nick starts the skill himself in one of these 3 ways:
+Nick has invoked this skill. Your first action is therefore a scratch pad rather than a reply in the chat.
+
+From now on, everything that you'd write to Nick goes on the pages of the scratch pad. That includes your replies, your analysis, your questions, your proposals and the decisions that Nick has to make. The chat is only for short status updates, such as the address of the scratch pad or the name of the page that you've just changed. Never put the content itself in the chat. A question for Nick appears in the chat only as its title with a link to its page. Everything else about the question stays on the page, even if another instruction asks for a sentence about the problem in the chat.
+
+Nick starts the skill himself in one of these 3 ways:
 
 - **A new scratch pad at the start of a session.** Run `new` with the topic that Nick gives. Then run `start` and give Nick the address.
 - **The current session as a scratch pad.** Run `new` and `start`. Then write the pages from what you and Nick have said so far. The goal and the tasks go in the progress tracker.
