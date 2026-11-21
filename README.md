@@ -15,11 +15,13 @@ I'm sharing them because you might find some useful tips or inspiration.
 
 ## Install
 
-The repo is a Claude Code plugin, which you can install from GitHub with these 2 commands:
+Run the [setup command](scratch-pad/README.md#setup) first. It clones the repo and puts the `scratch-pad` tool on your PATH.
+
+The repo is also a Claude Code plugin. Add your clone as a marketplace with these 2 commands:
 
 ```text
-/plugin marketplace add NTCoding/wip-skillz
+/plugin marketplace add <the folder of your clone>
 /plugin install wip-skillz@wip-skillz
 ```
 
-`scratch-pad` also needs its tool on your PATH. Run the [setup command](scratch-pad/README.md#setup) once on each machine.
+Claude then reads the skills from your clone rather than from a copy. That way the skill and the tool are always from the same commit.
