@@ -39,7 +39,6 @@ describe('scratchPadConnection', () => {
       jsonResponse({
         pages: pageSummaries.map((page) => ({
           ...page,
-          number: page.number ?? null,
           parent: page.parent ?? null,
           title: page.title ?? null,
           description: page.description ?? null,

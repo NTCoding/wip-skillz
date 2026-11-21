@@ -65,8 +65,11 @@
   margin-top: var(--gap-block);
 }
 
-:where(.reading-column__text) :is(h1, h2, h3, h4) {
+:where(.reading-column__text) [id] {
   scroll-margin-top: calc(var(--top-bar-h) + var(--space-6xl));
+}
+
+:where(.reading-column__text) :is(h1, h2, h3, h4) {
   font-family: var(--font-heading);
   font-weight: var(--fw-heading);
 }
@@ -124,6 +127,14 @@
 
 .reading-column__grid > .reading-column__text > p + :is(ul, ol, figure, blockquote, div) {
   margin-top: var(--gap-intro);
+}
+
+.reading-column__grid > .reading-column__text > .reading-column__end {
+  margin-top: var(--gap-block);
+}
+
+.reading-column__end:empty {
+  display: none;
 }
 
 :where(.reading-column__text) :is(p, li, dd) {

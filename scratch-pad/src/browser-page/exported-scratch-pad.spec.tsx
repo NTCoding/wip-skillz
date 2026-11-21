@@ -138,6 +138,12 @@ describe('ScratchPadApp in an export', () => {
     ).toBe('#/wait-between-retries.md')
   })
 
+  it('opens a page from the name of its file with the number in the hash of the export', async () => {
+    renderExport('#/2.1.1-first-retry.md')
+    await screen.findByRole('heading', { level: 1, name: 'First retry' })
+    expect(window.location.hash).toBe('#/first-retry.md')
+  })
+
   it('shows the progress tracker when the hash of the export names it', async () => {
     renderExport('#/progress-tracker')
     await screen.findByRole('heading', { level: 1, name: 'Progress tracker' })

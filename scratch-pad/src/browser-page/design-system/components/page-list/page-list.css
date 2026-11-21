@@ -1,6 +1,5 @@
 .page-list {
   padding: var(--space-0);
-  overflow: hidden;
   border: var(--hairline) solid var(--line);
   border-radius: var(--r-md);
   list-style: none;
@@ -11,6 +10,7 @@
 
 .page-list__entry {
   margin: var(--space-0);
+  padding: var(--space-0);
 }
 
 .page-list__entry + .page-list__entry {
@@ -28,6 +28,21 @@
 
 .page-list__link:hover {
   background: var(--table-row-hover);
+}
+
+/* The ring and the tint stay inside the rounded box because the box doesn't clip its rows. */
+.page-list__link:focus-visible {
+  outline-offset: calc(-1 * var(--focus-ring-w));
+}
+
+.page-list__entry:first-child .page-list__link {
+  border-top-left-radius: var(--r-row-in-box);
+  border-top-right-radius: var(--r-row-in-box);
+}
+
+.page-list__entry:last-child .page-list__link {
+  border-bottom-left-radius: var(--r-row-in-box);
+  border-bottom-right-radius: var(--r-row-in-box);
 }
 
 .page-list__link .icon {

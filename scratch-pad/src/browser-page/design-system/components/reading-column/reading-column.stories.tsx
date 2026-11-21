@@ -39,3 +39,13 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const APage: Story = {}
+
+export const WithAnEnd: Story = {
+  args: {
+    end: (
+      <p>
+        <em>The list of pages is shown here, under the last block of the text.</em>
+      </p>
+    ),
+  },
+}

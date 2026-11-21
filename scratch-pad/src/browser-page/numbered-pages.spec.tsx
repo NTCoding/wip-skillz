@@ -55,7 +55,7 @@ describe('ScratchPadApp with numbered pages', () => {
       'retry-limit.md1 decision and 2 replies for you',
       'Shop storageEach shop has its own storage.2 replies for you',
     ])
-    expect(screen.getByRole('article').lastElementChild).toBe(list)
+    expect(screen.getByRole('article').lastElementChild?.firstElementChild).toBe(list)
   })
 
   it('doesn’t show the list of pages when the index page is the only page', async () => {
@@ -129,6 +129,64 @@ describe('ScratchPadApp with numbered pages', () => {
     expect(
       within(sidebar).getByRole('link', { name: 'Invoice template' }).closest('li')?.textContent,
     ).toBe('Invoice template')
+  })
+
+  it('shows the parents and the file name of a page without a title in the breadcrumb', async () => {
+    const fake = fakeConnection()
+    vi.spyOn(fake.connection, 'pages').mockResolvedValue(
+      pageSummaries.map((summary) =>
+        summary.page === 'pages/wait-between-retries.md'
+          ? { ...summary, title: undefined }
+          : summary,
+      ),
+    )
+    renderApp(`/${exportPad}/wait-between-retries.md`, fake)
+    const breadcrumb = screen.getByRole('navigation', { name: 'Breadcrumb' })
+    await waitFor(() =>
+      expect(breadcrumb.textContent).toBe('Invoice export/retry-limit.md/wait-between-retries.md'),
+    )
+  })
+
+  it('opens a page from the name of its file with the number as it opens from its address', async () => {
+    const pushState = vi.spyOn(window.history, 'pushState')
+    renderApp(`/${exportPad}/2.1.1-first-retry.md#why-30-seconds`)
+    await shownPage('First retry')
+    expect(`${window.location.pathname}${window.location.hash}`).toBe(
+      `/${exportPad}/first-retry.md#why-30-seconds`,
+    )
+    expect(pushState).not.toHaveBeenCalled()
+    expect(screen.getByRole('navigation', { name: 'Breadcrumb' }).textContent).toBe(
+      'Invoice export/retry-limit.md/Wait between retries/First retry',
+    )
+    const sidebar = screen.getByRole('navigation', { name: 'Pages of the scratch pad' })
+    expect(
+      within(sidebar).getByRole('link', { name: 'First retry' }).getAttribute('aria-current'),
+    ).toBe('page')
+  })
+
+  it('shows a page only once in the sidebar when the list of pages has a cycle', async () => {
+    const fake = fakeConnection()
+    const [index, invoiceTemplate] = pageSummaries
+    vi.spyOn(fake.connection, 'pages').mockResolvedValue([
+      ...(index === undefined ? [] : [index]),
+      ...(invoiceTemplate === undefined
+        ? []
+        : [
+            invoiceTemplate,
+            {
+              ...invoiceTemplate,
+              page: 'pages/tax-number.md',
+              parent: 'pages/invoice-template.md',
+              title: 'Tax number page',
+            },
+            { ...invoiceTemplate, parent: 'pages/tax-number.md' },
+          ]),
+    ])
+    renderApp(`/${exportPad}/invoice-template.md`, fake)
+    await shownPage('Invoice template')
+    const sidebar = screen.getByRole('navigation', { name: 'Pages of the scratch pad' })
+    await within(sidebar).findByRole('link', { name: 'Tax number page' })
+    expect(within(sidebar).getAllByRole('link', { name: 'Invoice template' })).toHaveLength(1)
   })
 
   it('shows every parent of the open page in the breadcrumb', async () => {

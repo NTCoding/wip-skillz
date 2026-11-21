@@ -50,6 +50,8 @@ pick: proposal, because the network of a shop can be slow.
 
 1. The agent will change the retry limit once Nick has decided.
 2. The job will run with the new limit on the next night.
+
+Each page below describes one part of the export job.
 `
 
 export const invoiceTemplatePage = `# Invoice template

@@ -46,7 +46,7 @@ interface PageWithThreadsProps {
   readonly actions: PageActions | undefined
   readonly address: PageAddress
   // What the page shows under the last block of the agent's text, like the list of pages on the index page
-  readonly children?: ReactNode
+  readonly end?: ReactNode
 }
 
 interface Draft {
@@ -285,6 +285,7 @@ export function PageWithThreads(props: PageWithThreadsProps) {
     <>
       <ReadingColumn
         textRef={pageText}
+        end={props.end}
         margin={
           <MarginLane
             label="Comments and notes"
@@ -294,7 +295,6 @@ export function PageWithThreads(props: PageWithThreadsProps) {
         }
       >
         {pageElements(elementContext, body, highlighted)}
-        {props.children}
       </ReadingColumn>
       {selected !== undefined &&
         actions !== undefined &&

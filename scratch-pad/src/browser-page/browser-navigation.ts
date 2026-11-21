@@ -5,6 +5,8 @@ import { type BrowserRoute, type PadAddresses } from './browser-route'
 interface BrowserNavigation {
   readonly route: BrowserRoute
   readonly navigate: (href: string) => void
+  // Changes the address without adding an entry to the history
+  readonly replace: (href: string) => void
   readonly navigations: number
 }
 
@@ -25,7 +27,15 @@ export function useBrowserNavigation(routeOf: PadAddresses['routeOf']): BrowserN
     },
     [routeOf],
   )
-  return { route, navigate, navigations }
+  const replace = useCallback(
+    (href: string) => {
+      const url = new URL(href, window.location.href)
+      window.history.replaceState(null, '', url)
+      setRoute(routeOf(url))
+    },
+    [routeOf],
+  )
+  return { route, navigate, replace, navigations }
 }
 
 export function scrollTargetOf(

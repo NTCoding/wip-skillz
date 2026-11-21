@@ -15,6 +15,19 @@ describe('ReadingColumn', () => {
   })
 })
 
+describe('ReadingColumn with an end', () => {
+  it('shows the end under the last block of the text when an end is given', () => {
+    render(
+      <ReadingColumn end={<p>The pages of the invoice export</p>}>
+        <p>The export job retries 5 times.</p>
+      </ReadingColumn>,
+    )
+    expect(screen.getByRole('article').lastElementChild?.textContent).toBe(
+      'The pages of the invoice export',
+    )
+  })
+})
+
 describe('ReadingColumn with a margin', () => {
   it('shows the margin beside the text and marks the column as the scope of the anchors', () => {
     const { container } = render(

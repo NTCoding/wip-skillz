@@ -33,10 +33,18 @@ function openBranchOf(pages: readonly PageSummary[], file: string | undefined): 
 export function PadSidebar(props: PadSidebarProps) {
   const { addresses, pages, currentFile, currentPage, onNavigate } = props
   const openBranch = openBranchOf(pages, currentFile)
-  const pageLink = (summary: PageSummary, withSubPages: boolean): ReactNode => {
+  // A page that is already above in the tree isn’t shown again so that a cycle in `parent` can't loop forever.
+  const pageLink = (
+    summary: PageSummary,
+    withSubPages: boolean,
+    above: ReadonlySet<string>,
+  ): ReactNode => {
     const file = fileOfPage(summary.page)
     const title = summary.title ?? file
-    const subPages = withSubPages ? subPagesOf(pages, summary.page) : []
+    const inside = new Set([...above, summary.page])
+    const subPages = withSubPages
+      ? subPagesOf(pages, summary.page).filter((subPage) => !inside.has(subPage.page))
+      : []
     return (
       <SidebarLink
         key={file}
@@ -45,7 +53,9 @@ export function PadSidebar(props: PadSidebarProps) {
         current={file === currentFile}
         onNavigate={onNavigate}
         subPages={
-          subPages.length === 0 ? undefined : subPages.map((subPage) => pageLink(subPage, true))
+          subPages.length === 0
+            ? undefined
+            : subPages.map((subPage) => pageLink(subPage, true, inside))
         }
       >
         <TableOfContents
@@ -86,7 +96,9 @@ export function PadSidebar(props: PadSidebarProps) {
       collapsed={props.collapsed}
       onCollapsedChange={props.onCollapsedChange}
     >
-      {topLevelPages(pages).map((summary) => pageLink(summary, summary.page === openBranch))}
+      {topLevelPages(pages).map((summary) =>
+        pageLink(summary, summary.page === openBranch, new Set()),
+      )}
     </Sidebar>
   )
 }

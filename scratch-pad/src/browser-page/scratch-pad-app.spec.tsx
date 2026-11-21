@@ -328,13 +328,13 @@ describe('ScratchPadApp on the progress tracker and the decisions', () => {
     await waitFor(() => expect(breadcrumb.textContent).toBe('Invoice export/Invoice template'))
   })
 
-  it('shows only the title of the scratch pad in the breadcrumb while a page without a title loads', async () => {
+  it('shows the file name of a page without a title in the breadcrumb while the page loads', async () => {
     const fake = fakeConnection()
     vi.spyOn(fake.connection, 'page').mockReturnValue(new Promise(() => undefined))
     renderApp(`/${exportPad}/retry-limit.md`, fake)
-    await screen.findByRole('link', { name: 'retry-limit.md' })
+    await screen.findByRole('link', { name: 'retry-limit.md', current: 'page' })
     expect(screen.getByRole('navigation', { name: 'Breadcrumb' }).textContent).toBe(
-      'Invoice export',
+      'Invoice export/retry-limit.md',
     )
   })
 

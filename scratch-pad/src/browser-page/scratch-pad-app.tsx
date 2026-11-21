@@ -26,7 +26,7 @@ import { MissingPageView } from './missing-page-view'
 import { nickInboxEntries } from './nick-inbox-entries'
 import { PadSidebar, sectionsOf } from './pad-sidebar'
 import { PageOutline } from './page-outline'
-import { pageListEntries, parentsOf } from './page-tree'
+import { pageListEntries, pageOfFileName, parentsOf } from './page-tree'
 import { firstRevisions, pageRevisionOf, revisedAfterReconnect, revisedBy } from './pad-revisions'
 import { pagePreview } from './page-preview'
 import { type SavedSettings } from './saved-settings'
@@ -81,7 +81,7 @@ function breadcrumbOf(
       const file = fileOfPage(parent.page)
       return { title: parent.title ?? file, href: addresses.pageHref(file) }
     }),
-    current: viewedPage?.title ?? summary?.title,
+    current: viewedPage?.title ?? summary?.title ?? route.file,
   }
 }
 
@@ -146,15 +146,16 @@ function RouteView(props: RouteViewProps) {
       context={pageContext}
       actions={actions}
       address={{ section: route.section, navigations: props.navigations }}
-    >
-      {route.file === 'index.md' && (
-        <PageList
-          label="Pages"
-          entries={pageListEntries(pageContext.addresses, loadedOr(props.pages, []))}
-          onNavigate={pageContext.onNavigate}
-        />
-      )}
-    </PageWithThreads>
+      end={
+        route.file === 'index.md' ? (
+          <PageList
+            label="Pages"
+            entries={pageListEntries(pageContext.addresses, loadedOr(props.pages, []))}
+            onNavigate={pageContext.onNavigate}
+          />
+        ) : undefined
+      }
+    />
   ) : (
     <LoadingView loaded={page} />
   )
@@ -198,7 +199,7 @@ function tabTitleOf(pageTitle: string | undefined, padTitle: string): string {
 
 export function ScratchPadApp(props: ScratchPadAppProps) {
   const { pad, addresses, connection, writing, settings, narrowWindow } = props
-  const { route, navigate, navigations } = useBrowserNavigation(addresses.routeOf)
+  const { route, navigate, replace, navigations } = useBrowserNavigation(addresses.routeOf)
   const { collapsed, changeCollapsed } = useSidebarState(settings, narrowWindow, navigations)
   const [revisions, setRevisions] = useState(firstRevisions)
   const [serverStopped, setServerStopped] = useState(false)
@@ -249,6 +250,12 @@ export function ScratchPadApp(props: ScratchPadAppProps) {
   )
   const actions = usePageActions(writing, changed)
   const pageList = loadedOr(pages, [])
+  const pageOfFile = route.kind === 'page' ? pageOfFileName(pageList, route.file) : undefined
+  useEffect(() => {
+    if (route.kind === 'page' && pageOfFile !== undefined) {
+      replace(addresses.pageHref(fileOfPage(pageOfFile), route.section))
+    }
+  }, [route, pageOfFile, replace, addresses])
   const inboxEntries = nickInboxEntries(addresses, loadedOr(inbox, emptyNickInbox), pageList)
   const breadcrumb = breadcrumbOf(route, viewedPage, pageList, addresses)
 

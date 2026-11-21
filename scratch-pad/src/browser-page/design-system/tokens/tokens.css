@@ -223,6 +223,7 @@
   --r-md: 8px;
   --r-lg: 12px;
   --r-pill: 99px;
+  --r-row-in-box: calc(var(--r-md) - var(--hairline));
   --r-round: 50%;
 
   /* Shadows */

@@ -2,7 +2,7 @@
 // the browser page and of the gallery with headless Chrome.
 // Usage: node scripts/browser-page-screenshots.mjs <output folder>
 import { execFileSync } from 'node:child_process'
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, unlinkSync, writeFileSync } from 'node:fs'
 import { createServer } from 'node:http'
 import { tmpdir } from 'node:os'
 import { basename, extname, join, resolve } from 'node:path'
@@ -95,6 +95,30 @@ function writePadWithoutNumbers() {
   return padWithoutNumbers
 }
 
+function anchorOf(markdown, selectedText) {
+  const lines = markdown.split('\n')
+  const index = lines.findIndex((line) => line.includes(selectedText))
+  const [prefix, suffix] = lines[index].split(selectedText)
+  return {
+    firstLine: index + 1,
+    lastLine: index + 1,
+    selectedText,
+    prefix: prefix.trim(),
+    suffix: suffix.trim(),
+  }
+}
+
+async function post(path, body) {
+  const response = await fetch(`${checks.address}api/scratch-pads/${pad}/${path}`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(body),
+  })
+  if (!response.ok) {
+    throw new Error(`POST ${path} returned ${response.status}: ${await response.text()}`)
+  }
+}
+
 async function shoot(page, name) {
   await new Promise((resolveWait) => setTimeout(resolveWait, 300))
   await page.screenshot({ path: join(output, `${name}.png`) })
@@ -130,6 +154,107 @@ async function numberedPageShots(page, padWithoutNumbers) {
   await openPad(page, '', padWithoutNumbers)
   checks.pageListWithoutNumbers = await showPageList(page)
   await shoot(page, '18-index-page-list-without-numbers-1100')
+}
+
+// The 3 images of README.md. Copy them from <output folder>/docs into docs/ when they change.
+async function docsShots(page) {
+  await post('threads', {
+    type: 'comment',
+    page: 'pages/index.md',
+    ...anchorOf(indexPage, 'uploads the file to the storage of the shop'),
+    message: 'Does the upload retry with the same limit as the export job?',
+  })
+  run(
+    'reply',
+    'c-1',
+    'Yes. The upload uses the retry limit of the job, so it will retry 8 times too.',
+  )
+  mkdirSync(join(output, 'docs'), { recursive: true })
+  await page.setViewport({ width: 1440, height: 900 })
+  await openPad(page)
+  await page.waitForSelector('[aria-label="Comment c-1"]')
+  await shoot(page, 'docs/page-with-comment-thread')
+  await page.click('button[aria-haspopup="menu"]')
+  await page.waitForSelector('[role="menu"]')
+  await shoot(page, 'docs/inbox')
+  await page.keyboard.press('Escape')
+  await openPad(page, '#d-1')
+  await page.evaluate(() => document.activeElement?.blur())
+  await page.mouse.move(5, 500)
+  await shoot(page, 'docs/decision')
+}
+
+async function focusedRowShot(page, row, name) {
+  const link = await page.$(`ul[aria-label="Pages"] > li:${row}-child a`)
+  await link.evaluate((element) => element.focus())
+  await page.keyboard.down('Shift')
+  await page.keyboard.press('Tab')
+  await page.keyboard.up('Shift')
+  await page.keyboard.press('Tab')
+  checks[`${row}RowFocusVisible`] = await link.evaluate((element) =>
+    element.matches(':focus-visible'),
+  )
+  await shoot(page, name)
+}
+
+// The top of each target of an address has to be below the top bar after the page has scrolled to the target.
+async function targetTop(page, path, id) {
+  await openPad(page, path)
+  await new Promise((resolveWait) => setTimeout(resolveWait, 500))
+  return page.evaluate(
+    (target) => ({
+      target: Math.round(document.getElementById(target).getBoundingClientRect().top),
+      topBar: Math.round(document.querySelector('.top-bar').getBoundingClientRect().bottom),
+    }),
+    id,
+  )
+}
+
+async function reviewShots(page) {
+  await page.setViewport({ width: 1100, height: 900 })
+  await openPad(page)
+  checks.pageListGap = await page.evaluate(() => {
+    const list = document.querySelector('ul[aria-label="Pages"]')
+    const before = list.parentElement.previousElementSibling
+    return {
+      blockBefore: before.tagName,
+      gap: Math.round(list.getBoundingClientRect().top - before.getBoundingClientRect().bottom),
+    }
+  })
+  await showPageList(page)
+  await shoot(page, '19-page-list-under-a-paragraph-1100')
+  await focusedRowShot(page, 'first', '20-first-row-with-focus-1100')
+  await focusedRowShot(page, 'last', '21-last-row-with-focus-1100')
+  const untitled = join(home, pad, 'pages', '2.2-shop-timeouts.md')
+  writeFileSync(untitled, 'The storage of a shop times out after 20 seconds.\n')
+  await page.goto(`${checks.address}${pad}/shop-timeouts.md`, { waitUntil: 'domcontentloaded' })
+  await page.waitForSelector('article p')
+  await new Promise((resolveWait) => setTimeout(resolveWait, 300))
+  checks.untitledBreadcrumb = await page.$eval(
+    'nav[aria-label="Breadcrumb"]',
+    (breadcrumb) => breadcrumb.innerText,
+  )
+  await shoot(page, '22-sub-page-without-a-title-1100')
+  unlinkSync(untitled)
+  await openPad(page, '2.1.1-first-retry.md')
+  await page.waitForFunction(() => location.pathname.endsWith('/first-retry.md'))
+  checks.numberedAddress = await page.evaluate(() => ({
+    address: location.pathname,
+    breadcrumb: document.querySelector('nav[aria-label="Breadcrumb"]').innerText,
+  }))
+  checks.decisionTarget1100 = await targetTop(page, '#d-1', 'd-1')
+  await shoot(page, '23-link-to-a-decision-1100')
+  checks.subPageDecisionTarget1100 = await targetTop(page, 'wait-between-retries.md#d-2', 'd-2')
+  checks.headingTarget1100 = await targetTop(
+    page,
+    'retry-limit.md#what-the-agent-logs',
+    'what-the-agent-logs',
+  )
+  checks.threadTarget1100 = await targetTop(page, '#c-1', 'c-1')
+  await shoot(page, '24-link-to-a-thread-1100')
+  await page.setViewport({ width: 1440, height: 900 })
+  checks.decisionTarget1440 = await targetTop(page, '#d-1', 'd-1')
+  checks.threadTarget1440 = await targetTop(page, '#c-1', 'c-1')
 }
 
 async function pageShots(page) {
@@ -271,11 +396,13 @@ try {
   page.on('pageerror', (error) => {
     checks.pageErrors = [...(checks.pageErrors ?? []), String(error)]
   })
+  await docsShots(page)
   await pageShots(page)
   await liveUpdateShots(page)
   await navigationChecks(page)
   await widthShots(page)
   await numberedPageShots(page, padWithoutNumbers)
+  await reviewShots(page)
   await galleryShots(page)
 } finally {
   await browser.close()
