@@ -1,0 +1,15 @@
+{
+  "name": "wip-skillz",
+  "description": "Nick's skills for reviews, writing and working on a page in the browser",
+  "author": {
+    "name": "Nick Tune"
+  },
+  "skills": [
+    "./explain-clearly",
+    "./mr-description",
+    "./nick-review",
+    "./nick-walkthrough",
+    "./rewrite-like-nick",
+    "./scratch-pad"
+  ]
+}

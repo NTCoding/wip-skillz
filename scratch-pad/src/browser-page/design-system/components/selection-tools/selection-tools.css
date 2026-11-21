@@ -1,0 +1,46 @@
+.selection-tools {
+  position: absolute;
+  top: var(--selection-tools-top, 0);
+  left: var(--selection-tools-left, 0);
+  z-index: 50;
+  display: flex;
+  gap: var(--space-2xs);
+  padding: var(--space-xs);
+  border-radius: var(--r-pill);
+  background: var(--surface-raised);
+  box-shadow: var(--shadow-md);
+  font-family: var(--font-ui);
+}
+
+.selection-tools__button {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-sm);
+  height: var(--control-h);
+  padding: var(--space-0) var(--space-xl);
+  border: 0;
+  border-radius: var(--r-pill);
+  background: none;
+  color: var(--text);
+  font-size: var(--fs-sm);
+  line-height: var(--lh-sm);
+  font-weight: var(--fw-medium);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.selection-tools__button:hover {
+  background: var(--tint);
+}
+
+.selection-tools__button .icon {
+  color: var(--text-nav);
+}
+
+.selection-tools__button[data-kind='grammar'] .icon {
+  color: var(--grammar-ink);
+}
+
+.selection-tools__button[data-kind='improvement'] .icon {
+  color: var(--improvement-ink);
+}

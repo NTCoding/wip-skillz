@@ -1,0 +1,10 @@
+.page-link {
+  position: relative;
+}
+
+.page-link__preview {
+  position: absolute;
+  top: calc(100% + var(--space-sm));
+  left: var(--space-0);
+  z-index: 40;
+}

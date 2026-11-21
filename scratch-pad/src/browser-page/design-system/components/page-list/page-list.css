@@ -1,0 +1,90 @@
+.page-list {
+  padding: var(--space-0);
+  border: var(--hairline) solid var(--line);
+  border-radius: var(--r-md);
+  list-style: none;
+  font-family: var(--font-ui);
+  font-size: var(--fs-ui);
+  line-height: var(--lh-ui);
+}
+
+.page-list__entry {
+  margin: var(--space-0);
+  padding: var(--space-0);
+}
+
+.page-list__entry + .page-list__entry {
+  border-top: var(--hairline) solid var(--table-border);
+}
+
+.page-list__link {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xl);
+  padding: var(--cell-padding-y) var(--cell-padding-x);
+  color: var(--text);
+  text-decoration: none;
+}
+
+.page-list__link:hover {
+  background: var(--table-row-hover);
+}
+
+/* The ring and the tint stay inside the rounded box because the box doesn't clip its rows. */
+.page-list__link:focus-visible {
+  outline-offset: calc(-1 * var(--focus-ring-w));
+}
+
+.page-list__entry:first-child .page-list__link {
+  border-top-left-radius: var(--r-row-in-box);
+  border-top-right-radius: var(--r-row-in-box);
+}
+
+.page-list__entry:last-child .page-list__link {
+  border-bottom-left-radius: var(--r-row-in-box);
+  border-bottom-right-radius: var(--r-row-in-box);
+}
+
+.page-list__link .icon {
+  color: var(--icon);
+}
+
+.page-list__text {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2xs);
+  min-width: 0;
+}
+
+.page-list__title {
+  font-size: var(--fs-md);
+  line-height: var(--lh-md);
+  font-weight: var(--fw-medium);
+}
+
+.page-list__description {
+  overflow: hidden;
+  color: var(--text-2);
+  font-size: var(--fs-sm);
+  line-height: var(--lh-sm);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.page-list__waiting {
+  flex: none;
+  padding: var(--space-2xs) var(--space-lg);
+  border-radius: var(--r-pill);
+  background: var(--tint);
+  color: var(--state-todo);
+  font-size: var(--fs-xs);
+  line-height: var(--lh-xs);
+  font-weight: var(--fw-medium);
+  white-space: nowrap;
+}
+
+.page-list__waiting[data-waiting='true'] {
+  background: var(--accent-pale);
+  color: var(--state-done);
+}

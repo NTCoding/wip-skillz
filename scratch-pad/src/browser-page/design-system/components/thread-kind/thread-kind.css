@@ -1,0 +1,18 @@
+.thread-kind {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-sm);
+  color: var(--accent);
+  font-family: var(--font-ui);
+  font-size: var(--fs-xs);
+  line-height: var(--lh-xs);
+  font-weight: var(--fw-strong);
+}
+
+.thread-kind[data-kind='grammar'] {
+  color: var(--grammar-ink);
+}
+
+.thread-kind[data-kind='improvement'] {
+  color: var(--improvement-ink);
+}

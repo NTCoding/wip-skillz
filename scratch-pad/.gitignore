@@ -1,0 +1,5 @@
+node_modules
+dist/*
+!dist/scratch-pad
+coverage
+storybook-static

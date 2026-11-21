@@ -1,0 +1,54 @@
+/*
+  If the reading column is narrower than 1040px, the lane is placed over the
+  text. Each item is shown as a marker beside the text then. The item whose
+  popup is true is shown below its anchor. From 1040px, the lane is beside the
+  text and the markers are hidden. The columns in reading-column.css change at
+  the same width.
+*/
+.margin-lane {
+  position: relative;
+  min-width: 0;
+}
+
+.margin-lane__item {
+  --margin-card-shadow: var(--shadow-lg);
+
+  display: none;
+  position: absolute;
+  top: var(--margin-popup-top, 0);
+  right: var(--space-0);
+  z-index: 15;
+  width: min(var(--margin-popup-w), 100%);
+}
+
+.margin-lane__item[data-popup='true'] {
+  display: block;
+}
+
+.margin-lane__marker {
+  position: absolute;
+  top: var(--margin-marker-top, 0);
+  left: calc(100% + var(--space-md));
+}
+
+@container reading-column (width >= 1040px) {
+  .margin-lane {
+    min-height: var(--margin-lane-height, 0);
+  }
+
+  .margin-lane__item,
+  .margin-lane__item[data-popup='true'] {
+    --margin-card-shadow: initial;
+
+    display: block;
+    top: var(--margin-item-top, 0);
+    left: var(--space-0);
+    z-index: auto;
+    width: auto;
+    transition: top 0.2s ease;
+  }
+
+  .margin-lane__marker {
+    display: none;
+  }
+}

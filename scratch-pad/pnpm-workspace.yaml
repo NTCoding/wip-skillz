@@ -1,0 +1,10 @@
+autoInstallPeers: true
+engineStrict: true
+minimumReleaseAge: 10080
+
+overrides:
+  'eslint-plugin-sonarjs>typescript': npm:typescript@5.9.3
+
+allowBuilds:
+  esbuild: true
+  unrs-resolver: true

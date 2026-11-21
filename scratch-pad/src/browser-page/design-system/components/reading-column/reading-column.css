@@ -1,0 +1,224 @@
+/*
+  The columns depend on the width of the reading column, which is the area
+  beside the sidebar. In margin-lane.css, the markers are replaced by the lane
+  at the same width of 1040px.
+*/
+.reading-column {
+  container: reading-column / inline-size;
+}
+
+.reading-column__grid {
+  display: grid;
+  grid-template-columns:
+    minmax(var(--reading-side-min), 1fr) minmax(0, var(--col-w))
+    minmax(var(--marker-side-min), 1fr);
+  padding: var(--reading-padding-top) var(--space-0) var(--reading-padding-bottom);
+}
+
+.reading-column__margin {
+  grid-row: 1;
+  grid-column: 2;
+  align-self: start;
+  min-width: 0;
+}
+
+@container reading-column (width >= 1040px) {
+  .reading-column__grid {
+    grid-template-columns:
+      minmax(var(--lane-side-min), 1fr) minmax(0, var(--col-w))
+      calc(var(--lane-w-narrow) + var(--lane-gap)) minmax(var(--lane-side-min-end), 1fr);
+  }
+
+  .reading-column__margin {
+    grid-column: 3;
+    align-self: stretch;
+    display: grid;
+    padding-left: var(--lane-gap);
+  }
+}
+
+@container reading-column (width >= 1152px) {
+  .reading-column__grid {
+    grid-template-columns:
+      minmax(var(--lane-side-min), 1fr) var(--col-w)
+      calc(var(--lane-w) + var(--lane-gap)) minmax(var(--lane-side-min-end), 1fr);
+  }
+}
+
+:where(.reading-column__text) {
+  grid-row: 1;
+  grid-column: 2;
+  min-width: 0;
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: var(--fs-body);
+  line-height: var(--lh-body);
+  overflow-wrap: break-word;
+}
+
+:where(.reading-column__text)
+  :where(h1, h2, h3, h4, p, ul, ol, dl, dd, figure, blockquote, pre, hr) {
+  margin: var(--space-0);
+}
+
+.reading-column__grid > .reading-column__text > * + * {
+  margin-top: var(--gap-block);
+}
+
+:where(.reading-column__text) [id] {
+  scroll-margin-top: calc(var(--top-bar-h) + var(--space-6xl));
+}
+
+:where(.reading-column__text) :is(h1, h2, h3, h4) {
+  font-family: var(--font-heading);
+  font-weight: var(--fw-heading);
+}
+
+:where(.reading-column__text) h1 {
+  font-size: var(--fs-h1);
+  line-height: var(--lh-h1);
+  letter-spacing: var(--ls-h1);
+}
+
+:where(.reading-column__text) h2 {
+  font-size: var(--fs-h2);
+  line-height: var(--lh-h2);
+  letter-spacing: var(--ls-h2);
+}
+
+:where(.reading-column__text) h3 {
+  font-size: var(--fs-h3);
+  line-height: var(--lh-h3);
+  letter-spacing: var(--ls-h3);
+}
+
+:where(.reading-column__text) h4 {
+  font-size: var(--fs-h4);
+  line-height: var(--lh-h4);
+}
+
+.reading-column__grid > .reading-column__text > h2 {
+  margin-top: var(--gap-h2);
+}
+
+.reading-column__grid > .reading-column__text > h3 {
+  margin-top: var(--gap-h3);
+}
+
+.reading-column__grid > .reading-column__text > h4 {
+  margin-top: var(--gap-h4);
+}
+
+.reading-column__grid > .reading-column__text > :first-child {
+  margin-top: var(--space-0);
+}
+
+.reading-column__grid > .reading-column__text > h1 + * {
+  margin-top: var(--gap-under-h1);
+}
+
+.reading-column__grid > .reading-column__text > h2 + * {
+  margin-top: var(--gap-under-h2);
+}
+
+.reading-column__grid > .reading-column__text > :is(h3, h4) + * {
+  margin-top: var(--gap-under-h3);
+}
+
+.reading-column__grid > .reading-column__text > p + :is(ul, ol, figure, blockquote, div) {
+  margin-top: var(--gap-intro);
+}
+
+.reading-column__grid > .reading-column__text > .reading-column__end {
+  margin-top: var(--gap-block);
+}
+
+.reading-column__end:empty {
+  display: none;
+}
+
+:where(.reading-column__text) :is(p, li, dd) {
+  text-wrap: pretty;
+}
+
+:where(.reading-column__text) strong {
+  font-weight: var(--fw-strong);
+}
+
+:where(.reading-column__text) :is(ul, ol) {
+  padding-left: var(--indent-list);
+}
+
+:where(.reading-column__text) li {
+  padding-left: var(--space-xs);
+}
+
+:where(.reading-column__text) li + li {
+  margin-top: var(--gap-list-item);
+}
+
+:where(.reading-column__text) li > :is(ul, ol) {
+  margin-top: var(--gap-list-item);
+}
+
+:where(.reading-column__text) ol {
+  font-variant-numeric: tabular-nums;
+}
+
+:where(.reading-column__text) ol > li::marker {
+  color: var(--text-2);
+  font-family: var(--font-ui);
+  font-size: var(--fs-list-marker);
+}
+
+:where(.reading-column__text) a {
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-color: var(--link-line);
+  text-decoration-thickness: var(--hairline);
+  text-underline-offset: var(--underline-offset-link);
+}
+
+:where(.reading-column__text) code {
+  padding: var(--space-2xs) var(--space-sm);
+  border-radius: var(--r-xs);
+  background: var(--code-inline-bg);
+  color: var(--code-inline-fg);
+  font-family: var(--font-mono);
+  font-size: var(--fs-inline-code);
+  overflow-wrap: normal;
+  word-break: normal;
+  box-decoration-break: clone;
+}
+
+:where(.reading-column__text) :is(h1, h2, h3, h4) code {
+  font-size: var(--fs-inline-code-heading);
+}
+
+:where(.reading-column__text) pre code {
+  padding: var(--space-0);
+  background: none;
+  font-size: inherit;
+}
+
+:where(.reading-column__text) blockquote {
+  padding-left: var(--quote-indent);
+  border-left: var(--line-w-quote) solid var(--text);
+  font-style: italic;
+}
+
+:where(.reading-column__text) blockquote code {
+  font-style: normal;
+}
+
+:where(.reading-column__text) hr {
+  height: var(--hairline);
+  border: 0;
+  background: var(--line);
+}
+
+:where(.reading-column__text) img {
+  max-width: 100%;
+  height: auto;
+  border-radius: var(--r-md);
+}

@@ -1,0 +1,108 @@
+.outline {
+  position: fixed;
+  top: var(--outline-top);
+  right: 0;
+  z-index: 12;
+  width: var(--outline-w);
+  pointer-events: none;
+}
+
+.outline__bars {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--space-md);
+  width: max-content;
+  max-height: calc(100vh - var(--outline-bars-reserve));
+  margin-left: auto;
+  overflow: hidden;
+  pointer-events: auto;
+  padding: var(--space-xl) var(--space-5xl) var(--space-xl) var(--space-0);
+}
+
+.outline__bar {
+  display: block;
+  flex: none;
+  width: var(--outline-bar-w);
+  height: var(--line-w-thick);
+  border-radius: var(--r-xs);
+  background: var(--outline-bar);
+  transition: background 0.2s ease;
+}
+
+.outline__bar[data-level='3'] {
+  width: var(--outline-bar-w-3);
+}
+
+.outline__bar[data-level='4'] {
+  width: var(--outline-bar-w-4);
+}
+
+.outline__bar[data-current='true'] {
+  background: var(--accent);
+}
+
+.outline__card {
+  position: absolute;
+  top: 0;
+  right: var(--space-lg);
+  width: var(--outline-card-w);
+  max-height: min(var(--outline-card-max-h), calc(100vh - var(--outline-card-reserve)));
+  overflow-y: auto;
+  padding: var(--space-md);
+  border-radius: var(--r-lg);
+  background: var(--surface-raised);
+  box-shadow: var(--shadow-lg);
+  font-family: var(--font-ui);
+  opacity: 0;
+  transform: translateX(var(--space-sm));
+  pointer-events: none;
+  transition:
+    opacity 0.2s ease 0.12s,
+    transform 0.2s ease 0.12s;
+}
+
+.outline:hover .outline__card,
+.outline:focus-within .outline__card {
+  opacity: 1;
+  transform: none;
+  pointer-events: auto;
+  transition-delay: 0.03s;
+}
+
+.outline__list {
+  margin: var(--space-0);
+  padding: var(--space-0);
+  list-style: none;
+}
+
+.outline__link {
+  display: -webkit-box;
+  overflow: hidden;
+  padding: var(--space-sm) var(--space-lg);
+  border-radius: var(--r-md);
+  color: var(--text-2);
+  text-decoration: none;
+  font-size: var(--fs-sm);
+  line-height: var(--lh-sm);
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+}
+
+.outline__entry[data-level='3'] .outline__link {
+  padding-left: var(--outline-indent-3);
+}
+
+.outline__entry[data-level='4'] .outline__link {
+  padding-left: var(--outline-indent-4);
+}
+
+.outline__link:hover {
+  background: var(--tint);
+}
+
+.outline__link[aria-current='location'] {
+  color: var(--accent-strong);
+  font-weight: var(--fw-medium);
+}

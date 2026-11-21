@@ -1,0 +1,285 @@
+/*
+  The tokens of the Medium theme. Every other CSS file of the page uses these
+  custom properties rather than a raw value.
+*/
+:root {
+  color-scheme: light;
+
+  /* Fonts */
+  --font-body:
+    'Iowan Old Style', 'Source Serif 4', 'Source Serif Pro', Georgia, Cambria, 'Times New Roman',
+    serif;
+  --font-heading: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  --font-ui: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  --font-mono: Menlo, SFMono-Regular, Consolas, 'Liberation Mono', monospace;
+
+  /* Font sizes and line heights */
+  --fs-2xs: 11px;
+  --fs-code-bar: 11.5px;
+  --fs-xs: 12px;
+  --fs-table-code: 12.5px;
+  --fs-sm: 13px;
+  --fs-code: 13px;
+  --fs-ui: 14px;
+  --fs-preview: 15px;
+  --fs-md: 16px;
+  --fs-h4: 17px;
+  --fs-preview-title: 17px;
+  --fs-sidebar-title: 17px;
+  --fs-decision: 18px;
+  --fs-body: 20px;
+  --fs-h3: 20px;
+  --fs-h2: 26px;
+  --fs-h1: 42px;
+  --fs-inline-code: 0.76em;
+  --fs-inline-code-heading: 0.8em;
+  --fs-list-marker: 0.8em;
+
+  --lh-tight: 1;
+  --lh-xs: 16px;
+  --lh-sm: 18px;
+  --lh-ui: 20px;
+  --lh-table: 21px;
+  --lh-code: 22px;
+  --lh-preview: 22px;
+  --lh-md: 24px;
+  --lh-h4: 24px;
+  --lh-h3: 26px;
+  --lh-decision: 28px;
+  --lh-body: 32px;
+  --lh-h2: 32px;
+  --lh-h1: 52px;
+
+  --fw-regular: 400;
+  --fw-medium: 500;
+  --fw-strong: 700;
+  --fw-heading: 700;
+
+  --ls-h1: -0.021em;
+  --ls-h2: -0.016em;
+  --ls-h3: -0.011em;
+  --ls-title: -0.014em;
+  --ls-none: 0;
+
+  /* Spacing */
+  --space-0: 0;
+  --space-2xs: 2px;
+  --space-xs: 4px;
+  --space-sm: 6px;
+  --space-md: 8px;
+  --space-lg: 10px;
+  --space-xl: 12px;
+  --space-2xl: 14px;
+  --space-3xl: 16px;
+  --space-4xl: 18px;
+  --space-5xl: 20px;
+  --space-6xl: 24px;
+  --space-7xl: 32px;
+  --space-8xl: 40px;
+  --space-9xl: 64px;
+
+  --gap-block: 28px;
+  --gap-intro: 16px;
+  --gap-h2: 60px;
+  --gap-h3: 44px;
+  --gap-h4: 36px;
+  --gap-list-item: 12px;
+  --gap-under-h1: 36px;
+  --gap-under-h2: 12px;
+  --gap-under-h3: 8px;
+  --indent-list: 30px;
+  --crumb-padding-y: 3px;
+  --cell-padding-y: 13px;
+  --cell-padding-x: 16px;
+  --head-padding-y: 10px;
+  --code-padding-top: 16px;
+  --code-padding-bottom: 18px;
+  --code-gutter: 5ch;
+  --code-bar-padding: 9px 8px 8px 14px;
+  --reading-padding-top: 64px;
+  --reading-padding-bottom: 28vh;
+  --reading-side-min: 40px;
+  --marker-side-min: 88px;
+
+  /* Text */
+  --text: #242424;
+  --text-2: #6b6b6b;
+  --text-nav: #4f4f4f;
+  --text-label: #6b6b6b;
+  --icon: #6b6b6b;
+  --on-accent: #fff;
+
+  /* Surfaces. Each area of the frame has a background of its own. */
+  --surface-reading: #fff;
+  --surface-sidebar: #efeee9;
+  --surface-top-bar: #f7f7f4;
+  --surface-raised: #fff;
+  --surface-soft: #f9f9f9;
+  --surface-muted: #f5f5f5;
+
+  /* Lines and tints */
+  --line: #e6e6e6;
+  --line-soft: #ececec;
+  --line-strong: #b3b3b3;
+  --tint: rgb(0 0 0 / 5%);
+  --tint-strong: rgb(0 0 0 / 9%);
+  --scrim: rgb(0 0 0 / 55%);
+  --scrim-sidebar: rgb(255 255 255 / 60%);
+  --outline-bar: rgb(0 0 0 / 14%);
+  --selection: rgb(26 137 23 / 20%);
+
+  /* The focus ring is solid so that it has a contrast of 3 to 1 or more */
+  --focus: #1a8917;
+
+  /* Accent */
+  --accent: #1a8917;
+  --accent-strong: #0f730c;
+  --accent-pale: #e8f3e8;
+  --link-line: currentcolor;
+  --link-list-line: rgb(26 137 23 / 55%);
+
+  /* States */
+  --state-done: #146b12;
+  --state-doing: #2b67c6;
+  --state-todo: #6b6b6b;
+  --warning-bg: #fffaeb;
+  --warning-line: #f3dc9f;
+  --warning-ink: #7a5600;
+
+  /* Inline code */
+  --code-inline-bg: #f2f2f2;
+  --code-inline-fg: inherit;
+
+  /* Tables */
+  --table-border: #ececec;
+  --table-head-bg: #fafafa;
+  --table-head-fg: #6b6b6b;
+  --table-row-hover: #fafafa;
+
+  /* Code blocks and syntax colours */
+  --code-bg: #0f172a;
+  --code-fg: #e2e8f0;
+  --code-bar-bg: #0f172a;
+  --code-bar-fg: #94a3b8;
+  --code-bar-line: rgb(148 163 184 / 16%);
+  --code-gutter-fg: #8492a8;
+  --code-copy-fg: #94a3b8;
+  --code-copy-hover: #e2e8f0;
+  --code-copy-hover-bg: rgb(255 255 255 / 6%);
+  --code-comment: #94a3b8;
+  --code-string: #5eead4;
+  --code-keyword: #c4b5fd;
+  --code-number: #fdba74;
+  --code-fn: #7dd3fc;
+  --code-type: #fcd34d;
+  --code-punct: #94a3b8;
+
+  /* Decision blocks */
+  --decision-bg: #fffaeb;
+  --decision-line: #f3dc9f;
+  --decision-accent: #ffc017;
+  --decision-ink: #7a5600;
+  --decision-state-fg: #3d2c00;
+  --decision-done-bg: #f9f9f9;
+  --decision-done-line: #ececec;
+  --decision-done-ink: #146b12;
+
+  /* Threads in the margin and in Nick's Inbox */
+  --highlight-comment: #e0f0e0;
+  --highlight-comment-active: #bfe3be;
+  --highlight-comment-line: #1a8917;
+  --highlight-grammar: rgb(125 85 181 / 9%);
+  --highlight-grammar-active: rgb(125 85 181 / 22%);
+  --highlight-grammar-line: rgb(125 85 181 / 85%);
+  --highlight-improvement: rgb(181 84 11 / 8%);
+  --highlight-improvement-active: rgb(181 84 11 / 20%);
+  --highlight-improvement-line: rgb(181 84 11 / 80%);
+  --grammar-ink: #7d55b5;
+  --improvement-ink: #b5540b;
+  --avatar-nick-bg: #242424;
+  --avatar-nick-fg: #fff;
+  --avatar-agent-bg: #b5532e;
+  --avatar-agent-fg: #fff;
+  --thread-sent: #6b6b6b;
+  --thread-replied: #146b12;
+  --thread-changed-bg: #fffaeb;
+  --thread-changed-ink: #7a5600;
+  --field-border: #e6e6e6;
+  --field-focus: #1a8917;
+  --field-focus-ring: rgb(26 137 23 / 16%);
+  --inbox-count-bg: #c94a4a;
+  --inbox-count-fg: #fff;
+  --inbox-quote-line: #9fd19e;
+  --inbox-decision-line: #ffc017;
+
+  /* Buttons */
+  --button-primary-bg: #1a8917;
+  --button-primary-fg: #fff;
+  --button-primary-hover: #0f730c;
+
+  /* Radii */
+  --r-xs: 4px;
+  --r-sm: 6px;
+  --r-md: 8px;
+  --r-lg: 12px;
+  --r-pill: 99px;
+  --r-row-in-box: calc(var(--r-md) - var(--hairline));
+  --r-round: 50%;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 3px rgb(0 0 0 / 6%), 0 4px 14px rgb(0 0 0 / 7%);
+  --shadow-lg: 0 2px 8px rgb(0 0 0 / 6%), 0 14px 36px rgb(0 0 0 / 13%);
+  --shadow-full-size: 0 24px 64px rgb(0 0 0 / 22%);
+  --shadow-md: 0 2px 6px rgb(0 0 0 / 6%), 0 8px 24px rgb(0 0 0 / 10%);
+  --shadow-card-comment: 0 0 0 1.5px var(--highlight-comment-line), 0 6px 22px rgb(0 0 0 / 10%);
+  --shadow-card-grammar: 0 0 0 1.5px var(--grammar-ink), 0 6px 22px rgb(0 0 0 / 10%);
+  --shadow-card-improvement: 0 0 0 1.5px var(--improvement-ink), 0 6px 22px rgb(0 0 0 / 10%);
+  --shadow-marker: inset 0 0 0 var(--hairline) var(--line);
+
+  /* Layout */
+  --sidebar-w: 264px;
+  --sidebar-rail-w: 52px;
+  --top-bar-h: 56px;
+  --col-w: 680px;
+  --preview-w: 340px;
+  --icon-size: 16px;
+  --hairline: 1px;
+  --line-w-thick: 2px;
+  --line-w-quote: 3px;
+  --line-w-decision: 4px;
+  --underline-w-improvement: 1.5px;
+  --underline-offset-highlight: 4px;
+  --underline-offset-link: 0.18em;
+  --focus-ring-w: 2px;
+  --focus-ring-offset: 2px;
+  --decision-label-max-w: 10em;
+  --quote-indent: 23px;
+  --mark-size: 26px;
+  --control-h: 32px;
+  --sidebar-item-h: 34px;
+  --sidebar-indent: 8px;
+  --lane-w: 320px;
+  --lane-w-narrow: 280px;
+  --lane-gap: 24px;
+  --lane-side-min: 32px;
+  --lane-side-min-end: var(--outline-w);
+  --margin-popup-w: 340px;
+  --marker-h: 26px;
+  --marker-min-w: 30px;
+  --avatar-size: 26px;
+  --inbox-w: 380px;
+  --inbox-count-size: 18px;
+  --field-min-h: 34px;
+  --field-max-h: 160px;
+  --outline-top: 120px;
+  --outline-w: 56px;
+  --outline-bar-w: 16px;
+  --outline-bar-w-3: 12px;
+  --outline-bar-w-4: 8px;
+  --outline-bars-reserve: 200px;
+  --outline-card-w: 240px;
+  --outline-card-max-h: 640px;
+  --outline-card-reserve: 132px;
+  --outline-indent-3: 22px;
+  --outline-indent-4: 34px;
+}

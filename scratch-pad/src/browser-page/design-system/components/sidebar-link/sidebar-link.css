@@ -1,0 +1,40 @@
+.sidebar-link__anchor {
+  display: flex;
+  align-items: center;
+  gap: var(--space-lg);
+  min-height: var(--sidebar-item-h);
+  margin: var(--space-2xs) var(--space-0);
+  padding: var(--space-sm) var(--space-xl);
+  border-radius: var(--r-pill);
+  color: var(--text-nav);
+  text-decoration: none;
+}
+
+.sidebar-link__anchor:hover {
+  background: var(--tint);
+  color: var(--text);
+}
+
+.sidebar-link__anchor[aria-current='page'] {
+  background: var(--tint-strong);
+  color: var(--text);
+  font-weight: var(--fw-medium);
+}
+
+.sidebar-link__anchor .icon {
+  color: var(--icon);
+}
+
+.sidebar-link__title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sidebar-link__sub-pages {
+  margin: var(--space-0);
+  padding: var(--space-0) var(--space-0) var(--space-0) var(--sidebar-indent);
+  list-style: none;
+}

@@ -1,0 +1,13 @@
+{
+  "$schema": "https://unpkg.com/knip@5/schema.json",
+  "entry": [
+    "src/executable.ts",
+    "src/browser-page/browser-page.tsx",
+    "src/browser-page/design-system/design-system.ts",
+    "src/scratch-pad-folder/writer-process.mjs",
+    "scripts/browser-page-screenshots.mjs",
+    "scripts/export-in-chrome.mjs"
+  ],
+  "project": ["src/**/*.{ts,tsx}", ".token-lint/*.mjs", "scripts/*.mjs"],
+  "include": ["classMembers", "nsExports", "nsTypes"]
+}
