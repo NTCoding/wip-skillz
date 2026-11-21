@@ -1,0 +1,14 @@
+{
+  "name": "wip-skillz",
+  "description": "Nick's skills for Claude Code",
+  "owner": {
+    "name": "Nick Tune"
+  },
+  "plugins": [
+    {
+      "name": "wip-skillz",
+      "source": "./",
+      "description": "Nick's skills for reviews, writing and working on a page in the browser"
+    }
+  ]
+}

@@ -1,0 +1,47 @@
+.task-list {
+  margin: var(--space-0);
+  padding: var(--space-0);
+  border: var(--hairline) solid var(--line);
+  border-radius: var(--r-md);
+  list-style: none;
+  font-family: var(--font-ui);
+  font-size: var(--fs-md);
+  line-height: var(--lh-md);
+}
+
+.task-list__task {
+  display: grid;
+  grid-template-columns: var(--space-7xl) minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: var(--space-3xl);
+  padding: var(--cell-padding-y) var(--cell-padding-x);
+}
+
+.task-list__task + .task-list__task {
+  border-top: var(--hairline) solid var(--line-soft);
+}
+
+.task-list__number {
+  color: var(--text-2);
+  font-variant-numeric: tabular-nums;
+}
+
+.task-list__state {
+  padding: var(--space-2xs) var(--space-lg);
+  border-radius: var(--r-pill);
+  background: var(--tint);
+  color: var(--state-todo);
+  font-size: var(--fs-xs);
+  line-height: var(--lh-xs);
+  font-weight: var(--fw-medium);
+  white-space: nowrap;
+}
+
+.task-list__task[data-state='in-progress'] .task-list__state {
+  color: var(--state-doing);
+}
+
+.task-list__task[data-state='done'] .task-list__state {
+  background: var(--accent-pale);
+  color: var(--state-done);
+}

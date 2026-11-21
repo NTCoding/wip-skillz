@@ -1,0 +1,6 @@
+.html-block {
+  display: block;
+  width: 100%;
+  height: var(--html-block-height, auto);
+  border: 0;
+}

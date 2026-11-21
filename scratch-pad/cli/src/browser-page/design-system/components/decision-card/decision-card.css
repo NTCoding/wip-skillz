@@ -1,0 +1,84 @@
+.decision-card {
+  padding: var(--space-5xl) var(--space-6xl) var(--space-6xl);
+  border-radius: var(--r-lg);
+  background: var(--decision-bg);
+  box-shadow:
+    inset 0 0 0 var(--hairline) var(--decision-line),
+    inset var(--line-w-decision) 0 0 var(--decision-accent);
+  font-family: var(--font-body);
+  font-size: var(--fs-decision);
+  line-height: var(--lh-decision);
+}
+
+.decision-card[data-answered='true'] {
+  background: var(--decision-done-bg);
+  box-shadow: inset 0 0 0 var(--hairline) var(--decision-done-line);
+}
+
+.decision-card__head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  margin: var(--space-0) var(--space-0) var(--space-2xl);
+  color: var(--decision-ink);
+  font-family: var(--font-ui);
+  font-size: var(--fs-sm);
+  line-height: var(--lh-sm);
+  font-weight: var(--fw-strong);
+}
+
+.decision-card__kind {
+  flex: 1;
+}
+
+.decision-card__state {
+  padding: var(--space-2xs) var(--space-lg);
+  border-radius: var(--r-pill);
+  background: var(--decision-accent);
+  color: var(--decision-state-fg);
+  font-size: var(--fs-xs);
+  line-height: var(--lh-xs);
+}
+
+.decision-card[data-answered='true'] .decision-card__state {
+  background: var(--accent-pale);
+  color: var(--decision-done-ink);
+}
+
+.decision-card__question {
+  margin: var(--space-0);
+  font-family: var(--font-heading);
+  font-size: var(--fs-h3);
+  line-height: var(--lh-h3);
+  font-weight: var(--fw-strong);
+  letter-spacing: var(--ls-h3);
+}
+
+.decision-card__fields {
+  display: grid;
+  grid-template-columns: fit-content(var(--decision-label-max-w)) minmax(0, 1fr);
+  gap: var(--space-md) var(--space-5xl);
+  margin: var(--space-4xl) var(--space-0) var(--space-0);
+}
+
+.decision-card__fields dt {
+  padding-top: var(--space-xs);
+  color: var(--text-2);
+  font-family: var(--font-ui);
+  font-size: var(--fs-sm);
+  line-height: var(--lh-md);
+}
+
+.decision-card__fields dd {
+  margin: var(--space-0);
+  min-width: 0;
+}
+
+.decision-card__answer {
+  margin: var(--space-4xl) var(--space-0) var(--space-0);
+  color: var(--decision-done-ink);
+  font-family: var(--font-ui);
+  font-size: var(--fs-ui);
+  line-height: var(--lh-ui);
+  font-weight: var(--fw-medium);
+}

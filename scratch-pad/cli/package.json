@@ -1,0 +1,65 @@
+{
+  "name": "scratch-pad",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@11.21.0",
+  "engines": {
+    "node": "24.x"
+  },
+  "bin": {
+    "scratch-pad": "./dist/scratch-pad"
+  },
+  "scripts": {
+    "build": "node esbuild.config.mjs",
+    "built-tool:check": "node scripts/built-tool-check.mjs",
+    "scratch-pad": "node dist/scratch-pad",
+    "format": "prettier --write --config .prettierrc . ../SKILL.md ../reference.md ../README.md",
+    "format:check": "prettier --check --config .prettierrc . ../SKILL.md ../reference.md ../README.md",
+    "lint": "eslint . --max-warnings 0 && stylelint \"src/**/*.css\" --max-warnings 0",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p src/browser-page && tsc --noEmit -p .storybook",
+    "test": "vitest run",
+    "gallery": "storybook dev --port 6106 --no-open --disable-telemetry",
+    "gallery:build": "storybook build --quiet --disable-telemetry --output-dir storybook-static",
+    "knip": "knip",
+    "verify": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test && pnpm gallery:build && pnpm knip && pnpm built-tool:check"
+  },
+  "devDependencies": {
+    "@eslint-community/eslint-plugin-eslint-comments": "^4.5.0",
+    "@eslint/js": "^9.39.0",
+    "@storybook/react-vite": "^10.6.7",
+    "@testing-library/dom": "^10.4.2",
+    "@testing-library/react": "^16.3.3",
+    "@testing-library/user-event": "^14.6.10",
+    "@types/markdown-it": "^14.2.0",
+    "@types/node": "^24.10.1",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitest/coverage-v8": "^4.0.16",
+    "@vitest/eslint-plugin": "1.6.6",
+    "esbuild": "^0.27.0",
+    "eslint": "^9.39.0",
+    "eslint-plugin-import": "^2.32.0",
+    "eslint-plugin-jsx-a11y": "^6.10.2",
+    "eslint-plugin-react": "^7.37.5",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "eslint-plugin-sonarjs": "^3.0.5",
+    "eslint-plugin-unicorn": "^62.0.0",
+    "jsdom": "^31.0.1",
+    "knip": "^5.21.2",
+    "prettier": "^3.7.4",
+    "puppeteer-core": "^25.17.0",
+    "storybook": "^10.6.7",
+    "stylelint": "^18.0.0",
+    "typescript": "5.9.3",
+    "typescript-eslint": "^8.50.1",
+    "vite": "^8.3.8",
+    "vitest": "^4.0.8"
+  },
+  "dependencies": {
+    "markdown-it": "^14.3.3",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "zod": "^4.6.7"
+  }
+}

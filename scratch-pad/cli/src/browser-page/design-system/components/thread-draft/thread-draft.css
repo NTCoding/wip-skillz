@@ -1,0 +1,23 @@
+.thread-draft__quote {
+  display: -webkit-box;
+  margin: var(--space-0);
+  padding-left: var(--space-lg);
+  overflow: hidden;
+  border-left: var(--line-w-thick) solid var(--inbox-quote-line);
+  color: var(--text-nav);
+  font-family: var(--font-body);
+  font-size: var(--fs-ui);
+  line-height: var(--lh-ui);
+  font-style: italic;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+}
+
+.thread-draft__quote[data-kind='grammar'] {
+  border-left-color: var(--grammar-ink);
+}
+
+.thread-draft__quote[data-kind='improvement'] {
+  border-left-color: var(--improvement-ink);
+}

@@ -1,0 +1,36 @@
+.highlight {
+  padding: var(--space-2xs) var(--space-0);
+  background: var(--highlight-comment);
+  color: inherit;
+  box-decoration-break: clone;
+  transition: background 0.15s ease;
+}
+
+.highlight[data-kind='comment'][data-active='true'] {
+  background: var(--highlight-comment-active);
+  box-shadow: 0 var(--line-w-thick) 0 var(--highlight-comment-line);
+}
+
+.highlight[data-kind='grammar'] {
+  background: var(--highlight-grammar);
+  text-decoration: underline wavy var(--highlight-grammar-line);
+  text-decoration-thickness: var(--hairline);
+  text-underline-offset: var(--underline-offset-highlight);
+  text-decoration-skip-ink: none;
+}
+
+.highlight[data-kind='grammar'][data-active='true'] {
+  background: var(--highlight-grammar-active);
+}
+
+.highlight[data-kind='improvement'] {
+  background: var(--highlight-improvement);
+  text-decoration: underline dashed var(--highlight-improvement-line);
+  text-decoration-thickness: var(--underline-w-improvement);
+  text-underline-offset: var(--underline-offset-highlight);
+  text-decoration-skip-ink: none;
+}
+
+.highlight[data-kind='improvement'][data-active='true'] {
+  background: var(--highlight-improvement-active);
+}

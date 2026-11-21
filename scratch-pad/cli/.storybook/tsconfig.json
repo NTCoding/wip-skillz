@@ -1,0 +1,7 @@
+{
+  "extends": "../src/browser-page/tsconfig.json",
+  "compilerOptions": {
+    "types": ["node", "vite/client"]
+  },
+  "include": ["./*.ts", "./*.tsx", "../src/browser-page/**/*.ts", "../src/browser-page/**/*.tsx"]
+}
