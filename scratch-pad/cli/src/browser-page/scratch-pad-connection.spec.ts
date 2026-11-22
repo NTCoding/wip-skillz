@@ -7,6 +7,7 @@ import {
   progressTracker,
   retryQuestion,
 } from './browser-page-fixtures'
+import { queuedComment, queuedReply } from './outbox-fixtures'
 import {
   ScratchPadRequestError,
   ServerUnreachableError,
@@ -40,6 +41,7 @@ describe('scratchPadConnection', () => {
       jsonResponse({
         pages: pageSummaries.map((page) => ({
           ...page,
+          number: page.number ?? null,
           parent: page.parent ?? null,
           title: page.title ?? null,
           description: page.description ?? null,
@@ -266,5 +268,117 @@ describe('scratchPadConnection for threads and decisions', () => {
     expect(network.sent).toStrictEqual([
       { url: `${api}/improvements/3/delete`, method: 'POST', body: '{}' },
     ])
+  })
+  it('reads the outbox from its address with null turned into undefined', async () => {
+    const outbox = { items: [queuedComment, queuedReply] }
+    const network = networkReturning(
+      new Response(JSON.stringify(outbox, (_key, value: unknown) => value ?? null)),
+    )
+    await expect(scratchPadConnection(exportPad, network).outbox()).resolves.toStrictEqual(outbox)
+    expect(network.fetched).toStrictEqual([`${api}/outbox`])
+  })
+
+  it('posts a queued comment, a queued reply, an edit and a removal to the addresses of the outbox', async () => {
+    const network = networkWith({ items: [] })
+    const connection = scratchPadConnection(exportPad, network)
+    const comment = {
+      type: 'comment',
+      page: 'pages/index.md',
+      firstLine: 3,
+      lastLine: 4,
+      selectedText: 'paid invoices',
+      prefix: 'The export job writes the',
+      suffix: 'of each shop',
+      message: 'Only the paid ones?',
+    } as const
+    await connection.queueComment(comment)
+    await connection.queueReply('c-1', 'Can a shop ask for 10?')
+    await connection.editQueuedItem(2, 'Can a shop ask for 12?')
+    await connection.removeQueuedItem(2)
+    expect(network.sent).toStrictEqual([
+      { url: `${api}/outbox/comments`, method: 'POST', body: JSON.stringify(comment) },
+      {
+        url: `${api}/outbox/replies`,
+        method: 'POST',
+        body: '{"thread":"c-1","message":"Can a shop ask for 10?"}',
+      },
+      { url: `${api}/outbox/2`, method: 'POST', body: '{"message":"Can a shop ask for 12?"}' },
+      { url: `${api}/outbox/2/delete`, method: 'POST', body: '{}' },
+    ])
+  })
+
+  it('posts to the send address of the outbox and returns the sent threads', async () => {
+    const network = networkWith({ threads: [storedThread] })
+    await expect(scratchPadConnection(exportPad, network).sendOutbox()).resolves.toStrictEqual([
+      retryQuestion,
+    ])
+    expect(network.sent).toStrictEqual([{ url: `${api}/outbox/send`, method: 'POST', body: '{}' }])
+  })
+})
+
+describe('scratchPadConnection for the read marks', () => {
+  const readMarks = {
+    pages: [
+      {
+        page: 'pages/index.md',
+        state: 'read',
+        changedTime: '2026-11-20T21:30:00.000Z',
+        sections: [{ id: 'retry-limit', hash: 'a1' }],
+        changedSections: [{ id: 'retry-limit', title: 'Retry limit', hash: 'a1' }],
+      },
+    ],
+  }
+
+  it('reads the read marks and every thread of the scratch pad from their addresses', async () => {
+    const marks = networkWith(readMarks)
+    const threads = networkWith({ threads: [{ ...storedThread, resolvedTime: null }] })
+    await expect(scratchPadConnection(exportPad, marks).readMarks()).resolves.toStrictEqual(
+      readMarks,
+    )
+    await expect(scratchPadConnection(exportPad, threads).threadsOfPad()).resolves.toStrictEqual([
+      { ...retryQuestion, resolvedTime: undefined },
+    ])
+    expect([...marks.sent, ...threads.sent].map((request) => request.url)).toStrictEqual([
+      `${api}/read-marks`,
+      `${api}/threads`,
+    ])
+  })
+
+  it('posts the hashes that the browser shows to the read addresses of the page and of the section', async () => {
+    const network = networkWith({ page: 'index.md' })
+    const connection = scratchPadConnection(exportPad, network)
+    const section = { id: 'retry limit', hash: 'a1' }
+    await connection.markPageRead('retry limit.md', [section])
+    await connection.markPageUnread('index.md')
+    await connection.markSectionRead('index.md', section)
+    expect(network.sent).toStrictEqual([
+      {
+        url: `${api}/pages/retry%20limit.md/read`,
+        method: 'POST',
+        body: '{"sections":[{"id":"retry limit","hash":"a1"}]}',
+      },
+      { url: `${api}/pages/index.md/unread`, method: 'POST', body: '{}' },
+      {
+        url: `${api}/pages/index.md/sections/retry%20limit/read`,
+        method: 'POST',
+        body: '{"hash":"a1"}',
+      },
+    ])
+  })
+
+  it('passes a change of the read marks to the listener', () => {
+    const listeners: Array<(event: MessageEvent) => void> = []
+    const changes: unknown[] = []
+    scratchPadConnection(exportPad, {
+      fetch: () => Promise.reject(new DOMException('offline')),
+      openChangeStream: () => ({
+        addEventListener: (_type, listener) => listeners.push(listener),
+        close: () => undefined,
+      }),
+    }).onChange({ changed: (change) => changes.push(change), connection: () => undefined })
+    listeners.forEach((listener) =>
+      listener(new MessageEvent('message', { data: '{"kind":"read-marks"}' })),
+    )
+    expect(changes).toStrictEqual([{ kind: 'read-marks' }])
   })
 })

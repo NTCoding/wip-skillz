@@ -1,6 +1,7 @@
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
+import { type ThreadQuote } from '../selected-text-quote/selected-text-quote'
 import { ThreadCard, type ThreadMessage, type ThreadState } from './thread-card'
 
 class ClosedThreadError extends Error {}
@@ -26,6 +27,7 @@ interface CardOptions {
   readonly kind?: 'comment' | 'grammar' | 'improvement'
   readonly readOnly?: boolean
   readonly messages?: readonly ThreadMessage[]
+  readonly quote?: ThreadQuote
 }
 
 function renderCard(options: CardOptions = {}) {
@@ -45,9 +47,21 @@ function renderCard(options: CardOptions = {}) {
       onResolve={
         options.readOnly === true ? undefined : (options.onResolve ?? (() => Promise.resolve()))
       }
+      quote={options.quote}
     />,
   )
   return screen.getByRole('region')
+}
+
+const quote: ThreadQuote = {
+  prefix: 'The job ',
+  selectedText: 'retries 5 times',
+  suffix: ' on a slow network.',
+}
+
+async function openFullSize(): Promise<HTMLElement> {
+  await userEvent.click(screen.getByRole('button', { name: 'Open c-1 at full size' }))
+  return screen.getByRole('dialog')
 }
 
 describe('ThreadCard', () => {
@@ -149,5 +163,104 @@ describe('ThreadCard', () => {
     expect(within(card).getAllByRole('listitem')).toHaveLength(2)
     expect(within(card).queryByRole('textbox')).toBeNull()
     expect(within(card).queryByRole('button', { name: 'Resolve c-1' })).toBeNull()
+  })
+  it('adds Nick’s reply to the outbox rather than sending it when Nick presses Add to outbox', async () => {
+    const onReply = vi.fn<(text: string) => Promise<void>>(() => Promise.resolve())
+    const onAddToOutbox = vi.fn<(text: string) => Promise<void>>(() => Promise.resolve())
+    render(
+      <ThreadCard
+        id="c-1"
+        kind="comment"
+        messages={[question, answer]}
+        state="waits-for-nick"
+        outcome={undefined}
+        textChanged={false}
+        active={false}
+        onActivate={() => undefined}
+        onReply={onReply}
+        onAddToOutbox={onAddToOutbox}
+      />,
+    )
+    await userEvent.type(screen.getByRole('textbox', { name: 'Write a reply…' }), 'Why 8?')
+    await userEvent.click(screen.getByRole('button', { name: 'Add to outbox' }))
+    expect(onAddToOutbox).toHaveBeenCalledWith('Why 8?')
+    expect(onReply).not.toHaveBeenCalled()
+  })
+
+  it('shows the replies in the outbox after the state of the thread', () => {
+    render(
+      <ThreadCard
+        id="c-1"
+        kind="comment"
+        messages={[question]}
+        state="waits-for-agent"
+        outcome={undefined}
+        textChanged={false}
+        active={false}
+        onActivate={() => undefined}
+        outbox={<p>Why 8?</p>}
+      />,
+    )
+    expect(screen.getByRole('region').textContent).toContain('Sent to the agentWhy 8?')
+  })
+
+  it('shows the quote, every message, the state and the reply box when Nick opens the thread at full size', async () => {
+    renderCard({ quote })
+    const view = await openFullSize()
+    expect(view.getAttribute('aria-label')).toBe('Thread on “retries 5 times”')
+    expect(within(view).getByRole('blockquote').textContent).toBe(
+      'The job retries 5 times on a slow network.',
+    )
+    expect(within(view).getAllByRole('listitem')).toHaveLength(2)
+    expect(view.textContent).toContain('The agent replied')
+  })
+
+  it('shows the reply box rather than the resolve button at full size', async () => {
+    renderCard({ quote })
+    const view = await openFullSize()
+    expect(within(view).getByRole('textbox', { name: 'Write a reply…' })).toBeDefined()
+    expect(within(view).queryByRole('button', { name: 'Resolve c-1' })).toBeNull()
+  })
+
+  it('gives the focus back to the full size button when Nick closes the full size view', async () => {
+    renderCard({ quote })
+    const control = screen.getByRole('button', { name: 'Open c-1 at full size' })
+    await userEvent.click(control)
+    await userEvent.keyboard('{Escape}')
+    expect(screen.queryByRole('dialog')).toBeNull()
+    expect(document.activeElement).toBe(control)
+  })
+
+  it('keeps the reply that Nick has started when he opens the thread at full size', async () => {
+    renderCard()
+    await userEvent.type(screen.getByRole('textbox', { name: 'Write a reply…' }), 'Why 8?')
+    const view = await openFullSize()
+    expect(within(view).getByRole<HTMLTextAreaElement>('textbox').value).toBe('Why 8?')
+  })
+
+  it('shows every message of a resolved thread at full size', async () => {
+    renderCard({ state: 'resolved', quote })
+    const view = await openFullSize()
+    expect(within(view).getAllByRole('listitem')).toHaveLength(2)
+    expect(within(view).queryByRole('button', { name: /more message/ })).toBeNull()
+  })
+
+  it('cuts a long quote short in the label of the full size view', async () => {
+    renderCard({ quote: { ...quote, selectedText: 'The export job retries 5 times. '.repeat(3) } })
+    expect((await openFullSize()).getAttribute('aria-label')).toBe(
+      'Thread on “The export job retries 5 times. The export job retries 5 tim…”',
+    )
+  })
+
+  it('labels the full size view as a thread when the thread doesn’t have any selected text', async () => {
+    renderCard({ quote: { prefix: '', selectedText: '', suffix: '' } })
+    expect((await openFullSize()).getAttribute('aria-label')).toBe('Thread')
+  })
+
+  it('doesn’t quote anything at full size when the thread doesn’t have a quote', async () => {
+    renderCard()
+    const view = await openFullSize()
+    expect(view.getAttribute('aria-label')).toBe('Thread')
+    expect(within(view).queryByRole('blockquote')).toBeNull()
   })
 })

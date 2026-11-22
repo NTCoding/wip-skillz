@@ -28,7 +28,7 @@ export default defineConfig({
           css: {
             include: [
               /design-system\/tokens\/.+\.css/u,
-              /components\/(app-frame|reading-column)\/[a-z-]+\.css/u,
+              /components\/(app-frame|reading-column|margin-card)\/[a-z-]+\.css/u,
             ],
           },
         },

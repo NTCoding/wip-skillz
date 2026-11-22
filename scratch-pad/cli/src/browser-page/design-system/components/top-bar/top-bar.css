@@ -47,9 +47,96 @@ a.top-bar__crumb:hover {
   color: var(--text-2);
 }
 
+.top-bar__page-action {
+  flex: none;
+  margin-left: var(--space-md);
+  padding: var(--space-2xs) var(--space-lg);
+  border: 0;
+  border-radius: var(--r-pill);
+  background: none;
+  box-shadow: inset 0 0 0 var(--hairline) var(--line-strong);
+  color: var(--text-nav);
+  font: inherit;
+  font-size: var(--fs-xs);
+  line-height: var(--lh-xs);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.top-bar__page-action:hover {
+  background: var(--tint);
+  color: var(--text);
+}
+
+.top-bar__page-action:disabled {
+  cursor: not-allowed;
+}
+
+/* The problem only takes the space that the crumbs leave, so the name of the page stays readable. */
+.top-bar__problem {
+  flex: 1 1 0;
+  min-width: 0;
+  margin-left: var(--space-md);
+  overflow: hidden;
+  color: var(--warning-ink);
+  font-size: var(--fs-xs);
+  line-height: var(--lh-xs);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .top-bar__actions {
   flex: none;
   display: flex;
   align-items: center;
   gap: var(--space-md);
+}
+
+.top-bar__current {
+  position: relative;
+  display: flex;
+  min-width: 0;
+}
+
+button.top-bar__crumb {
+  border: 0;
+  background: none;
+  font: inherit;
+  cursor: default;
+}
+
+.top-bar__current > .top-bar__crumb:hover,
+.top-bar__current > .top-bar__crumb:focus-visible {
+  background: var(--tint);
+}
+
+/* The gap above the panel belongs to the subtree so that the pointer can move from the name to the panel. */
+.top-bar__subtree {
+  position: absolute;
+  top: 100%;
+  left: var(--space-0);
+  z-index: 30;
+  padding-top: var(--space-md);
+}
+
+.top-bar__subtree-panel {
+  width: var(--subtree-w);
+  max-width: calc(100vw - var(--space-7xl));
+  max-height: calc(100vh - var(--top-bar-h) - var(--space-7xl));
+  padding: var(--space-md);
+  overflow-y: auto;
+  border-radius: var(--r-lg);
+  background: var(--surface-raised);
+  box-shadow: var(--shadow-lg);
+  color: var(--text);
+  white-space: normal;
+}
+
+.top-bar__subtree-title {
+  margin: var(--space-0);
+  padding: var(--space-sm) var(--space-lg) var(--space-xs);
+  color: var(--text-2);
+  font-size: var(--fs-xs);
+  line-height: var(--lh-xs);
+  font-weight: var(--fw-medium);
 }

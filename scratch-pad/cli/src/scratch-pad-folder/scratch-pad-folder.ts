@@ -33,7 +33,15 @@ import {
   PadDbFailureError,
   padDbErrorFrom,
 } from './pad-db-errors'
-import { newPadDbSql, padMigrationsAfter, padSchema, padTables, type PadSchema } from './pad-schema'
+import {
+  newPadDbSql,
+  padMigrationFillsAfter,
+  padMigrationsAfter,
+  padSchema,
+  padTables,
+  type PadSchema,
+  type PageMarkdown,
+} from './pad-schema'
 import { readSavedValues } from './saved-values'
 
 const padDbFile = 'pad.db'
@@ -113,6 +121,11 @@ export class ScratchPadFolder {
     )
   }
 
+  // The time that the page's file was last written, as an ISO time
+  pageChangedTime(page: string): string {
+    return statSync(join(this.path, fileOfPage(this.pageFiles(), page))).mtime.toISOString()
+  }
+
   watchPadDb(): PadDbWatch {
     this.read(() => undefined)
     return new PadDbWatch(
@@ -187,6 +200,7 @@ export class ScratchPadFolder {
       this.storedPageIds(db).forEach(({ stored, page }) => {
         db.prepare('UPDATE threads SET page = ? WHERE page = ?').run(page, stored)
         db.prepare('UPDATE decisions SET page = ? WHERE page = ?').run(page, stored)
+        db.prepare('UPDATE outbox SET page = ? WHERE page = ?').run(page, stored)
       }),
     )
     db.exec('COMMIT')
@@ -197,7 +211,8 @@ export class ScratchPadFolder {
       db,
       this.name,
       'threads',
-      'SELECT page FROM threads UNION SELECT page FROM decisions',
+      `SELECT page FROM threads UNION SELECT page FROM decisions
+       UNION SELECT page FROM outbox WHERE page IS NOT NULL`,
     ).map((row) => row.text('page'))
     return storedPageIds(stored, this.pageFiles())
   }
@@ -257,8 +272,19 @@ export class ScratchPadFolder {
 
   private migrate(db: DatabaseSync): void {
     db.exec('BEGIN IMMEDIATE')
-    rolledBackOnError(db, () => db.exec(padMigrationsAfter(this.schema, this.schemaVersion(db))))
+    rolledBackOnError(db, () => {
+      const version = this.schemaVersion(db)
+      db.exec(padMigrationsAfter(this.schema, version))
+      const pages = this.pageMarkdowns()
+      padMigrationFillsAfter(this.schema, version).forEach((fill) =>
+        fill(new PadDb(db, this.name), pages),
+      )
+    })
     db.exec('COMMIT')
+  }
+
+  private pageMarkdowns(): PageMarkdown[] {
+    return this.pages().map((page) => ({ page, markdown: this.readPageLines(page).join('\n') }))
   }
 
   private schemaVersion(db: DatabaseSync): number {

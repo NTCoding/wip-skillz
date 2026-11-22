@@ -6,6 +6,7 @@ const meta = {
   component: MarginCard,
   args: {
     label: 'Comment c-1',
+    name: 'c-1',
     kind: 'comment',
     active: false,
     children: <p>Is 5 retries enough on a slow network?</p>,

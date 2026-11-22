@@ -35,6 +35,28 @@ describe('ThreadDraft', () => {
     expect(onCancel).toHaveBeenCalledWith()
   })
 
+  it('keeps the draft and only closes the full size view when Nick presses Escape in the draft at full size', async () => {
+    const onCancel = vi.fn<() => void>()
+    render(
+      <ThreadDraft
+        kind="comment"
+        selectedText="retries 5 times"
+        onSend={() => Promise.resolve()}
+        onCancel={onCancel}
+      />,
+    )
+    await userEvent.click(screen.getByRole('button', { name: 'Open the new comment at full size' }))
+    const field = screen.getByRole('textbox', { name: 'Write a comment…' })
+    await userEvent.type(field, 'Is 5 enough?')
+    await userEvent.keyboard('{Escape}')
+    expect(screen.queryByRole('dialog')).toBeNull()
+    expect(onCancel).not.toHaveBeenCalled()
+    expect(screen.getByRole('textbox', { name: 'Write a comment…' })).toHaveProperty(
+      'value',
+      'Is 5 enough?',
+    )
+  })
+
   it('doesn’t show a quote when Nick comments on a whole block', () => {
     render(
       <ThreadDraft
@@ -47,5 +69,34 @@ describe('ThreadDraft', () => {
     expect(
       screen.getByRole('region', { name: 'New comment' }).querySelector('blockquote'),
     ).toBeNull()
+  })
+  it('adds the comment to the outbox rather than sending it when Nick presses Add to outbox', async () => {
+    const onSend = vi.fn<(text: string) => Promise<void>>(() => Promise.resolve())
+    const onAddToOutbox = vi.fn<(text: string) => Promise<void>>(() => Promise.resolve())
+    render(
+      <ThreadDraft
+        kind="comment"
+        selectedText="retries 5 times"
+        onSend={onSend}
+        onAddToOutbox={onAddToOutbox}
+        onCancel={() => undefined}
+      />,
+    )
+    await userEvent.keyboard('Is 5 enough?')
+    await userEvent.click(screen.getByRole('button', { name: 'Add to outbox' }))
+    expect(onAddToOutbox).toHaveBeenCalledWith('Is 5 enough?')
+    expect(onSend).not.toHaveBeenCalled()
+  })
+
+  it('doesn’t show Add to outbox when the draft can’t be added to the outbox', () => {
+    render(
+      <ThreadDraft
+        kind="grammar"
+        selectedText="5"
+        onSend={() => Promise.resolve()}
+        onCancel={() => undefined}
+      />,
+    )
+    expect(screen.queryByRole('button', { name: 'Add to outbox' })).toBeNull()
   })
 })

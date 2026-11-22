@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useState, type ReactNode } from 'react'
 import './margin-lane.css'
 
 // The anchor of an item is the highlight of its thread or else the block with its lines.
@@ -104,6 +104,17 @@ export function layOutMarginLane(lane: HTMLElement, scope: Element): void {
   for (const { item, top } of cards.placed) {
     item.style.setProperty('--margin-item-top', px(top))
   }
+  // An item moves to a new top with a transition, but an item that is placed for the first time is
+  // shown at its top straight away. Otherwise a link to the card of the item would scroll to the
+  // top of the lane, which is where the card starts its transition. The browser computes the new
+  // top before data-placed turns the transition on. One layout is enough for every new item.
+  const newItems = cards.placed.filter((card) => !card.item.hasAttribute('data-placed'))
+  if (newItems.length > 0) {
+    lane.getBoundingClientRect()
+  }
+  for (const { item } of newItems) {
+    item.setAttribute('data-placed', '')
+  }
   for (const { item, box } of anchored) {
     item.style.setProperty('--margin-popup-top', px(box.bottom + gapBelowAnchor))
   }
@@ -125,8 +136,11 @@ function useClosePopup(lane: HTMLElement | null, onClosePopup: (() => void) | un
     if (lane === null || onClosePopup === undefined) {
       return undefined
     }
+    // An Escape whose default was prevented, like the one that closes the subtree in the top bar,
+    // doesn't close the card. The Escape that closes a full size view isn't received by this
+    // listener, because FullSizeView stops its propagation.
     const closeOnEscape = (event: KeyboardEvent): void => {
-      if (event.key === 'Escape') {
+      if (event.key === 'Escape' && !event.defaultPrevented) {
         onClosePopup()
       }
     }
@@ -150,14 +164,27 @@ function useClosePopup(lane: HTMLElement | null, onClosePopup: (() => void) | un
   }, [lane, onClosePopup])
 }
 
+function scopeOf(lane: HTMLElement): Element {
+  return lane.closest('[data-margin-scope]') ?? lane.ownerDocument.body
+}
+
 export function MarginLane({ label, items, onClosePopup }: MarginLaneProps) {
   const [lane, setLane] = useState<HTMLElement | null>(null)
   useClosePopup(lane, onClosePopup)
+  // The ref places the items in the same commit that adds the lane to the page. The effects of the
+  // page, like the scroll to the card of a link, run before the next commit. So the card has to
+  // be in its place by then.
+  const attachLane = useCallback((element: HTMLElement | null) => {
+    setLane(element)
+    if (element !== null) {
+      layOutMarginLane(element, scopeOf(element))
+    }
+  }, [])
   useLayoutEffect(() => {
     if (lane === null) {
       return undefined
     }
-    const scope = lane.closest('[data-margin-scope]') ?? lane.ownerDocument.body
+    const scope = scopeOf(lane)
     layOutMarginLane(lane, scope)
     const observer = new ResizeObserver(() => layOutMarginLane(lane, scope))
     observer.observe(scope)
@@ -167,7 +194,7 @@ export function MarginLane({ label, items, onClosePopup }: MarginLaneProps) {
     return () => observer.disconnect()
   })
   return (
-    <aside ref={setLane} className="margin-lane" aria-label={label}>
+    <aside ref={attachLane} className="margin-lane" aria-label={label}>
       {items.flatMap((item) => [
         item.marker === undefined ? null : (
           <div

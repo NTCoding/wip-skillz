@@ -28,6 +28,12 @@ export const visibleTextMarkdown = [
   '> The finance team reads the report.',
   '>',
   '> It arrives every Monday.',
+  '',
+  ':::agent-note',
+  "I haven't read the **retry** code.",
+  '',
+  'I only read the `git log`.',
+  ':::',
 ].join('\n')
 
 export const visibleTextHtml = [
@@ -67,6 +73,10 @@ export const visibleTextHtml = [
   '<p>The finance team reads the report.</p>',
   '<p>It arrives every Monday.</p>',
   '</blockquote>',
+  '<div class="agent-note" data-lines="24-28">',
+  "<p>I haven't read the <strong>retry</strong> code.</p>",
+  '<p>I only read the <code>git log</code>.</p>',
+  '</div>',
   '',
 ].join('\n')
 
@@ -79,6 +89,7 @@ export const visibleBlockTexts: Readonly<Record<string, string>> = {
     'The export job retries 5 times. The export job writes one file per shop. Each file is a CSV file.',
   '15-18': 'const retries = 5 const wait = 30',
   '20-22': 'The finance team reads the report. It arrives every Monday.',
+  '24-28': "I haven't read the retry code. I only read the git log.",
 }
 
 export const selectionsAround: readonly SelectionAround[] = [
@@ -105,5 +116,11 @@ export const selectionsAround: readonly SelectionAround[] = [
     selectedText: 'const wait = 30',
     prefix: 'const retries = 5',
     suffix: '',
+  },
+  {
+    lines: '24-28',
+    selectedText: "haven't read the retry",
+    prefix: 'I',
+    suffix: 'code. I only read the git log.',
   },
 ]

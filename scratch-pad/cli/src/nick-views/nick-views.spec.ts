@@ -1,4 +1,4 @@
-import { mkdirSync, renameSync } from 'node:fs'
+import { mkdirSync, renameSync, rmSync } from 'node:fs'
 import { join } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
 import { replyToThread } from '../agent-commands/thread-commands'
@@ -65,7 +65,7 @@ describe('pageSummaries', () => {
     ])
   })
 
-  it('returns each page with its title and its open threads when Nick has commented', () => {
+  it('returns each page with its title, its open threads and its headings at the levels that the browser shows when Nick has commented', () => {
     const folder = exportJobScratchPad(temporaryHome())
     commentOnRetryPolicy(folder, 'Is 5 retries enough?')
 
@@ -77,6 +77,10 @@ describe('pageSummaries', () => {
         parent: undefined,
         title: 'Export job',
         description: undefined,
+        headings: [
+          { level: 1, text: 'Export job', id: 'export-job', line: 1 },
+          { level: 3, text: 'Retry policy', id: 'retry-policy', line: 3 },
+        ],
         openThreads: 1,
         waitingForNick: { decisions: 0, replies: 0 },
         waitingForNickWithSubPages: { decisions: 0, replies: 0 },
@@ -212,16 +216,22 @@ function numberedScratchPad(): ScratchPadFolder {
 }
 
 describe('viewPage', () => {
-  it('returns the rendered page with its title and headings when the page exists', () => {
+  it('returns the index page with the title, the introduction and the table of contents when Nick opens the index page', () => {
     const page = viewPage(exportJobScratchPad(temporaryHome()), 'index')
 
-    expect({ ...page, html: page.html.split('\n')[0] }).toStrictEqual({
+    expect({ ...page, html: page.html.split('\n').slice(0, 3) }).toStrictEqual({
       page: 'pages/index.md',
       title: 'Export job',
-      html: '<h1 data-lines="1-1" id="export-job">Export job</h1>',
+      html: [
+        '<h1 data-lines="1-1" id="export-job">Export job</h1>',
+        '<h2 id="introduction">Introduction</h2>',
+        '<h3 data-lines="3-3" id="retry-policy">Retry policy</h3>',
+      ],
       headings: [
         { level: 1, text: 'Export job', id: 'export-job', line: 1 },
-        { level: 2, text: 'Retry policy', id: 'retry-policy', line: 3 },
+        { level: 2, text: 'Introduction', id: 'introduction', line: 2 },
+        { level: 3, text: 'Retry policy', id: 'retry-policy', line: 3 },
+        { level: 2, text: 'Table of contents', id: 'table-of-contents', line: 8 },
       ],
       links: [],
       decisions: [],
@@ -327,6 +337,18 @@ describe('threadsOfPage', () => {
     expect(
       threadsOfPage(folder, 'board-edge.md').map((thread) => [thread.page, thread.position?.kind]),
     ).toStrictEqual([['pages/board-edge.md', 'attached']])
+  })
+
+  it('returns the threads of a page that the agent has deleted, without a position on the page', () => {
+    const folder = numberedScratchPad()
+    const anchor = { firstLine: 1, lastLine: 1, selectedText: 'Board edge', prefix: '', suffix: '' }
+    nickComments(folder, { type: 'comment', page: '2-board-edge.md', anchor, text: 'Why?' })
+    rmSync(join(folder.path, 'pages/2-board-edge.md'))
+
+    expect(
+      threadsOfPage(folder, 'board-edge.md').map((thread) => [thread.id, thread.position?.kind]),
+    ).toStrictEqual([['c-1', 'detached']])
+    expect(threadsOfPage(folder, 'queue.md')).toStrictEqual([])
   })
 })
 

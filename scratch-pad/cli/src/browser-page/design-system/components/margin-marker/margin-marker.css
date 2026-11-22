@@ -32,3 +32,16 @@
 .margin-marker[data-kind='improvement'] {
   color: var(--improvement-ink);
 }
+
+.margin-marker[data-kind='decision'] {
+  gap: var(--space-0);
+  color: var(--decision-ink);
+}
+
+.margin-marker[data-kind='decision'] > .icon + .icon {
+  color: var(--decision-done-ink);
+}
+
+.margin-marker[data-kind='changed'] {
+  color: var(--thread-changed-ink);
+}

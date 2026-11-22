@@ -1,0 +1,9 @@
+.selected-text-quote {
+  margin: var(--space-0);
+  padding-left: var(--quote-indent);
+  border-left: var(--line-w-quote) solid var(--highlight-comment-line);
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: var(--fs-decision);
+  line-height: var(--lh-decision);
+}

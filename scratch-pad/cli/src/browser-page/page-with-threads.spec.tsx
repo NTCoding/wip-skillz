@@ -9,8 +9,10 @@ import {
   fakeConnection,
   indexPage,
   retryQuestion,
+  toneNote,
   type FakeConnection,
 } from './browser-page-fixtures'
+import { queuedComment } from './outbox-fixtures'
 import { withPostedThreads } from './page-with-threads'
 import { ScratchPadApp } from './scratch-pad-app'
 
@@ -224,7 +226,7 @@ describe('the threads of a page', () => {
     expect(await within(card('Comment c-1')).findByText('The text has changed')).toBeDefined()
   })
 
-  it('shows Nick’s choice at once when Nick answers a decision', async () => {
+  it('moves the decision into the margin and opens its card there when Nick answers a decision', async () => {
     const fake = await renderIndex()
     const answerDecision = vi.spyOn(fake.connection, 'answerDecision')
     await userEvent.click(screen.getByRole('button', { name: 'Proposal' }))
@@ -232,6 +234,104 @@ describe('the threads of a page', () => {
     expect((await screen.findByRole('status', { name: '' })).textContent).toBe(
       "Nick's answer: proposal",
     )
+    expect(card('Decision d-1').closest('[data-key]')?.getAttribute('data-key')).toBe('d-1')
+    expect(screen.queryByRole('button', { name: 'Proposal' })).toBeNull()
+  })
+
+  it('opens the whole thread at full size and adds a reply to the outbox there when Nick clicks the expand button of a card', async () => {
+    await renderIndex()
+    await userEvent.click(screen.getByRole('button', { name: 'Open c-1 at full size' }))
+    const view = screen.getByRole('dialog', { name: 'Thread on “retries 5 times”' })
+    expect(within(view).getByRole('blockquote').textContent).toBe(
+      'The job retries 5 times. See this section and the retry',
+    )
+    await userEvent.type(within(view).getByRole('textbox', { name: 'Write a reply…' }), 'Why 8?')
+    await userEvent.click(within(view).getByRole('button', { name: 'Add to outbox' }))
+    expect(await within(view).findByText('Why 8?')).toBeDefined()
+  })
+
+  it('labels the full size view as a thread when a thread doesn’t have the text around its selection', async () => {
+    const fake = fakeConnection()
+    const anchor = { firstLine: 8, lastLine: 8, selectedText: '' }
+    fake.threads.set('index.md', [
+      { ...retryQuestion, anchor: { ...anchor, prefix: undefined, suffix: undefined } },
+      { ...toneNote, anchor: undefined },
+    ])
+    await renderIndex(fake)
+    await userEvent.click(screen.getByRole('button', { name: 'Open c-1 at full size' }))
+    expect(screen.getByRole('dialog').getAttribute('aria-label')).toBe('Thread')
+  })
+})
+
+describe('the decisions that Nick has answered', () => {
+  async function renderAnswered() {
+    const fake = fakeConnection()
+    fake.pages.set('index.md', {
+      ...indexPage,
+      decisions: [
+        {
+          id: 'd-1',
+          question: 'Will the export job retry 8 times?',
+          answer: { choice: 'alternative' },
+        },
+      ],
+    })
+    const decisionText = {
+      kind: 'attached',
+      firstLine: 28,
+      lastLine: 32,
+      text: 'Raise the retry limit',
+      occurrence: 0,
+      match: 'exact',
+      score: 1,
+    } as const
+    const onDecision: Thread = { ...retryQuestion, id: 'c-2', position: decisionText }
+    fake.threads.set('index.md', [retryQuestion, onDecision])
+    fake.outbox.push({ ...queuedComment, position: decisionText })
+    await renderIndex(fake)
+  }
+
+  it('shows the marker of the decision, its thread and its comment in the outbox beside its question rather than the decision in the text', async () => {
+    await renderAnswered()
+    expect(screen.queryByRole('region', { name: 'Decision d-1' })).toBeNull()
+    const anchorLines = ['[data-marker="d-1"]', '[data-key="c-2"]', '[data-key="outbox-1"]'].map(
+      (item) => document.querySelector(item)?.getAttribute('data-anchor-lines'),
+    )
+    expect(anchorLines).toStrictEqual(['26-26', '26-26', '26-26'])
+  })
+
+  it('opens the card of the decision when Nick clicks its marker and closes it with the close button', async () => {
+    await renderAnswered()
+    const [marker] = screen.getAllByRole('button', { name: 'Decision d-1' })
+    await userEvent.click(marker ?? document.body)
+    expect(card('Decision d-1').textContent).toContain("Nick's answer: alternative")
+    expect(popupOf('Decision d-1')).toBe(null)
+    expect(card('Decision d-1').closest('[data-popup]')?.getAttribute('data-popup')).toBe('true')
+    await userEvent.click(screen.getByRole('button', { name: 'Close d-1' }))
+    expect(screen.queryByRole('region', { name: 'Decision d-1' })).toBeNull()
+  })
+
+  it('closes the full size view of the decision rather than its card when Nick presses Escape', async () => {
+    await renderAnswered()
+    const lastMarker = screen.getAllByRole('button', { name: 'Decision d-1' }).at(-1)
+    await userEvent.click(lastMarker ?? document.body)
+    await userEvent.click(screen.getByRole('button', { name: 'Open d-1 at full size' }))
+    expect(
+      screen.getByRole('dialog', { name: 'Decision: Will the export job retry 8 times?' }),
+    ).toBeDefined()
+    await userEvent.keyboard('{Escape}')
+    expect(screen.queryByRole('dialog')).toBeNull()
+    expect(card('Decision d-1').id).toBe('d-1')
+  })
+
+  it('ignores a click on the marker of a decision while Nick writes a new thread', async () => {
+    await renderAnswered()
+    selectInBlock('3-4', 4, 14)
+    await userEvent.click(screen.getByRole('button', { name: 'Comment' }))
+    await userEvent.click(
+      screen.getAllByRole('button', { name: 'Decision d-1' })[0] ?? document.body,
+    )
+    expect(screen.queryByRole('region', { name: 'Decision d-1' })).toBeNull()
   })
 })
 

@@ -4,7 +4,8 @@ import { invoiceHtml, renderedInvoicePage } from './rendered-page-fixtures'
 describe('the named blocks of a rendered page', () => {
   it('reports an unknown block and shows its content under a warning when the block name is unknown', () => {
     const page = renderedInvoicePage([':::chart', 'retries: 5', ':::'])
-    const text = "there aren't any blocks called :::chart. The blocks are :::decision and :::html"
+    const text =
+      "there aren't any blocks called :::chart. The blocks are :::decision, :::html and :::agent-note"
 
     expect(page.problems).toStrictEqual([{ line: 1, text }])
     expect(page.html).toBe(

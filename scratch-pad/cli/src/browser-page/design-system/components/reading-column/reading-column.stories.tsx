@@ -49,3 +49,20 @@ export const WithAnEnd: Story = {
     ),
   },
 }
+
+export const WithAChangedSection: Story = {
+  args: {
+    children: (
+      <>
+        <h1>Invoice export</h1>
+        <p>The export job writes the paid invoices of each shop to a CSV file.</p>
+        <h2 data-changed-section="">Retry limit</h2>
+        <p data-changed-section="">
+          The job retries a failed shop <strong>8 times</strong>.
+        </p>
+        <h2>What a shop sees</h2>
+        <p>The shop receives one email when its file is ready.</p>
+      </>
+    ),
+  },
+}

@@ -53,6 +53,23 @@ describe('changesOfEvents', () => {
     ).toStrictEqual([{ kind: 'improvements' }])
   })
 
+  it('returns one outbox change when Nick queues, edits, removes or sends items of the outbox', () => {
+    expect(
+      changesOfEvents([
+        event(1, 'item-queued'),
+        event(2, 'queued-item-edited'),
+        event(3, 'queued-item-removed'),
+        event(4, 'outbox-sent'),
+      ]),
+    ).toStrictEqual([{ kind: 'outbox' }])
+  })
+
+  it('returns one read marks change when Nick marks a page or a section as read or unread', () => {
+    expect(
+      changesOfEvents([event(1, 'page-read'), event(2, 'page-unread'), event(3, 'section-read')]),
+    ).toStrictEqual([{ kind: 'read-marks' }])
+  })
+
   it('returns one progress tracker change when the goal and the tasks change', () => {
     expect(
       changesOfEvents([

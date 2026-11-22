@@ -1,9 +1,15 @@
-import { act, fireEvent, render, screen } from '@testing-library/react'
+import { act, fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import { type ViewedPage } from './api-responses'
 import { exportPad, exportPadAddresses, indexPage } from './browser-page-fixtures'
-import { keyedBlocks, pageElements, parsedPageBody, type PageElementContext } from './page-elements'
+import {
+  answeredDecisions,
+  keyedBlocks,
+  pageElements,
+  parsedPageBody,
+  type PageElementContext,
+} from './page-elements'
 
 function contextFor(page: ViewedPage, overrides: Partial<PageElementContext> = {}) {
   const context: PageElementContext = {
@@ -90,11 +96,15 @@ describe('pageElements', () => {
     expect(onAnswerDecision).toHaveBeenCalledWith('d-1', { choice: 'alternative' })
   })
 
-  it('shows the choice that Nick has just made before the page is read again', () => {
-    renderPage(indexPage, { answersOnThisPage: new Map([['d-1', { choice: 'proposal' }]]) })
-    const card = screen.getByRole('region', { name: 'Decision d-1' })
-    expect(card.textContent).toContain("Nick's answer: proposal")
-    expect(card.querySelector('button')).toBeNull()
+  it('takes the decision out of the text when Nick has just answered it, before the page is read again', () => {
+    const context = contextFor(indexPage, {
+      answersOnThisPage: new Map([['d-1', { choice: 'proposal' }]]),
+    })
+    const body = parsedPageBody(indexPage.html)
+    const [decision] = answeredDecisions(context, body)
+    expect(decision?.answer).toBe('proposal')
+    render(<article>{pageElements(context, body, new Map(), undefined, new Set(['d-1']))}</article>)
+    expect(screen.queryByRole('region', { name: 'Decision d-1' })).toBeNull()
   })
 
   it('shows the warnings of a decision block and the choice of Nick when the decision is answered', () => {
@@ -128,6 +138,74 @@ describe('pageElements', () => {
     expect(screen.getByRole('region', { name: 'Decision d-2' }).textContent).toContain(
       "Nick's answer: The shop pays.",
     )
+  })
+
+  it('returns the question, the lines, the fields, the answer and the paragraphs under the question of each answered decision', () => {
+    const html = [
+      '<h2 data-lines="1-1">Will the export job retry 8 times?</h2>',
+      '<p data-lines="3-3">The network of a shop can be slow.</p>',
+      '<p data-lines="5-5"><img src="steps.svg" alt="The 3 steps"></p>',
+      '<pre data-lines="7-9"><code>retries = 8</code></pre>',
+      '<p data-lines="11-11">The job retries 8 times now.</p>',
+      '<div class="decision" data-decision="d-1" data-lines="13-17">',
+      '<div class="decision-proposal"><p class="decision-label">Proposal</p><p>Raise it.</p></div>',
+      '</div>',
+    ].join('')
+    const page = {
+      ...withHtml(html),
+      decisions: [
+        {
+          id: 'd-1',
+          question: 'Will the export job retry 8 times?',
+          answer: { choice: 'proposal' },
+        },
+      ],
+    }
+    const [decision] = answeredDecisions(contextFor(page), parsedPageBody(html))
+    expect({ ...decision, proposal: undefined }).toStrictEqual({
+      id: 'd-1',
+      question: 'Will the export job retry 8 times?',
+      headingLines: '1-1',
+      blockLines: '13-17',
+      proposal: undefined,
+      alternative: null,
+      pick: null,
+      answer: 'proposal',
+      context: ['The network of a shop can be slow.', 'The job retries 8 times now.'],
+    })
+  })
+
+  it('doesn’t return the lines of an answered decision when its block doesn’t have any', () => {
+    const html =
+      '<h2 data-lines="1-1">Who pays the fee?</h2><div class="decision" data-decision="d-1"></div>'
+    const page = {
+      ...withHtml(html),
+      decisions: [{ id: 'd-1', question: 'Who pays the fee?', answer: { written: 'The shop.' } }],
+    }
+    const [decision] = answeredDecisions(contextFor(page), parsedPageBody(html))
+    expect([decision?.blockLines, decision?.answer]).toStrictEqual([undefined, 'The shop.'])
+  })
+
+  it('keeps an answered decision in the text when the decision has a warning or is inside another block', () => {
+    const html = [
+      '<h2 data-lines="1-1">Who pays the fee?</h2>',
+      '<div class="decision" data-decision="d-1">',
+      '<p class="named-block-warning">The decision doesn’t have a pick: line.</p>',
+      '</div>',
+      '<blockquote><h3>Who sends the file?</h3><div class="decision" data-decision="d-2"></div></blockquote>',
+    ].join('')
+    const page = {
+      ...withHtml(html),
+      decisions: [
+        { id: 'd-1', question: 'Who pays the fee?', answer: { choice: 'proposal' } },
+        { id: 'd-2', question: 'Who sends the file?', answer: { choice: 'alternative' } },
+      ],
+    }
+    renderPage(page)
+    expect(answeredDecisions(contextFor(page), parsedPageBody(html))).toStrictEqual([])
+    expect(
+      screen.getAllByRole('region').map((card) => card.getAttribute('aria-label')),
+    ).toStrictEqual(['Decision d-1', 'Decision d-2'])
   })
 
   it('shows a decision without a question when the page doesn’t know the id of the decision', () => {
@@ -215,6 +293,28 @@ describe('pageElements', () => {
     ])
   })
 
+  it('opens the target page when Nick clicks a link to another page inside an agent note', async () => {
+    const onNavigate = vi.fn<(href: string) => void>()
+    const page = {
+      ...withHtml(
+        '<div class="agent-note" data-lines="1-3">\n<p>I haven’t read <a href="export-job.md#retry-limit">the export job</a>.</p>\n</div>',
+      ),
+      links: [
+        {
+          kind: 'page' as const,
+          href: 'export-job.md#retry-limit',
+          page: 'pages/export-job.md',
+          headingId: 'retry-limit',
+        },
+      ],
+    }
+    renderPage(page, { onNavigate })
+    const note = screen.getByRole('figure')
+    expect(note.textContent).toContain('Agent note')
+    await userEvent.click(within(note).getByRole('link', { name: 'the export job' }))
+    expect(onNavigate).toHaveBeenCalledWith(`/${exportPad}/export-job.md#retry-limit`)
+  })
+
   it('shows the text of a link without the link when the link runs a script or isn’t a web address', () => {
     const { container } = renderPage(
       withHtml(
@@ -254,5 +354,54 @@ describe('pageElements', () => {
     )
     expect(container.querySelectorAll('article > p')).toHaveLength(2)
     expect(screen.queryByRole('button')).toBeNull()
+  })
+
+  it('marks every block of a changed section, apart from a stray text, and ends the section at the next heading', () => {
+    const page = withHtml(
+      [
+        '<h1 id="retry">Retry</h1>',
+        '<h2 id="limit">Limit</h2>',
+        '<p>5 retries.</p>',
+        'A stray text.',
+        '<h3 id="wait">Wait</h3>',
+        '<p>30 seconds.</p>',
+        '<h1 id="other">Other</h1>',
+        '<p>Not a section.</p>',
+      ].join('\n'),
+    )
+    const context = contextFor(page)
+    const marks = { changedSections: new Set(['limit', 'other']), afterTitle: <p>New</p> }
+    const { container } = render(
+      <article>{pageElements(context, parsedPageBody(page.html), new Map(), marks)}</article>,
+    )
+    expect(
+      [...container.querySelectorAll('article > *')].map((block) => [
+        block.tagName,
+        block.hasAttribute('data-changed-section'),
+      ]),
+    ).toStrictEqual([
+      ['H1', false],
+      ['P', false],
+      ['H2', true],
+      ['P', true],
+      ['H3', false],
+      ['P', false],
+      ['H1', false],
+      ['P', false],
+    ])
+    expect(container.textContent).toContain('A stray text.')
+  })
+
+  it('shows the line after the title above the first block when the page doesn’t have a heading of level 1', () => {
+    const page = withHtml('<p>The export job retries 5 times.</p>\n<h2 id="limit">Limit</h2>')
+    const marks = { changedSections: new Set<string>(), afterTitle: <p>This page is new.</p> }
+    const { container } = render(
+      <article>
+        {pageElements(contextFor(page), parsedPageBody(page.html), new Map(), marks)}
+      </article>,
+    )
+    expect(
+      [...container.querySelectorAll('article > *')].map((block) => block.textContent),
+    ).toStrictEqual(['This page is new.', 'The export job retries 5 times.', 'Limit'])
   })
 })

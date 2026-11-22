@@ -18,6 +18,8 @@ type Story = StoryObj<typeof meta>
 
 export const Comment: Story = {}
 
+export const CommentWithOutbox: Story = { args: { onAddToOutbox: () => Promise.resolve() } }
+
 export const GrammarNote: Story = { args: { kind: 'grammar' } }
 
 export const ImprovementNote: Story = { args: { kind: 'improvement' } }

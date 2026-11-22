@@ -5,6 +5,26 @@ import { Inbox, type InboxEntry } from './inbox'
 
 const entries: InboxEntry[] = [
   {
+    key: 'page pages/retry-limit.md',
+    href: '/2026-11-20-invoice-export/retry-limit.md',
+    kind: 'page',
+    where: 'Retry limit',
+    quote: 'The export job retries the upload of the invoices.',
+    last: undefined,
+    time: '2026-11-20T21:20:00.000Z',
+    shownTime: '20 Nov, 21:20',
+  },
+  {
+    key: 'section pages/invoice-template.md the-tax-number',
+    href: '/2026-11-20-invoice-export/invoice-template.md#the-tax-number',
+    kind: 'section',
+    where: 'Invoice template › 1.1 Tax number › Shops outside the EU',
+    quote: undefined,
+    last: undefined,
+    time: '2026-11-20T21:15:00.000Z',
+    shownTime: 'Changed 20 Nov, 21:15',
+  },
+  {
     key: 'd-1',
     href: '/2026-11-20-invoice-export/#d-1',
     kind: 'decision',

@@ -18,6 +18,7 @@ export interface WaitingForNick {
 export interface PageSummary extends ListedPage {
   readonly parent: string | undefined
   readonly description: string | undefined
+  readonly headings: readonly Heading[]
   readonly waitingForNick: WaitingForNick
   readonly waitingForNickWithSubPages: WaitingForNick
 }

@@ -7,6 +7,7 @@ interface ThreadDraftProps {
   readonly kind: ThreadKindName
   readonly selectedText: string
   readonly onSend: (text: string) => Promise<void>
+  readonly onAddToOutbox?: ((text: string) => Promise<void>) | undefined
   readonly onCancel: () => void
 }
 
@@ -16,9 +17,15 @@ const placeholders: Readonly<Record<ThreadKindName, string>> = {
   improvement: 'What would make this better?',
 }
 
-export function ThreadDraft({ kind, selectedText, onSend, onCancel }: ThreadDraftProps) {
+export function ThreadDraft(props: ThreadDraftProps) {
+  const { kind, selectedText, onSend, onAddToOutbox, onCancel } = props
   return (
-    <MarginCard label={`New ${threadKindLabels[kind].toLowerCase()}`} kind={kind} active>
+    <MarginCard
+      label={`New ${threadKindLabels[kind].toLowerCase()}`}
+      name={`the new ${threadKindLabels[kind].toLowerCase()}`}
+      kind={kind}
+      active
+    >
       <ThreadKind kind={kind} />
       {selectedText !== '' && (
         <blockquote className="thread-draft__quote" data-kind={kind}>
@@ -29,6 +36,11 @@ export function ThreadDraft({ kind, selectedText, onSend, onCancel }: ThreadDraf
         label={placeholders[kind]}
         submitLabel="Send"
         onSubmit={onSend}
+        secondSubmit={
+          onAddToOutbox === undefined
+            ? undefined
+            : { label: 'Add to outbox', onSubmit: onAddToOutbox }
+        }
         onCancel={onCancel}
         focusOnMount
       />

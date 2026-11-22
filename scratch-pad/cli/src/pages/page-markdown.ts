@@ -22,11 +22,15 @@ export function isPagePath(page: string): boolean {
   return pagePattern.test(page)
 }
 
-export function findPage(pages: readonly string[], requested: string, padName: string): string {
+export function existingPage(pages: readonly string[], requested: string): string | undefined {
   const candidates = [requested, `pages/${requested}`, `pages/${requested}.md`].map(
     (candidate) => pageFileOf(candidate).page,
   )
-  const page = pages.find((candidate) => candidates.includes(candidate))
+  return pages.find((candidate) => candidates.includes(candidate))
+}
+
+export function findPage(pages: readonly string[], requested: string, padName: string): string {
+  const page = existingPage(pages, requested)
   if (page === undefined) {
     throw new UnknownPageError(requested, padName, pages)
   }

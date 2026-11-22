@@ -45,6 +45,16 @@ describe('checkPages', () => {
     })
   })
 
+  it('accepts a link to a heading that the server adds to the index page', () => {
+    const folder = exportJobScratchPad(temporaryHome())
+    writeFileInPad(
+      folder,
+      'pages/1-retry.md',
+      '# Retry\n\nSee [the pages](index.md#table-of-contents) and [the policy](index.md#retry-policy).',
+    )
+    expect(checkPages(folder, ['retry'], undefined).problemCount).toBe(0)
+  })
+
   it('reports an open thread whose page the agent has deleted when no page is requested', () => {
     const folder = scratchPadWithRetryPage()
     const anchor = { firstLine: 1, lastLine: 1, selectedText: 'Retry', prefix: '', suffix: '' }

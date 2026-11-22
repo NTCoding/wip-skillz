@@ -6,21 +6,29 @@ import {
   improvementDeleteResponse,
   improvementEditResponse,
   improvementsResponse,
+  markedPageResponse,
   nickInboxResponse,
+  outboxResponse,
   padChange,
   pagesResponse,
   progressTrackerResponse,
+  readMarksResponse,
   threadResponse,
+  threadsOfPadResponse,
   threadsResponse,
   viewedPageResponse,
   type Answer,
   type DecisionLogEntry,
   type Improvements,
   type NickInbox,
+  type Outbox,
   type PadChange,
   type PageSummary,
   type ProgressTracker,
+  type ReadMarks,
+  type SectionHash,
   type Thread,
+  type ThreadOfPad,
   type ThreadType,
   type ViewedPage,
 } from './api-responses'
@@ -51,6 +59,9 @@ export interface ScratchPadReading {
   readonly progressTracker: () => Promise<ProgressTracker>
   readonly decisionLog: () => Promise<DecisionLogEntry[]>
   readonly improvements: () => Promise<Improvements>
+  readonly outbox: () => Promise<Outbox>
+  readonly readMarks: () => Promise<ReadMarks>
+  readonly threadsOfPad: () => Promise<ThreadOfPad[]>
   readonly onChange: (listeners: ChangeListeners) => () => void
 }
 
@@ -61,6 +72,14 @@ export interface ScratchPadWriting {
   readonly answerDecision: (id: string, page: string, answer: Answer) => Promise<void>
   readonly editImprovement: (number: number, edit: ImprovementEdit) => Promise<void>
   readonly deleteImprovement: (number: number) => Promise<void>
+  readonly queueComment: (thread: NewThread) => Promise<void>
+  readonly queueReply: (id: string, message: string) => Promise<void>
+  readonly editQueuedItem: (number: number, message: string) => Promise<void>
+  readonly removeQueuedItem: (number: number) => Promise<void>
+  readonly sendOutbox: () => Promise<Thread[]>
+  readonly markPageRead: (file: string, sections: readonly SectionHash[]) => Promise<void>
+  readonly markPageUnread: (file: string) => Promise<void>
+  readonly markSectionRead: (file: string, section: SectionHash) => Promise<void>
 }
 
 export type ScratchPadConnection = ScratchPadReading & ScratchPadWriting
@@ -138,6 +157,7 @@ function postOf(body: unknown): PostRequest {
 export function scratchPadConnection(pad: string, network: BrowserNetwork): ScratchPadConnection {
   const api = `/api/scratch-pads/${encodeURIComponent(pad)}`
   const threadUrl = (id: string): string => `${api}/threads/${encodeURIComponent(id)}`
+  const pageUrl = (file: string): string => `${api}/pages/${encodeURIComponent(file)}`
   return {
     pages: async () => (await readJson(network, `${api}/pages`, pagesResponse)).pages,
     page: (file) =>
@@ -150,6 +170,10 @@ export function scratchPadConnection(pad: string, network: BrowserNetwork): Scra
     decisionLog: async () =>
       (await readJson(network, `${api}/decision-log`, decisionLogResponse)).decisions,
     improvements: () => readJson(network, `${api}/improvements`, improvementsResponse),
+    outbox: () => readJson(network, `${api}/outbox`, outboxResponse),
+    readMarks: () => readJson(network, `${api}/read-marks`, readMarksResponse),
+    threadsOfPad: async () =>
+      (await readJson(network, `${api}/threads`, threadsOfPadResponse)).threads,
     startThread: async (thread) =>
       (await readJson(network, `${api}/threads`, threadResponse, postOf(thread))).thread,
     replyToThread: async (id, message) =>
@@ -179,6 +203,39 @@ export function scratchPadConnection(pad: string, network: BrowserNetwork): Scra
         `${api}/improvements/${number}/delete`,
         improvementDeleteResponse,
         postOf({}),
+      )
+    },
+    queueComment: async (thread) => {
+      await readJson(network, `${api}/outbox/comments`, outboxResponse, postOf(thread))
+    },
+    queueReply: async (id, message) => {
+      await readJson(
+        network,
+        `${api}/outbox/replies`,
+        outboxResponse,
+        postOf({ thread: id, message }),
+      )
+    },
+    editQueuedItem: async (number, message) => {
+      await readJson(network, `${api}/outbox/${number}`, outboxResponse, postOf({ message }))
+    },
+    removeQueuedItem: async (number) => {
+      await readJson(network, `${api}/outbox/${number}/delete`, outboxResponse, postOf({}))
+    },
+    sendOutbox: async () =>
+      (await readJson(network, `${api}/outbox/send`, threadsResponse, postOf({}))).threads,
+    markPageRead: async (file, sections) => {
+      await readJson(network, `${pageUrl(file)}/read`, markedPageResponse, postOf({ sections }))
+    },
+    markPageUnread: async (file) => {
+      await readJson(network, `${pageUrl(file)}/unread`, markedPageResponse, postOf({}))
+    },
+    markSectionRead: async (file, section) => {
+      await readJson(
+        network,
+        `${pageUrl(file)}/sections/${encodeURIComponent(section.id)}/read`,
+        markedPageResponse,
+        postOf({ hash: section.hash }),
       )
     },
     onChange: (listeners) => {

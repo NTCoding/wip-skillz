@@ -4,7 +4,8 @@ import {
   type Improvements,
   type NickInbox,
   type PadChange,
-  type PageSummary,
+  type PageReadMark,
+  type SectionHash,
   type ProgressTracker,
   type Thread,
   type ViewedPage,
@@ -12,11 +13,15 @@ import {
 import { BrowserPageError } from './browser-page-error'
 import { type NarrowWindow } from './sidebar-state'
 import { servedAddresses } from './browser-route'
+import { fakeOutbox } from './outbox-fixtures'
+import { pageSummaries } from './page-summary-fixtures'
 import {
   type ChangeListeners,
   type NewThread,
   type ScratchPadConnection,
 } from './scratch-pad-connection'
+
+export { pageSummaries } from './page-summary-fixtures'
 
 export const exportPad = '2026-11-20-invoice-export'
 
@@ -80,13 +85,14 @@ export const indexPage: ViewedPage = {
   title: 'Invoice export',
   html: indexHtml,
   headings: [
-    { level: 1, text: 'Invoice export', id: 'invoice-export' },
-    { level: 2, text: 'Retry limit', id: 'retry-limit' },
-    { level: 3, text: 'Wait between retries', id: 'wait-between-retries' },
+    { level: 1, text: 'Invoice export', id: 'invoice-export', line: 1 },
+    { level: 2, text: 'Retry limit', id: 'retry-limit', line: 6 },
+    { level: 3, text: 'Wait between retries', id: 'wait-between-retries', line: 22 },
     {
       level: 2,
       text: 'Will the export job retry 8 times?',
       id: 'will-the-export-job-retry-8-times',
+      line: 26,
     },
   ],
   links: [
@@ -117,9 +123,9 @@ export const invoiceTemplatePage: ViewedPage = {
     '<p>Each invoice has one page.</p>',
   ].join('\n'),
   headings: [
-    { level: 1, text: 'Invoice template', id: 'invoice-template' },
-    { level: 2, text: 'Tax number', id: 'tax-number' },
-    { level: 2, text: 'Layout', id: 'layout' },
+    { level: 1, text: 'Invoice template', id: 'invoice-template', line: 1 },
+    { level: 2, text: 'Tax number', id: 'tax-number', line: 3 },
+    { level: 2, text: 'Layout', id: 'layout', line: 8 },
   ],
   links: [],
   decisions: [],
@@ -135,69 +141,12 @@ const firstRetryPage: ViewedPage = {
     '<p>The storage of a shop is often back after 30 seconds.</p>',
   ].join('\n'),
   headings: [
-    { level: 1, text: 'First retry', id: 'first-retry' },
-    { level: 2, text: 'Why 30 seconds?', id: 'why-30-seconds' },
+    { level: 1, text: 'First retry', id: 'first-retry', line: 1 },
+    { level: 2, text: 'Why 30 seconds?', id: 'why-30-seconds', line: 3 },
   ],
   links: [],
   decisions: [],
 }
-
-export const pageSummaries: PageSummary[] = [
-  {
-    page: 'pages/index.md',
-    file: 'pages/index.md',
-    parent: undefined,
-    title: 'Invoice export',
-    description: 'The export job writes the paid invoices of each shop to a CSV file.',
-    openThreads: 2,
-    waitingForNickWithSubPages: { decisions: 1, replies: 1 },
-  },
-  {
-    page: 'pages/invoice-template.md',
-    file: 'pages/1-invoice-template.md',
-    parent: undefined,
-    title: 'Invoice template',
-    description: 'Each invoice shows the tax number of the shop.',
-    openThreads: 0,
-    waitingForNickWithSubPages: { decisions: 0, replies: 0 },
-  },
-  {
-    page: 'pages/retry-limit.md',
-    file: 'pages/2-retry-limit.md',
-    parent: undefined,
-    title: undefined,
-    description: undefined,
-    openThreads: 1,
-    waitingForNickWithSubPages: { decisions: 1, replies: 2 },
-  },
-  {
-    page: 'pages/wait-between-retries.md',
-    file: 'pages/2.1-wait-between-retries.md',
-    parent: 'pages/retry-limit.md',
-    title: 'Wait between retries',
-    description: 'Each retry waits twice as long as the retry before it.',
-    openThreads: 0,
-    waitingForNickWithSubPages: { decisions: 1, replies: 1 },
-  },
-  {
-    page: 'pages/first-retry.md',
-    file: 'pages/2.1.1-first-retry.md',
-    parent: 'pages/wait-between-retries.md',
-    title: 'First retry',
-    description: 'The first retry waits 30 seconds.',
-    openThreads: 1,
-    waitingForNickWithSubPages: { decisions: 1, replies: 1 },
-  },
-  {
-    page: 'pages/shop-storage.md',
-    file: 'pages/shop-storage.md',
-    parent: undefined,
-    title: 'Shop storage',
-    description: 'Each shop has its own storage.',
-    openThreads: 2,
-    waitingForNickWithSubPages: { decisions: 0, replies: 2 },
-  },
-]
 
 export const progressTracker: ProgressTracker = {
   title: 'Invoice export',
@@ -312,6 +261,9 @@ export interface FakeConnection {
   readonly connection: ScratchPadConnection
   readonly pages: Map<string, ViewedPage>
   readonly threads: Map<string, Thread[]>
+  readonly outbox: ReturnType<typeof fakeOutbox>['items']
+  // The read marks that the fake returns. A test sets them to show new pages and changed sections.
+  readonly readMarks: PageReadMark[]
   readonly sendChange: (change: PadChange) => void
   readonly sendConnection: (connected: boolean) => void
   readonly closeChanges: () => void
@@ -367,6 +319,15 @@ export function fakeConnection(): FakeConnection {
     ['first-retry.md', firstRetryPage],
   ])
   const threads = new Map([['index.md', [retryQuestion, toneNote]]])
+  const outbox = fakeOutbox(retryQuestion)
+  const readMarks: PageReadMark[] = []
+  const changeMark = (file: string, change: (mark: PageReadMark) => PageReadMark): void => {
+    const index = readMarks.findIndex((mark) => mark.page === `pages/${file}`)
+    const mark = readMarks[index]
+    if (mark !== undefined) {
+      readMarks[index] = change(mark)
+    }
+  }
   const listeners = new Set<ChangeListeners>()
   const closeChanges = vi.fn<() => void>()
   const connection: ScratchPadConnection = {
@@ -380,9 +341,30 @@ export function fakeConnection(): FakeConnection {
     threads: (file) => Promise.resolve(threads.get(file) ?? []),
     nickInbox: () => Promise.resolve(indexInbox),
     ...fakeActions,
+    ...outbox.actions,
     progressTracker: () => Promise.resolve(progressTracker),
     decisionLog: () => Promise.resolve(decisionLog),
     improvements: () => Promise.resolve(improvements),
+    readMarks: () => Promise.resolve({ pages: [...readMarks] }),
+    threadsOfPad: () =>
+      Promise.resolve(
+        [...threads.values()].flat().map((thread) => ({ ...thread, resolvedTime: undefined })),
+      ),
+    markPageRead: vi.fn((file: string) => {
+      changeMark(file, (mark) => ({ ...mark, state: 'read', changedSections: [] }))
+      return Promise.resolve()
+    }),
+    markPageUnread: vi.fn((file: string) => {
+      changeMark(file, (mark) => ({ ...mark, state: 'new', changedSections: [] }))
+      return Promise.resolve()
+    }),
+    markSectionRead: vi.fn((file: string, section: SectionHash) => {
+      changeMark(file, (mark) => ({
+        ...mark,
+        changedSections: mark.changedSections.filter((each) => each.id !== section.id),
+      }))
+      return Promise.resolve()
+    }),
     onChange: (changeListeners) => {
       listeners.add(changeListeners)
       return () => {
@@ -395,6 +377,8 @@ export function fakeConnection(): FakeConnection {
     connection,
     pages,
     threads,
+    outbox: outbox.items,
+    readMarks,
     sendChange: (change) => listeners.forEach((listener) => listener.changed(change)),
     sendConnection: (connected) => listeners.forEach((listener) => listener.connection(connected)),
     closeChanges,

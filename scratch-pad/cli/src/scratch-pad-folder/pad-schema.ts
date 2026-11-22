@@ -1,7 +1,9 @@
 import { decisionSources } from '../decisions/decision-log'
 import { itemTypes } from '../items/item-id'
 import { taskStates } from '../progress-tracker/progress-tracker'
+import { sectionTexts } from '../read-marks/read-marks'
 import { authors, threadTypes, waitingParties } from '../threads/thread'
+import { type PadDb } from './pad-db'
 
 export const padTables = [
   'progress_tracker',
@@ -13,6 +15,9 @@ export const padTables = [
   'events',
   'agent_inbox',
   'improvements',
+  'outbox',
+  'read_pages',
+  'read_sections',
 ] as const
 
 function oneOf(column: string, values: readonly string[]): string {
@@ -94,9 +99,17 @@ CREATE TABLE agent_inbox (
 PRAGMA user_version = 1;
 `
 
+export interface PageMarkdown {
+  readonly page: string
+  readonly markdown: string
+}
+
+// fill only runs when an existing scratch pad is migrated, after the migration's SQL. A new
+// scratch pad doesn't run it.
 export interface PadMigration {
   readonly version: number
   readonly sql: string
+  readonly fill?: (pad: PadDb, pages: readonly PageMarkdown[]) => void
 }
 
 export interface PadSchema {
@@ -116,10 +129,67 @@ CREATE TABLE improvements (
 ) STRICT;
 `
 
+// A queued comment has a page and an anchor, whereas a queued reply has the id of its thread.
+// AUTOINCREMENT never gives a new item the number of a removed one, so a page that is out of date
+// never edits or removes another item.
+const outboxTable = `
+CREATE TABLE outbox (
+  number INTEGER PRIMARY KEY AUTOINCREMENT CHECK (number >= 1),
+  time TEXT NOT NULL,
+  text TEXT NOT NULL,
+  thread_id TEXT REFERENCES threads (id),
+  page TEXT,
+  first_line INTEGER CHECK (first_line >= 1),
+  last_line INTEGER CHECK (last_line >= first_line),
+  selected_text TEXT,
+  prefix TEXT,
+  suffix TEXT,
+  copies_on_page INTEGER CHECK (copies_on_page >= 0),
+  CHECK ((thread_id IS NULL) <> (page IS NULL)),
+  CHECK ((page IS NULL) = (first_line IS NULL)),
+  CHECK ((first_line IS NULL) = (last_line IS NULL)),
+  CHECK ((first_line IS NULL) = (selected_text IS NULL))
+) STRICT;
+`
+
+// A page that Nick has read has a row in read_pages. Each section that he has read has a row in
+// read_sections with the hash of the section's text at that moment.
+const readMarksTables = `
+CREATE TABLE read_pages (
+  page TEXT PRIMARY KEY
+) STRICT;
+
+CREATE TABLE read_sections (
+  page TEXT NOT NULL,
+  section TEXT NOT NULL,
+  hash TEXT NOT NULL,
+  PRIMARY KEY (page, section)
+) STRICT;
+`
+
+// The read marks are new in version 4. Every page of an existing scratch pad counts as read then,
+// so that Nick doesn't see every page of an older scratch pad as new.
+function markEveryPageRead(pad: PadDb, pages: readonly PageMarkdown[]): void {
+  pages.forEach(({ page, markdown }) => pad.markPageRead(page, sectionTexts(markdown, page)))
+}
+
 export const padSchema: PadSchema = {
-  version: 2,
+  version: 4,
   firstTables: firstPadTables,
-  migrations: [{ version: 2, sql: improvementsTable }],
+  migrations: [
+    { version: 2, sql: improvementsTable },
+    { version: 3, sql: outboxTable },
+    { version: 4, sql: readMarksTables, fill: markEveryPageRead },
+  ],
+}
+
+export function padMigrationFillsAfter(
+  schema: PadSchema,
+  version: number,
+): NonNullable<PadMigration['fill']>[] {
+  return schema.migrations.flatMap((migration) =>
+    migration.version > version && migration.fill !== undefined ? [migration.fill] : [],
+  )
 }
 
 export function padMigrationsAfter(schema: PadSchema, version: number): string {

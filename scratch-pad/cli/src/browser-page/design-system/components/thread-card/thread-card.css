@@ -1,7 +1,24 @@
-.thread-card__resolve {
-  position: absolute;
-  top: var(--space-md);
-  right: var(--space-md);
+.thread-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xl);
+}
+
+.thread-card[data-full-size='true'] {
+  flex: 1;
+  gap: var(--space-6xl);
+  font-size: var(--fs-md);
+  line-height: var(--lh-md);
+}
+
+/* At full size, the reply box stays at the bottom of the view. */
+.thread-card[data-full-size='true'] > .thread-card__reply {
+  position: sticky;
+  bottom: var(--space-0);
+  margin-top: auto;
+  padding: var(--space-3xl) var(--space-0);
+  border-top: var(--hairline) solid var(--line);
+  background: var(--surface-raised);
 }
 
 .thread-card__changed {
@@ -25,54 +42,6 @@
   margin: var(--space-0);
   padding: var(--space-0);
   list-style: none;
-}
-
-.thread-card__message {
-  display: grid;
-  grid-template-columns: var(--avatar-size) minmax(0, 1fr);
-  column-gap: var(--space-lg);
-}
-
-.thread-card__avatar {
-  display: grid;
-  place-items: center;
-  width: var(--avatar-size);
-  height: var(--avatar-size);
-  border-radius: var(--r-round);
-  background: var(--avatar-nick-bg);
-  color: var(--avatar-nick-fg);
-  font-size: var(--fs-xs);
-  line-height: var(--lh-tight);
-  font-weight: var(--fw-strong);
-}
-
-.thread-card__avatar[data-author='agent'] {
-  background: var(--avatar-agent-bg);
-  color: var(--avatar-agent-fg);
-}
-
-.thread-card__meta {
-  display: flex;
-  align-items: center;
-  gap: var(--space-sm);
-  min-height: var(--avatar-size);
-  margin: var(--space-0);
-}
-
-.thread-card__author {
-  font-weight: var(--fw-medium);
-}
-
-.thread-card__time {
-  color: var(--text-2);
-  font-size: var(--fs-xs);
-  line-height: var(--lh-xs);
-}
-
-.thread-card__text {
-  margin: var(--space-2xs) var(--space-0) var(--space-0);
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
 }
 
 .thread-card__more {
@@ -108,4 +77,8 @@
   color: var(--warning-ink);
   font-size: var(--fs-sm);
   line-height: var(--lh-sm);
+}
+
+.thread-card[data-full-size='true'] > .thread-card__messages {
+  gap: var(--space-6xl);
 }

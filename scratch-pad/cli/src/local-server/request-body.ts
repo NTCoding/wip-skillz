@@ -1,5 +1,6 @@
 import { type Answer } from '../decisions/decision-answer'
 import { type ImprovementEdit } from '../improvements/improvements'
+import { type SectionHash } from '../read-marks/read-marks'
 import { ScratchPadError } from '../scratch-pad-error'
 import { threadTypes, type Anchor, type ThreadType } from '../threads/thread'
 
@@ -73,6 +74,14 @@ export class RequestBody {
     throw new InvalidRequestBodyError(`"${name}" must be a text`)
   }
 
+  list(name: string): readonly unknown[] {
+    const value = this.optional(name)
+    if (!Array.isArray(value)) {
+      throw new InvalidRequestBodyError(`"${name}" must be a list`)
+    }
+    return value
+  }
+
   optionalWholeNumber(name: string): number | undefined {
     const value = this.optional(name)
     if (value === undefined || (typeof value === 'number' && Number.isInteger(value))) {
@@ -144,4 +153,18 @@ function parsedJson(text: string): unknown {
   } catch {
     throw new InvalidRequestBodyError("it isn't JSON")
   }
+}
+
+function sectionHashFrom(value: unknown): SectionHash {
+  const section = jsonObjectFrom(value)
+  const id = section?.['id']
+  const hash = section?.['hash']
+  if (typeof id !== 'string' || typeof hash !== 'string') {
+    throw new InvalidRequestBodyError('each item of "sections" must have the texts "id" and "hash"')
+  }
+  return { id, hash }
+}
+
+export function sectionHashesFrom(body: RequestBody): SectionHash[] {
+  return body.list('sections').map(sectionHashFrom)
 }

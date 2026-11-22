@@ -45,6 +45,10 @@
     left: var(--space-0);
     z-index: auto;
     width: auto;
+  }
+
+  /* An item that is placed for the first time doesn't have a transition. margin-lane.tsx explains why. */
+  .margin-lane__item[data-placed] {
     transition: top 0.2s ease;
   }
 

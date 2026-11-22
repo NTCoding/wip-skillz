@@ -30,7 +30,10 @@ describe('a scratch pad of the build before the numbers', () => {
        VALUES ('c-1', 1, 'nick', 'Why March?', '${time}'),
               ('c-1', 2, 'agent', 'The shops asked for March.', '${time}');
        INSERT INTO decisions (id, page, line, question, choice, time)
-       VALUES ('d-1', 'pages/2026-plan.md', 5, 'Ship in March?', 'proposal', '${time}');`,
+       VALUES ('d-1', 'pages/2026-plan.md', 5, 'Ship in March?', 'proposal', '${time}');
+       INSERT INTO outbox (time, text, page, first_line, last_line, selected_text)
+       VALUES ('${time}', 'Is March too late?', 'pages/2026-plan.md', 3, 3, 'in March');
+       INSERT INTO outbox (time, text, thread_id) VALUES ('${time}', 'And April?', 'c-1');`,
     )
     return folder
   }
@@ -58,11 +61,15 @@ describe('a scratch pad of the build before the numbers', () => {
     )
   })
 
-  it('stores the id of the page for the thread and the decision once the scratch pad is opened', () => {
+  it('stores the id of the page for the thread, the decision and the queued comment once the scratch pad is opened', () => {
     const folder = olderPadWithPlanThread()
 
     expect(
-      folder.read((pad) => [pad.readThread('c-1').page, pad.readDecisionAnswer('d-1').page]),
-    ).toStrictEqual(['pages/plan.md', 'pages/plan.md'])
+      folder.read((pad) => [
+        pad.readThread('c-1').page,
+        pad.readDecisionAnswer('d-1').page,
+        ...pad.readOutbox().map((item) => (item.kind === 'comment' ? item.page : item.thread)),
+      ]),
+    ).toStrictEqual(['pages/plan.md', 'pages/plan.md', 'pages/plan.md', 'c-1'])
   })
 })

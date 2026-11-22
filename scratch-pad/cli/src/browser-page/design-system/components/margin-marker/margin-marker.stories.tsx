@@ -26,3 +26,7 @@ export const OpenComment: Story = { args: { open: true } }
 export const GrammarNote: Story = { args: { label: 'Grammar / tone g-1', kind: 'grammar' } }
 
 export const ImprovementNote: Story = { args: { label: 'Improvement i-1', kind: 'improvement' } }
+
+export const AnsweredDecision: Story = { args: { label: 'Decision d-1', kind: 'decision' } }
+
+export const ChangedSection: Story = { args: { label: 'Retry limit has changed', kind: 'changed' } }

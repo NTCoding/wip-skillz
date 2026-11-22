@@ -42,11 +42,27 @@ beforeEach(() => {
 })
 
 describe('ScratchPadApp on a page', () => {
+  it('goes back to the top of the index page when Nick clicks the title in the breadcrumb on a decision of the index page', async () => {
+    renderApp(`/${exportPad}/#d-1`)
+    await shownPage('Invoice export')
+    const breadcrumb = screen.getByRole('navigation', { name: 'Breadcrumb' })
+    vi.mocked(window.scrollTo).mockClear()
+
+    await userEvent.click(within(breadcrumb).getByRole('link', { name: 'Invoice export' }))
+
+    expect(`${window.location.pathname}${window.location.hash}`).toBe(`/${exportPad}/`)
+    expect(window.scrollTo).toHaveBeenCalledWith(0, 0)
+  })
+
   it('shows only the title of the scratch pad in the breadcrumb when the address is the scratch pad', async () => {
     renderApp(`/${exportPad}/`)
     await shownPage('Invoice export')
     const breadcrumb = screen.getByRole('navigation', { name: 'Breadcrumb' })
-    expect(within(breadcrumb).queryByRole('link')).toBeNull()
+    expect(
+      within(breadcrumb)
+        .getAllByRole('link')
+        .map((link) => link.getAttribute('aria-current')),
+    ).toStrictEqual(['page'])
     expect(breadcrumb.textContent).toBe('Invoice export')
     expect(
       screen.getByRole('link', { name: 'Progress tracker' }).getAttribute('aria-current'),
@@ -218,7 +234,8 @@ describe('ScratchPadApp with live changes', () => {
       ],
     })
     act(() => fake.sendChange({ kind: 'decision', id: 'd-1' }))
-    expect((await screen.findByText(/Nick's answer/)).textContent).toBe("Nick's answer: proposal")
+    expect(await screen.findAllByRole('button', { name: 'Decision d-1' })).toHaveLength(2)
+    expect(screen.queryByRole('button', { name: 'Proposal' })).toBeNull()
   })
 
   it('reads the tracker and the log again when they change', async () => {

@@ -1,6 +1,6 @@
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { FullSizeView } from './full-size-view'
 
 function renderView() {
@@ -55,6 +55,30 @@ describe('FullSizeView', () => {
     expect(document.activeElement).toBe(
       screen.getByRole('button', { name: 'Open the diagram at full size' }),
     )
+  })
+
+  it('prevents the default of the Escape that closes the dialog so that the card around the view stays open', async () => {
+    renderView()
+    await openView()
+    const notPrevented = fireEvent.keyDown(document, { key: 'Escape' })
+    expect([notPrevented, screen.queryByRole('dialog')]).toStrictEqual([false, null])
+  })
+
+  it('doesn’t pass the Escape that closes the dialog on to the field in the view or to the listeners on the document', async () => {
+    const onFieldKey = vi.fn<() => void>()
+    const onDocumentKey = vi.fn<() => void>()
+    render(
+      <FullSizeView label="comment">
+        <textarea aria-label="Write a reply…" onKeyDown={onFieldKey} />
+      </FullSizeView>,
+    )
+    document.addEventListener('keydown', onDocumentKey)
+    await userEvent.click(screen.getByRole('button', { name: 'Open the comment at full size' }))
+    await userEvent.click(screen.getByRole('textbox', { name: 'Write a reply…' }))
+    await userEvent.keyboard('{Escape}')
+    document.removeEventListener('keydown', onDocumentKey)
+    expect(screen.queryByRole('dialog')).toBeNull()
+    expect([onFieldKey.mock.calls.length, onDocumentKey.mock.calls.length]).toStrictEqual([0, 0])
   })
 
   it('closes the dialog when Nick presses the close button', async () => {

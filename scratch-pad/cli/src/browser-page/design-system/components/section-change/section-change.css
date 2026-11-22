@@ -1,0 +1,38 @@
+.section-change {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+/* The title only takes the width of its text, which leaves the top right corner to the tools of the card. */
+.section-change__title {
+  display: flex;
+  align-self: flex-start;
+  align-items: center;
+  gap: var(--space-sm);
+  margin: var(--space-0);
+  padding: var(--space-xs) var(--space-lg);
+  border-radius: var(--r-sm);
+  background: var(--thread-changed-bg);
+  color: var(--thread-changed-ink);
+  font-size: var(--fs-sm);
+  line-height: var(--lh-sm);
+  font-weight: var(--fw-medium);
+}
+
+.section-change__text,
+.section-change__problem {
+  margin: var(--space-0);
+  color: var(--text-2);
+  font-size: var(--fs-sm);
+  line-height: var(--lh-sm);
+}
+
+.section-change__problem {
+  color: var(--warning-ink);
+}
+
+.section-change__actions {
+  display: flex;
+  justify-content: flex-end;
+}

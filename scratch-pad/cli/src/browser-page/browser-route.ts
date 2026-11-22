@@ -4,6 +4,8 @@ import {
   decisionLogPath,
   improvementsHref,
   improvementsPath,
+  inboxOutboxHref,
+  inboxOutboxPath,
   indexFile,
   pageHref,
   progressTrackerHref,
@@ -28,6 +30,7 @@ export type BrowserRoute =
     }
   | { readonly kind: 'progress-tracker'; readonly pad: string }
   | { readonly kind: 'decision-log'; readonly pad: string }
+  | { readonly kind: 'inbox-outbox'; readonly pad: string }
   | { readonly kind: 'improvements'; readonly pad: string; readonly section: string | undefined }
 
 interface BrowserLocation {
@@ -49,6 +52,9 @@ function routeFrom(pad: string, file: string, section: string): BrowserRoute {
   }
   if (file === decisionLogPath) {
     return { kind: 'decision-log', pad }
+  }
+  if (file === inboxOutboxPath) {
+    return { kind: 'inbox-outbox', pad }
   }
   const sectionOrNone = section === '' ? undefined : section
   if (file === improvementsPath) {
@@ -72,6 +78,7 @@ export interface PadAddresses {
   readonly progressTrackerHref: string
   readonly decisionLogHref: string
   readonly improvementsHref: (section?: string) => string
+  readonly inboxOutboxHref: string
   readonly htmlBlockFrame: HtmlBlockFrameSource
 }
 
@@ -82,6 +89,7 @@ export function servedAddresses(pad: string): PadAddresses {
     progressTrackerHref: progressTrackerHref(pad),
     decisionLogHref: decisionLogHref(pad),
     improvementsHref: (section) => improvementsHref(pad, section),
+    inboxOutboxHref: inboxOutboxHref(pad),
     htmlBlockFrame: 'server',
   }
 }
@@ -95,6 +103,7 @@ export function exportedAddresses(pad: string): PadAddresses {
     progressTrackerHref: `#/${progressTrackerPath}`,
     decisionLogHref: `#/${decisionLogPath}`,
     improvementsHref: (section) => exportedHref(improvementsPath, section),
+    inboxOutboxHref: `#/${inboxOutboxPath}`,
     htmlBlockFrame: 'inline',
   }
 }

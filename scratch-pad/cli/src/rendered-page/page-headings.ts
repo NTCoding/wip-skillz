@@ -42,7 +42,7 @@ function headingTokens(tokens: readonly Token[]): HeadingToken[] {
   const { drafts } = withChildren(tokens).reduce(scanHeading, start)
   return drafts.reduce<HeadingToken[]>((found, draft) => {
     const headings = found.map(({ heading }) => heading)
-    const id = uniqueId(headingIdOf(draft.text) || 'section', headings)
+    const id = uniqueHeadingId(draft.text, headings)
     const heading = { level: draft.level, text: draft.text, id, line: draft.line }
     return [...found, { token: draft.token, heading }]
   }, [])
@@ -76,6 +76,10 @@ export function plainText(token: Token): string {
     return token.content
   }
   return token.type === 'softbreak' || token.type === 'hardbreak' ? ' ' : ''
+}
+
+export function uniqueHeadingId(text: string, headings: readonly Heading[]): string {
+  return uniqueId(headingIdOf(text) || 'section', headings)
 }
 
 function uniqueId(base: string, headings: readonly Heading[], number = 1): string {

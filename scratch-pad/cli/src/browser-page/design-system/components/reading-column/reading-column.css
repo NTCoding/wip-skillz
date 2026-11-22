@@ -129,8 +129,36 @@
   margin-top: var(--gap-intro);
 }
 
+/* Each block of a section that has changed since Nick read it has data-changed-section, which
+   draws a bar on its left. The bar of the next block also fills the gap above that block. */
+.reading-column__grid > .reading-column__text > [data-changed-section] {
+  position: relative;
+}
+
+.reading-column__grid > .reading-column__text > [data-changed-section]::before {
+  content: '';
+  position: absolute;
+  top: var(--space-0);
+  bottom: var(--space-0);
+  left: calc(var(--space-5xl) * -1);
+  width: var(--line-w-quote);
+  border-radius: var(--r-xs);
+  background: var(--changed-section-bar);
+}
+
+.reading-column__grid
+  > .reading-column__text
+  > [data-changed-section]
+  + [data-changed-section]::before {
+  top: calc(var(--gap-h3) * -1);
+}
+
 .reading-column__grid > .reading-column__text > .reading-column__end {
   margin-top: var(--gap-block);
+}
+
+.reading-column__end > * + * {
+  margin-top: var(--space-6xl);
 }
 
 .reading-column__end:empty {

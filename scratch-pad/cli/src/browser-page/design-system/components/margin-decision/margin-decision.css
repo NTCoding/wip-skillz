@@ -1,0 +1,140 @@
+.margin-decision {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.margin-decision__marker {
+  align-self: flex-start;
+}
+
+/* The width is the same as in margin-lane.css, where MarginLane shows the markers below 1040px. */
+@container reading-column (width < 1040px) {
+  .margin-decision__marker {
+    display: none;
+  }
+}
+
+.margin-decision__card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.margin-decision__head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  margin: var(--space-0);
+  padding-right: var(--space-9xl);
+  color: var(--decision-ink);
+  font-size: var(--fs-sm);
+  line-height: var(--lh-sm);
+  font-weight: var(--fw-strong);
+}
+
+.margin-decision__kind {
+  flex: 1;
+}
+
+.margin-decision__state {
+  padding: var(--space-2xs) var(--space-lg);
+  border-radius: var(--r-pill);
+  background: var(--accent-pale);
+  color: var(--decision-done-ink);
+  font-size: var(--fs-xs);
+  line-height: var(--lh-xs);
+}
+
+.margin-decision__question {
+  margin: var(--space-0);
+  font-size: var(--fs-md);
+  line-height: var(--lh-md);
+  font-weight: var(--fw-strong);
+}
+
+.margin-decision__fields {
+  margin: var(--space-0);
+}
+
+.margin-decision__fields dt {
+  margin-top: var(--space-md);
+  color: var(--text-2);
+  font-size: var(--fs-xs);
+  line-height: var(--lh-xs);
+}
+
+.margin-decision__fields dd {
+  margin: var(--space-0);
+}
+
+.margin-decision__answer {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  margin: var(--space-xs) var(--space-0) var(--space-0);
+  padding-top: var(--space-md);
+  border-top: var(--hairline) solid var(--line-soft);
+  color: var(--decision-done-ink);
+  font-weight: var(--fw-medium);
+}
+
+/* At full size, each field of the decision is shown in a box. */
+.margin-decision__card[data-full-size='true'] {
+  gap: var(--space-5xl);
+}
+
+.margin-decision__card[data-full-size='true'] .margin-decision__head {
+  padding-right: var(--space-0);
+}
+
+.margin-decision__card[data-full-size='true'] .margin-decision__question {
+  font-family: var(--font-heading);
+  font-size: var(--fs-h2);
+  line-height: var(--lh-h2);
+  letter-spacing: var(--ls-h2);
+}
+
+.margin-decision__context {
+  margin: var(--space-0);
+  color: var(--text-nav);
+  font-family: var(--font-body);
+  font-size: var(--fs-decision);
+  line-height: var(--lh-decision);
+}
+
+.margin-decision__card[data-full-size='true'] .margin-decision__fields {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5xl);
+}
+
+.margin-decision__card[data-full-size='true'] .margin-decision__fields > div {
+  padding: var(--space-4xl) var(--space-5xl);
+  border-radius: var(--r-md);
+  background: var(--surface-soft);
+  box-shadow: inset 0 0 0 var(--hairline) var(--line-soft);
+}
+
+.margin-decision__card[data-full-size='true'] .margin-decision__fields dt {
+  margin: var(--space-0) var(--space-0) var(--space-xs);
+  font-size: var(--fs-sm);
+  line-height: var(--lh-sm);
+  font-weight: var(--fw-medium);
+}
+
+.margin-decision__card[data-full-size='true'] .margin-decision__fields dd {
+  font-family: var(--font-body);
+  font-size: var(--fs-decision);
+  line-height: var(--lh-decision);
+}
+
+.margin-decision__card[data-full-size='true'] .margin-decision__answer {
+  margin: var(--space-0);
+  padding: var(--space-xl) var(--space-5xl);
+  border-top: 0;
+  border-radius: var(--r-md);
+  background: var(--accent-pale);
+  font-size: var(--fs-md);
+  line-height: var(--lh-md);
+}

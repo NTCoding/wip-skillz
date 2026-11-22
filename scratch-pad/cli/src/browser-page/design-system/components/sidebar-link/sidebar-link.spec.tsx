@@ -100,4 +100,27 @@ describe('SidebarLink', () => {
     await userEvent.click(screen.getByRole('link', { name: 'Invoice template' }))
     expect(onNavigate).toHaveBeenCalledWith('/pad/invoice-template.md')
   })
+
+  it.each([
+    ['new', 'New'],
+    ['changed', 'Changed'],
+  ] as const)('shows a dot with the label %s when the page has that mark', (mark, label) => {
+    render(
+      <ul>
+        <SidebarLink
+          href="/pad/invoice-template.md"
+          title="Invoice template"
+          current={false}
+          mark={mark}
+          onNavigate={() => undefined}
+        />
+      </ul>,
+    )
+    expect(screen.getByRole('img', { name: label }).dataset['mark']).toBe(mark)
+  })
+
+  it("doesn't show a dot when the page doesn't have a mark", () => {
+    renderLink(false)
+    expect(screen.queryByRole('img')).toBeNull()
+  })
 })

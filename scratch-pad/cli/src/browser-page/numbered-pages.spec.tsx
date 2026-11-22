@@ -1,4 +1,5 @@
 import { act, render, screen, waitFor, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   exportPad,
@@ -58,19 +59,43 @@ describe('ScratchPadApp with numbered pages', () => {
     expect(screen.getByRole('article').lastElementChild?.firstElementChild).toBe(list)
   })
 
+  it('shows a collapsed full tree under the list of pages with the counts of what the tree shows', async () => {
+    renderApp(`/${exportPad}/`)
+    const list = await screen.findByRole('list', { name: 'Pages' })
+    const toggle = screen.getByRole('button', { name: /^Full tree/ })
+    expect(toggle.textContent).toBe('Full tree3 pages, 2 sub pages and 5 sections')
+    expect(list.nextElementSibling?.contains(toggle)).toBe(true)
+    expect(screen.queryByRole('list', { name: 'Full tree' })).toBeNull()
+  })
+
+  it('goes to the section of a page when Nick clicks the section in the full tree', async () => {
+    renderApp(`/${exportPad}/`)
+    await userEvent.click(await screen.findByRole('button', { name: /^Full tree/ }))
+    const tree = screen.getByRole('list', { name: 'Full tree' })
+    await userEvent.click(within(tree).getByRole('link', { name: 'Shops outside the EU' }))
+    await shownPage('Invoice template')
+    expect(window.location.pathname).toBe(`/${exportPad}/invoice-template.md`)
+    expect(window.location.hash).toBe('#shops-outside-the-eu')
+  })
+
   it('doesn’t show the list of pages when the index page is the only page', async () => {
     const fake = fakeConnection()
     vi.spyOn(fake.connection, 'pages').mockResolvedValue(pageSummaries.slice(0, 1))
     renderApp(`/${exportPad}/`, fake)
     await shownPage('Invoice export')
-    await screen.findByRole('link', { name: 'Invoice export', current: 'page' })
+    await within(screen.getByRole('navigation', { name: 'Breadcrumb' })).findByRole('link', {
+      name: 'Invoice export',
+      current: 'page',
+    })
     expect(screen.queryByRole('list', { name: 'Pages' })).toBeNull()
+    expect(screen.queryByRole('button', { name: /^Full tree/ })).toBeNull()
   })
 
   it('doesn’t show the list of pages on a page other than the index page', async () => {
     renderApp(`/${exportPad}/invoice-template.md`)
     await shownPage('Invoice template')
     expect(screen.queryByRole('list', { name: 'Pages' })).toBeNull()
+    expect(screen.queryByRole('button', { name: /^Full tree/ })).toBeNull()
   })
 
   it.each([

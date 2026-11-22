@@ -38,3 +38,16 @@
   padding: var(--space-0) var(--space-0) var(--space-0) var(--sidebar-indent);
   list-style: none;
 }
+
+.sidebar-link__mark {
+  flex: none;
+  width: var(--space-md);
+  height: var(--space-md);
+  border-radius: var(--r-round);
+  background: var(--accent);
+}
+
+.sidebar-link__mark[data-mark='changed'] {
+  background: var(--decision-accent);
+  box-shadow: var(--shadow-mark-changed);
+}

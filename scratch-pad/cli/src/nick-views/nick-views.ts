@@ -1,18 +1,36 @@
 import { type Answer } from '../decisions/decision-answer'
 import { type DecisionLogEntry } from '../decisions/decision-log'
 import { nickInbox } from '../nick-inbox/nick-inbox'
-import { isUnderNumber, parentNumberOf, type PageFile } from '../pages/page-files'
-import { findPage, pageTitle } from '../pages/page-markdown'
+import { type QueuedComment, type QueuedReply } from '../outbox/outbox'
+import { isUnderNumber, pageFileOf, parentNumberOf, type PageFile } from '../pages/page-files'
+import { existingPage, findPage, pageTitle } from '../pages/page-markdown'
 import { type PageSummary, type WaitingForNick } from '../pages/page-text'
 import { type ProgressTracker } from '../progress-tracker/progress-tracker'
+import {
+  pageReadState,
+  sectionTexts,
+  type SectionHash,
+  type SectionText,
+} from '../read-marks/read-marks'
 import { type DecisionBlock } from '../rendered-page/decision-block'
+import { shownHeadings } from '../rendered-page/index-page'
 import { pageDescription } from '../rendered-page/page-description'
 import { type Heading } from '../rendered-page/page-headings'
 import { type PageLink } from '../rendered-page/page-links'
-import { renderDetails, renderPage, type RenderedPage } from '../rendered-page/rendered-page'
+import {
+  pageHeadings,
+  renderDetails,
+  renderPage,
+  type RenderedPage,
+} from '../rendered-page/rendered-page'
 import { type ScratchPadFolder } from '../scratch-pad-folder/scratch-pad-folder'
 import { type Thread } from '../threads/thread'
-import { positionedThread, type PositionedThread } from '../threads/thread-position'
+import {
+  currentPosition,
+  positionedThread,
+  type PositionedThread,
+  type ThreadPosition,
+} from '../threads/thread-position'
 
 interface DecisionOnPage extends DecisionBlock {
   readonly answer: Answer | undefined
@@ -62,6 +80,26 @@ interface NickInboxItems {
   readonly decisions: readonly UnansweredDecision[]
 }
 
+type QueuedItemOnPage = (QueuedComment & { readonly position: ThreadPosition }) | QueuedReply
+
+interface Outbox {
+  readonly items: readonly QueuedItemOnPage[]
+}
+
+interface PageReadMark {
+  readonly page: string
+  readonly state: 'new' | 'read'
+  // The time that the page's file was last written
+  readonly changedTime: string
+  // The hash of each section's text, which the browser posts back when Nick marks the page as read
+  readonly sections: readonly SectionHash[]
+  readonly changedSections: readonly SectionText[]
+}
+
+interface ThreadOfPad extends PositionedThread {
+  readonly resolvedTime: string | undefined
+}
+
 export function pageSummaries(folder: ScratchPadFolder): PageSummary[] {
   const openThreads = folder
     .read((pad) => pad.readThreads())
@@ -82,6 +120,7 @@ export function pageSummaries(folder: ScratchPadFolder): PageSummary[] {
       parent: parentOf(file, files),
       title: pageTitle(lines),
       description: pageDescription(lines.join('\n')),
+      headings: shownHeadings(file.page, pageHeadings(lines.join('\n'))),
       openThreads: openThreads.filter((thread) => thread.page === file.page).length,
       waitingForNick: waitingOn([file.page]),
       waitingForNickWithSubPages: waitingOn([file, ...pagesUnder].map((each) => each.page)),
@@ -119,8 +158,10 @@ export function viewPage(folder: ScratchPadFolder, requested: string): ViewedPag
   }
 }
 
+// The agent can delete a page that still has threads. The threads of a deleted page are returned
+// too, because Nick can still reply to them in the browser and edit the replies in his outbox.
 export function threadsOfPage(folder: ScratchPadFolder, requested: string): PositionedThread[] {
-  const page = findPage(folder.pages(), requested, folder.name)
+  const page = existingPage(folder.pages(), requested) ?? pageFileOf(`pages/${requested}`).page
   return withPositions(
     folder,
     folder.read((pad) => pad.readThreads()).filter((thread) => thread.page === page),
@@ -150,6 +191,55 @@ export function nickInboxItems(folder: ScratchPadFolder): NickInboxItems {
         ),
       ),
   }
+}
+
+export function outboxOf(folder: ScratchPadFolder): Outbox {
+  return {
+    items: folder
+      .read((pad) => pad.readOutbox())
+      .map((item) =>
+        item.kind === 'reply'
+          ? item
+          : {
+              ...item,
+              position: currentPosition(item.anchor, folder.readPageLines(item.page).join('\n')),
+            },
+      ),
+  }
+}
+
+// Every page is listed, including a sub page that the sidebar doesn't show. The hash of each
+// section is the hash of the text that the browser shows, which the browser posts back when Nick
+// marks the page or the section as read.
+export function readMarksOf(folder: ScratchPadFolder): { readonly pages: PageReadMark[] } {
+  const marks = folder.read((pad) => pad.readReadMarks())
+  return {
+    pages: folder.pages().map((page) => {
+      const sections = sectionTexts(folder.readPageLines(page).join('\n'), page)
+      const state = pageReadState(page, sections, marks)
+      return {
+        page,
+        state: state.kind,
+        changedTime: folder.pageChangedTime(page),
+        sections: sections.map((section) => ({ id: section.id, hash: section.hash })),
+        changedSections: state.kind === 'new' ? [] : state.changedSections,
+      }
+    }),
+  }
+}
+
+// Every thread of the scratch pad, with the time that Nick last resolved it
+export function threadsOfPad(folder: ScratchPadFolder): ThreadOfPad[] {
+  const { threads, events } = folder.read((pad) => ({
+    threads: pad.readThreads(),
+    events: pad.readEvents(),
+  }))
+  return withPositions(folder, threads).map((thread) => ({
+    ...thread,
+    resolvedTime: events.findLast(
+      (event) => event.kind === 'thread-resolved' && event.item === thread.id,
+    )?.time,
+  }))
 }
 
 export function progressTrackerOf(folder: ScratchPadFolder): ProgressTracker {

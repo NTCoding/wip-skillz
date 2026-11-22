@@ -105,6 +105,31 @@ describe('layOutMarginLane', () => {
     expect(lane.style.getPropertyValue('--margin-lane-height')).toBe('2436px')
   })
 
+  it('computes the layout once, with the first top of every new item, before it turns on the transition of the new items', () => {
+    const scope = document.createElement('div')
+    const lane = laneWith(scope)
+    placeAt(scope.querySelector('[data-lines="5-5"]') ?? scope, 260)
+    const item = lane.querySelector<HTMLElement>('[data-key="i-1"]') ?? lane
+    const computed: { readonly top: string; readonly placed: boolean }[] = []
+    vi.spyOn(lane, 'getBoundingClientRect').mockImplementation(() => {
+      computed.push({
+        top: item.style.getPropertyValue('--margin-item-top'),
+        placed: item.hasAttribute('data-placed'),
+      })
+      return DOMRect.fromRect({ y: 100 })
+    })
+    layOutMarginLane(lane, scope)
+    layOutMarginLane(lane, scope)
+    expect([computed, item.hasAttribute('data-placed')]).toStrictEqual([
+      [
+        { top: '', placed: false },
+        { top: '148px', placed: false },
+        { top: '148px', placed: true },
+      ],
+      true,
+    ])
+  })
+
   it('makes the lane 0 pixels tall when the lane doesn’t have any items', () => {
     const lane = document.createElement('aside')
     layOutMarginLane(lane, document.createElement('div'))
@@ -224,5 +249,57 @@ describe('MarginLane', () => {
     )
     fireEvent.pointerDown(document.body)
     expect(onClosePopup).not.toHaveBeenCalled()
+  })
+
+  it('lays the items out again when a card changes its height without a new render of the lane', () => {
+    const observers: ResizeObserverInThisTest[] = []
+    class ResizeObserverInThisTest {
+      readonly observed: Element[] = []
+
+      constructor(readonly resized: () => void) {
+        observers.push(this)
+      }
+
+      observe(element: Element): void {
+        this.observed.push(element)
+      }
+
+      disconnect(): void {
+        this.observed.length = 0
+      }
+    }
+    vi.stubGlobal('ResizeObserver', ResizeObserverInThisTest)
+    const card = (key: string, anchorLines: string) => ({
+      key,
+      anchorLines,
+      content: <p>Is 5 retries enough?</p>,
+      marker: undefined,
+      popup: false,
+    })
+    render(
+      <div data-margin-scope>
+        <p data-lines="3-3">The export job retries 5 times.</p>
+        <p data-lines="5-5">The job writes one file per shop.</p>
+        <MarginLane label="Comments and notes" items={[card('c-1', '3-3'), card('c-2', '5-5')]} />
+      </div>,
+    )
+    const lane = screen.getByRole('complementary', { name: 'Comments and notes' })
+    const [first, second] = [...lane.children]
+    placeAt(lane, 100)
+    placeAt(document.querySelector('[data-lines="3-3"]') ?? lane, 200)
+    placeAt(document.querySelector('[data-lines="5-5"]') ?? lane, 220)
+    placeAt(first ?? lane, 0, 80)
+    placeAt(second ?? lane, 0, 50)
+    const observer = observers.at(-1)
+    observer?.resized()
+    const grown = topsOf(lane)
+    placeAt(first ?? lane, 0, 30)
+    observer?.resized()
+
+    expect(observer?.observed).toStrictEqual(expect.arrayContaining([first, second]))
+    expect([grown, topsOf(lane)]).toStrictEqual([
+      ['88px', '180px'],
+      ['88px', '130px'],
+    ])
   })
 })

@@ -40,6 +40,24 @@ describe('pageCheckProblems', () => {
     ])
   })
 
+  it("reports the link when a link inside an agent note points to a page that doesn't exist", () => {
+    expect(
+      problemsOfInvoicePage([
+        'Intro',
+        '',
+        ':::agent-note',
+        'I skipped [the queue](queue.md).',
+        ':::',
+      ]),
+    ).toStrictEqual([
+      {
+        page: 'pages/invoice-template.md',
+        line: 4,
+        text: "the link points to pages/queue.md, which doesn't exist",
+      },
+    ])
+  })
+
   it("reports the link when the link points to a heading id that isn't on the target page", () => {
     expect(problemsOfInvoicePage(['[limit](export-job.md#retry-limits)'])).toStrictEqual([
       {
