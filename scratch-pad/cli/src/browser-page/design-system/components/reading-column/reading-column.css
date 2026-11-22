@@ -133,6 +133,10 @@
   margin-top: var(--gap-block);
 }
 
+.reading-column__end > * + * {
+  margin-top: var(--space-6xl);
+}
+
 .reading-column__end:empty {
   display: none;
 }

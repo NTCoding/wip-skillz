@@ -48,4 +48,33 @@ describe('ThreadDraft', () => {
       screen.getByRole('region', { name: 'New comment' }).querySelector('blockquote'),
     ).toBeNull()
   })
+  it('adds the comment to the outbox rather than sending it when Nick presses Add to outbox', async () => {
+    const onSend = vi.fn<(text: string) => Promise<void>>(() => Promise.resolve())
+    const onAddToOutbox = vi.fn<(text: string) => Promise<void>>(() => Promise.resolve())
+    render(
+      <ThreadDraft
+        kind="comment"
+        selectedText="retries 5 times"
+        onSend={onSend}
+        onAddToOutbox={onAddToOutbox}
+        onCancel={() => undefined}
+      />,
+    )
+    await userEvent.keyboard('Is 5 enough?')
+    await userEvent.click(screen.getByRole('button', { name: 'Add to outbox' }))
+    expect(onAddToOutbox).toHaveBeenCalledWith('Is 5 enough?')
+    expect(onSend).not.toHaveBeenCalled()
+  })
+
+  it('doesn’t show Add to outbox when the draft can’t be added to the outbox', () => {
+    render(
+      <ThreadDraft
+        kind="grammar"
+        selectedText="5"
+        onSend={() => Promise.resolve()}
+        onCancel={() => undefined}
+      />,
+    )
+    expect(screen.queryByRole('button', { name: 'Add to outbox' })).toBeNull()
+  })
 })

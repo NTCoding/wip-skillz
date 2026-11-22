@@ -1,8 +1,9 @@
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import { Button } from '../button/button'
 import { Icon, type IconName } from '../icon/icon'
 import { IconButton } from '../icon-button/icon-button'
 import { MarginCard } from '../margin-card/margin-card'
+import { Message } from '../message/message'
 import { MessageBox, problemOf } from '../message-box/message-box'
 import { ThreadKind, threadKindLabels, type ThreadKindName } from '../thread-kind/thread-kind'
 import './thread-card.css'
@@ -26,10 +27,11 @@ interface ThreadCardProps {
   readonly active: boolean
   readonly onActivate: () => void
   readonly onReply?: ((text: string) => Promise<void>) | undefined
+  readonly onAddToOutbox?: ((text: string) => Promise<void>) | undefined
   readonly onResolve?: (() => Promise<void>) | undefined
+  // The replies of this thread that wait in the outbox, which are shown below the state
+  readonly outbox?: ReactNode
 }
-
-const authorNames = { nick: 'Nick', agent: 'Agent' } as const
 
 const states: Readonly<Record<ThreadState, { readonly icon: IconName; readonly text: string }>> = {
   'waits-for-agent': { icon: 'sent', text: 'Sent to the agent' },
@@ -41,19 +43,8 @@ function MessageList({ messages }: { readonly messages: readonly ThreadMessage[]
   return (
     <ol className="thread-card__messages">
       {messages.map((message, index) => (
-        <li className="thread-card__message" key={index}>
-          <span className="thread-card__avatar" data-author={message.author} aria-hidden="true">
-            {authorNames[message.author].slice(0, 1)}
-          </span>
-          <div className="thread-card__body">
-            <p className="thread-card__meta">
-              <span className="thread-card__author">{authorNames[message.author]}</span>
-              <time className="thread-card__time" dateTime={message.time}>
-                {message.shownTime}
-              </time>
-            </p>
-            <p className="thread-card__text">{message.text}</p>
-          </div>
+        <li key={index}>
+          <Message {...message} />
         </li>
       ))}
     </ol>
@@ -81,8 +72,30 @@ function ResolvedMessages({ messages }: { readonly messages: readonly ThreadMess
   )
 }
 
+interface ReplyBoxProps {
+  readonly resolved: boolean
+  readonly onReply: (text: string) => Promise<void>
+  readonly onAddToOutbox: ((text: string) => Promise<void>) | undefined
+}
+
+function ReplyBox({ resolved, onReply, onAddToOutbox }: ReplyBoxProps) {
+  return (
+    <MessageBox
+      label={resolved ? 'Reply to reopen…' : 'Write a reply…'}
+      submitLabel={resolved ? 'Reopen' : 'Reply'}
+      onSubmit={onReply}
+      secondSubmit={
+        onAddToOutbox === undefined
+          ? undefined
+          : { label: 'Add to outbox', onSubmit: onAddToOutbox }
+      }
+    />
+  )
+}
+
 export function ThreadCard(props: ThreadCardProps) {
-  const { id, kind, messages, state, outcome, textChanged, onReply, onResolve } = props
+  const { id, kind, messages, state, outcome, textChanged, onReply, onAddToOutbox, onResolve } =
+    props
   const [problem, setProblem] = useState<string | undefined>(undefined)
   const resolved = state === 'resolved'
   const resolveWith = (resolveThread: () => Promise<void>): void => {
@@ -115,17 +128,14 @@ export function ThreadCard(props: ThreadCardProps) {
         {states[state].text}
       </p>
       {outcome !== undefined && <p className="thread-card__outcome">Done: {outcome}</p>}
+      {props.outbox}
       {problem !== undefined && (
         <p className="thread-card__problem" role="alert">
           {problem}
         </p>
       )}
       {onReply !== undefined && (
-        <MessageBox
-          label={resolved ? 'Reply to reopen…' : 'Write a reply…'}
-          submitLabel={resolved ? 'Reopen' : 'Reply'}
-          onSubmit={onReply}
-        />
+        <ReplyBox resolved={resolved} onReply={onReply} onAddToOutbox={onAddToOutbox} />
       )}
     </MarginCard>
   )

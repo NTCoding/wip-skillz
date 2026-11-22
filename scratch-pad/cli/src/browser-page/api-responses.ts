@@ -7,19 +7,21 @@ const optionalText = z
 
 const waitingForNick = z.object({ decisions: z.number(), replies: z.number() })
 
+const heading = z.object({ level: z.number(), text: z.string(), id: z.string() })
+
 const pageSummary = z.object({
   page: z.string(),
   file: z.string(),
+  number: optionalText,
   parent: optionalText,
   title: optionalText,
   description: optionalText,
+  headings: z.array(heading),
   openThreads: z.number(),
   waitingForNickWithSubPages: waitingForNick,
 })
 
 export const pagesResponse = z.object({ pages: z.array(pageSummary) })
-
-const heading = z.object({ level: z.number(), text: z.string(), id: z.string() })
 
 const pageLink = z.discriminatedUnion('kind', [
   z.object({
@@ -133,6 +135,27 @@ export const threadsResponse = z.object({ threads: z.array(thread) })
 
 export const threadResponse = z.object({ thread })
 
+const queuedItem = z.discriminatedUnion('kind', [
+  z.object({
+    kind: z.literal('comment'),
+    number: z.number(),
+    page: z.string(),
+    anchor,
+    text: z.string(),
+    time: z.string(),
+    position,
+  }),
+  z.object({
+    kind: z.literal('reply'),
+    number: z.number(),
+    thread: z.string(),
+    text: z.string(),
+    time: z.string(),
+  }),
+])
+
+export const outboxResponse = z.object({ items: z.array(queuedItem) })
+
 const openDecision = z.object({
   page: z.string(),
   id: z.string(),
@@ -170,6 +193,7 @@ export const padChange = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('decision'), id: z.string() }),
   z.object({ kind: z.literal('decision-log') }),
   z.object({ kind: z.literal('improvements') }),
+  z.object({ kind: z.literal('outbox') }),
   z.object({ kind: z.literal('progress-tracker') }),
 ])
 
@@ -183,3 +207,6 @@ export type Answer = z.infer<typeof answer>
 export type ThreadType = z.infer<typeof threadType>
 export type Thread = z.infer<typeof thread>
 export type NickInbox = z.infer<typeof nickInboxResponse>
+export type Outbox = z.infer<typeof outboxResponse>
+export type QueuedItem = z.infer<typeof queuedItem>
+export type QueuedComment = Extract<QueuedItem, { kind: 'comment' }>

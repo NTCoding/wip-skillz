@@ -1,0 +1,25 @@
+.agent-note {
+  margin: var(--space-0);
+  padding: var(--space-xl) var(--space-5xl) var(--space-3xl) var(--space-6xl);
+  border-radius: var(--r-md);
+  background: var(--accent-pale);
+  box-shadow: inset var(--line-w-quote) 0 0 var(--accent);
+  color: var(--text);
+}
+
+.agent-note__label {
+  margin: var(--space-0) var(--space-0) var(--space-xs);
+  color: var(--accent-strong);
+  font-family: var(--font-ui);
+  font-size: var(--fs-xs);
+  line-height: var(--lh-xs);
+  font-weight: var(--fw-strong);
+}
+
+.agent-note__body > * {
+  margin: var(--space-0);
+}
+
+.agent-note__body > * + * {
+  margin-top: var(--space-xl);
+}

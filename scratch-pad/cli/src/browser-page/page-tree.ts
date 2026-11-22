@@ -1,9 +1,13 @@
 import { type PageSummary } from './api-responses'
 import { fileOfPage, type PadAddresses } from './browser-route'
-import { type PageListEntry } from './design-system/design-system'
+import { type FullTreeNode, type PageListEntry } from './design-system/design-system'
 import { indexFile } from './pad-paths'
 
 // The API returns the pages in the order to show them. Each function returns them in the same order.
+
+const fullTreeDepth = 3
+
+type Heading = PageSummary['headings'][number]
 
 export function topLevelPages(pages: readonly PageSummary[]): PageSummary[] {
   return pages.filter((summary) => summary.parent === undefined)
@@ -53,4 +57,62 @@ export function pageOfFileName(pages: readonly PageSummary[], file: string): str
     return undefined
   }
   return pages.find((summary) => fileOfPage(summary.file) === file)?.page
+}
+
+// The full tree shows the pages, the sub pages and the sections of the pages, 3 levels deep. The sections are the
+// headings of level 2 and 3. A section of level 3 is shown under the section of level 2 above it. Under each page,
+// the sections are shown first and the sub pages after them. A node on the third level never has any children so a
+// page that is nested deeper than the third level isn't shown in the full tree.
+export function fullTreeNodes(
+  addresses: PadAddresses,
+  pages: readonly PageSummary[],
+): FullTreeNode[] {
+  const pageNode = (summary: PageSummary, level: number): FullTreeNode => {
+    const file = fileOfPage(summary.page)
+    const title = summary.title ?? file
+    const children =
+      level === fullTreeDepth
+        ? []
+        : [
+            ...sectionNodes(summary.headings, level + 1, (id) => addresses.pageHref(file, id)),
+            ...subPagesOf(pages, summary.page).map((subPage) => pageNode(subPage, level + 1)),
+          ]
+    return {
+      kind: 'page',
+      title: summary.number === undefined ? title : `${summary.number} ${title}`,
+      href: addresses.pageHref(file),
+      children,
+    }
+  }
+  return topLevelPages(pages)
+    .filter((summary) => summary.page !== `pages/${indexFile}`)
+    .map((summary) => pageNode(summary, 1))
+}
+
+// A section of level 3 that comes before every section of level 2 is shown on the same level as the sections of
+// level 2.
+function sectionNodes(
+  headings: readonly Heading[],
+  level: number,
+  hrefOf: (id: string) => string,
+): FullTreeNode[] {
+  const node = (heading: Heading, children: readonly FullTreeNode[]): FullTreeNode => ({
+    kind: 'section',
+    title: heading.text,
+    href: hrefOf(heading.id),
+    children,
+  })
+  const sections = headings.filter((heading) => heading.level === 2 || heading.level === 3)
+  return sections.flatMap((heading, index) => {
+    const previous = sections.slice(0, index)
+    if (heading.level === 3) {
+      return previous.some((each) => each.level === 2) ? [] : [node(heading, [])]
+    }
+    const after = sections.slice(index + 1)
+    const nextSection = after.findIndex((each) => each.level === 2)
+    const below = nextSection === -1 ? after : after.slice(0, nextSection)
+    return [
+      node(heading, level === fullTreeDepth ? [] : below.map((subsection) => node(subsection, []))),
+    ]
+  })
 }

@@ -111,6 +111,8 @@ Follow these rules on every page:
 
 The pages of a scratch pad tell a story that Nick reads in order. You decide that order with a number at the start of each file name, like `pages/1-how-the-job-runs.md`. The number of a sub page is the number of its parent page with a dot and one more number. So `pages/1.1-retry-limit.md` is a sub page of page 1 and `pages/1.1.1-wait-between-retries.md` is a sub page of page 1.1. Every file is in the `pages` folder however deep its page is. `index.md` is the only page that doesn't have a number.
 
+Put a new page under the page whose topic it belongs to, rather than at the end of the top level. The sidebar and the breadcrumb show the topics of the scratch pad through the levels of the pages so a flat list of pages hides which pages are related. For example, a page that looks again at the options after Nick has changed a requirement is a sub page of the page about the requirements, like 2.1-without-paying.md under 2-what-the-factory-has-to-do.md. Only start a new top level page for a new topic.
+
 You can give a page a new number at any time. However, the rest of the file name has to stay the same for as long as the page exists, because every link to the page and every comment on the page uses that name. The number isn't part of the page's address in the browser. For example, the address of `pages/1.1-retry-limit.md` ends with `retry-limit.md`. A new number for the page doesn't change that address.
 
 ### Ask Nick to decide something
@@ -130,6 +132,16 @@ pick: proposal, because the network of a shop can be slow.
 ```
 
 If you reword the question, keep the same id. Give a new decision the next free id.
+
+### Emphasise a key point
+
+Use the `:::agent-note` block to emphasise a key point that Nick should be aware of. A key point in the middle of a paragraph is easy to miss, whereas the block shows the point in its own box with an "Agent note" label. For example:
+
+```markdown
+:::agent-note
+This proposal hasn't been verified against the latest version of the library.
+:::
+```
 
 ### Draw something that Markdown can't show
 

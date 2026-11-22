@@ -1,4 +1,5 @@
 import { type Meta, type StoryObj } from '@storybook/react-vite'
+import { OutboxMessage } from '../outbox-message/outbox-message'
 import { ThreadCard, type ThreadMessage } from './thread-card'
 
 const question: ThreadMessage = {
@@ -69,4 +70,23 @@ export const ReadOnly: Story = {
 
 export const ResolvedWithReplies: Story = {
   args: { messages: [question, answer], state: 'resolved', textChanged: true },
+}
+
+export const ReplyInTheOutbox: Story = {
+  args: {
+    messages: [question, answer],
+    state: 'waits-for-nick',
+    onAddToOutbox: () => Promise.resolve(),
+    outbox: (
+      <OutboxMessage
+        label="Reply"
+        text="Can a shop ask for 8 retries instead?"
+        time="2026-11-20T21:15:00.000Z"
+        shownTime="20 Nov, 21:15"
+        onEdit={() => Promise.resolve()}
+        onRemove={() => Promise.resolve()}
+        onEditingChange={() => undefined}
+      />
+    ),
+  },
 }

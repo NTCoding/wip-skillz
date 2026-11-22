@@ -1,7 +1,8 @@
 import { type Token } from 'markdown-it'
 import { posix } from 'node:path'
+import { isAgentNote } from './agent-note-block'
 import { withChildren } from './page-headings'
-import { pageMarkdownParser } from './page-markdown-parser'
+import { blockBodyParser, pageMarkdownParser } from './page-markdown-parser'
 
 export type PageLink =
   | {
@@ -21,21 +22,35 @@ interface LinkScan {
 const schemePattern = /^[a-z][a-z\d+.-]*:/i
 
 export function linksOf(tokens: readonly Token[], page: string): PageLink[] {
-  const start: LinkScan = { line: 1, links: [] }
-  return [...withChildren(tokens).reduce((scan, token) => scanLink(scan, token, page), start).links]
+  return linksAfterLine(tokens, page, 0)
 }
 
-function scanLink(scan: LinkScan, token: Token, page: string): LinkScan {
-  const line = lineOf(scan, token)
+// The body of an :::agent-note block is parsed on its own, so the lines of its tokens start
+// again from 0. linesBefore is the number of the page's lines that come before those tokens.
+function linksAfterLine(tokens: readonly Token[], page: string, linesBefore: number): PageLink[] {
+  const start: LinkScan = { line: linesBefore + 1, links: [] }
+  const scan = withChildren(tokens).reduce(
+    (current, token) => scanLink(current, token, page, linesBefore),
+    start,
+  )
+  return [...scan.links]
+}
+
+function scanLink(scan: LinkScan, token: Token, page: string, linesBefore: number): LinkScan {
+  const line = lineOf(scan, token, linesBefore)
+  if (isAgentNote(token)) {
+    const body = blockBodyParser.parse(token.content, {})
+    return { line, links: [...scan.links, ...linksAfterLine(body, page, line)] }
+  }
   const href = token.attrGet('href')
   return href === null
     ? { line, links: scan.links }
     : { line, links: [...scan.links, pageLink(href, line, page)] }
 }
 
-function lineOf(scan: LinkScan, token: Token): number {
+function lineOf(scan: LinkScan, token: Token, linesBefore: number): number {
   if (token.map !== null) {
-    return token.map[0] + 1
+    return linesBefore + token.map[0] + 1
   }
   return token.type === 'softbreak' || token.type === 'hardbreak' ? scan.line + 1 : scan.line
 }

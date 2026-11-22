@@ -1,6 +1,6 @@
-import { useEffect, useId, useRef, useState, type FocusEvent, type KeyboardEvent } from 'react'
+import { useEffect, useId, useRef, useState, type KeyboardEvent } from 'react'
 import { navigationClick, type Navigate } from '../../navigation-click'
-import { Icon } from '../icon/icon'
+import { TopBarPanel, type TopBarPanelControls } from '../top-bar-panel/top-bar-panel'
 import './inbox.css'
 
 export interface InboxEntry {
@@ -48,34 +48,26 @@ function InboxItem({ entry }: { readonly entry: InboxEntry }) {
   )
 }
 
-export function Inbox({ entries, onNavigate }: InboxProps) {
+interface InboxMenuProps extends InboxProps {
+  readonly controls: TopBarPanelControls
+}
+
+// The menu is only mounted while the panel is open, so the first item is focused each time the
+// panel opens.
+function InboxMenu({ entries, onNavigate, controls }: InboxMenuProps) {
   const id = useId()
-  const [open, setOpen] = useState(false)
   const [current, setCurrent] = useState(0)
-  const root = useRef<HTMLDivElement>(null)
-  const button = useRef<HTMLButtonElement>(null)
   const links = useRef<(HTMLAnchorElement | null)[]>([])
   useEffect(() => {
-    if (open) {
-      links.current[0]?.focus()
-    }
-  }, [open])
-  const close = (): void => {
-    setOpen(false)
-    button.current?.focus()
-  }
+    links.current[0]?.focus()
+  }, [])
   const focusItem = (index: number): void => {
     setCurrent(index)
     links.current[index]?.focus()
   }
   const move = (event: KeyboardEvent<HTMLUListElement>): void => {
-    if (event.key === 'Escape') {
-      close()
-      return
-    }
     if (event.key === 'Tab') {
-      setOpen(false)
-      button.current?.focus()
+      controls.closeAndFocusButton()
       return
     }
     const last = entries.length - 1
@@ -92,73 +84,57 @@ export function Inbox({ entries, onNavigate }: InboxProps) {
     event.preventDefault()
     focusItem(target)
   }
-  const closeWhenFocusLeaves = (event: FocusEvent<HTMLDivElement>): void => {
-    if (!root.current?.contains(event.relatedTarget)) {
-      setOpen(false)
-    }
-  }
   return (
-    <div ref={root} className="inbox" onBlur={closeWhenFocusLeaves}>
-      <button
-        ref={button}
-        type="button"
-        className="inbox__button"
-        aria-haspopup="menu"
-        aria-expanded={open}
-        aria-controls={open ? `${id}-menu` : undefined}
-        aria-label={`Inbox: ${countText(entries.length)}`}
-        onClick={() => {
-          setCurrent(0)
-          setOpen(!open)
-        }}
-        onKeyDown={(event) => {
-          if (event.key === 'Escape') {
-            setOpen(false)
-          }
-        }}
-      >
-        <Icon name="inbox" />
-        Inbox
-        {entries.length > 0 && <span className="inbox__count">{entries.length}</span>}
-      </button>
-      {open && (
-        <div className="inbox__panel">
-          <p className="inbox__title" id={`${id}-title`}>
-            Waiting for you
-          </p>
-          {entries.length === 0 ? (
-            <p className="inbox__empty">Nothing waits for you.</p>
-          ) : (
-            <ul
-              className="inbox__list"
-              id={`${id}-menu`}
-              role="menu"
-              aria-labelledby={`${id}-title`}
-              onKeyDown={move}
-            >
-              {entries.map((entry, index) => (
-                <li key={entry.key} role="none">
-                  <a
-                    ref={(link) => {
-                      links.current[index] = link
-                    }}
-                    className="inbox__item"
-                    role="menuitem"
-                    tabIndex={index === current ? 0 : -1}
-                    href={entry.href}
-                    onClick={(event) => {
-                      setOpen(false)
-                      navigationClick(entry.href, onNavigate)(event)
-                    }}
-                  >
-                    <InboxItem entry={entry} />
-                  </a>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
+    <div className="inbox">
+      <p className="inbox__title" id={`${id}-title`}>
+        Waiting for you
+      </p>
+      {entries.length === 0 ? (
+        <p className="inbox__empty">Nothing waits for you.</p>
+      ) : (
+        <ul
+          className="inbox__list"
+          id={controls.popupId}
+          role="menu"
+          aria-labelledby={`${id}-title`}
+          onKeyDown={move}
+        >
+          {entries.map((entry, index) => (
+            <li key={entry.key} role="none">
+              <a
+                ref={(link) => {
+                  links.current[index] = link
+                }}
+                className="inbox__item"
+                role="menuitem"
+                tabIndex={index === current ? 0 : -1}
+                href={entry.href}
+                onClick={(event) => {
+                  controls.close()
+                  navigationClick(entry.href, onNavigate)(event)
+                }}
+              >
+                <InboxItem entry={entry} />
+              </a>
+            </li>
+          ))}
+        </ul>
       )}
     </div>
+  )
+}
+
+export function Inbox(props: InboxProps) {
+  return (
+    <TopBarPanel
+      icon="inbox"
+      label="Inbox"
+      countText={countText(props.entries.length)}
+      count={props.entries.length}
+      tone="inbox"
+      popup={props.entries.length === 0 ? undefined : 'menu'}
+    >
+      {(controls) => <InboxMenu {...props} controls={controls} />}
+    </TopBarPanel>
   )
 }

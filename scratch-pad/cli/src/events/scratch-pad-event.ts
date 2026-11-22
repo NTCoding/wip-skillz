@@ -12,12 +12,23 @@ export const eventKinds = [
   'improvement-logged',
   'improvement-edited',
   'improvement-deleted',
+  'item-queued',
+  'queued-item-edited',
+  'queued-item-removed',
+  'outbox-sent',
   'goal-set',
   'task-added',
   'task-started',
   'task-done',
 ] as const
 export type EventKind = (typeof eventKinds)[number]
+
+// The agent never sees an item in the outbox, so these events don't count as Nick being busy.
+export const outboxEventKinds: readonly EventKind[] = [
+  'item-queued',
+  'queued-item-edited',
+  'queued-item-removed',
+]
 
 export interface ScratchPadEvent {
   readonly number: number

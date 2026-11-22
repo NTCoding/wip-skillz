@@ -211,6 +211,8 @@
   --inbox-count-fg: #fff;
   --inbox-quote-line: #9fd19e;
   --inbox-decision-line: #ffc017;
+  --outbox-count-bg: #242424;
+  --outbox-count-fg: #fff;
 
   /* Buttons */
   --button-primary-bg: #1a8917;
@@ -255,6 +257,7 @@
   --decision-label-max-w: 10em;
   --quote-indent: 23px;
   --mark-size: 26px;
+  --tree-chevron-size: 26px;
   --control-h: 32px;
   --sidebar-item-h: 34px;
   --sidebar-indent: 8px;
@@ -268,7 +271,8 @@
   --marker-min-w: 30px;
   --avatar-size: 26px;
   --inbox-w: 380px;
-  --inbox-count-size: 18px;
+  --top-bar-count-size: 18px;
+  --outbox-w: 300px;
   --field-min-h: 34px;
   --field-max-h: 160px;
   --field-details-min-h: 120px;

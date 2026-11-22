@@ -239,14 +239,14 @@ Import the theme's CSS file in `design-system.ts` and then set `data-theme` on `
 
 The comments feature is made of these files:
 
-| File                    | What it does                                                                                                                                                                         |
-| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `selected-block.ts`     | Turns Nick's selection into the selected text and the lines of its block. It also adds the text before and after the selection.                                                      |
-| `visible-text.ts`       | Builds a block's text in the same way as the server does. It puts a space between table cells and between list items. It leaves out a code block's bar and the text of every button. |
-| `thread-anchors.ts`     | Shows each card beside the block where the server found the thread's text. If the thread is detached, the card will be shown near the thread's old lines.                            |
-| `text-highlights.tsx`   | Finds the selected text in a block and splits the text nodes into `Highlight` components                                                                                             |
-| `page-with-threads.tsx` | Shows the page with its cards in the margin. It also shows the draft of a new thread and the selection tools.                                                                        |
-| `missing-page-view.tsx` | Shows the threads that are waiting for Nick on a page that the agent has deleted. Nick can still reply to those threads or resolve them there.                                       |
+| File                    | What it does                                                                                                                                                                                                                             |
+| ----------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `selected-block.ts`     | Turns Nick's selection into the selected text and the lines of its block. It also adds the text before and after the selection.                                                                                                          |
+| `visible-text.ts`       | Builds a block's text in the same way as the server does. It puts a space between table cells and between list items. It leaves out a code block's bar and the text of every button.                                                     |
+| `thread-anchors.ts`     | Shows each card beside the block where the server found the thread's text. If the thread is detached, the card will be shown near the thread's old lines.                                                                                |
+| `text-highlights.tsx`   | Finds the selected text in a block and splits the text nodes into `Highlight` components                                                                                                                                                 |
+| `page-with-threads.tsx` | Shows the page with its cards in the margin. It also shows the draft of a new thread and the selection tools.                                                                                                                            |
+| `missing-page-view.tsx` | Shows the threads that are waiting for Nick on a page that the agent has deleted. Nick can still reply to those threads or resolve them there. It also shows the items in the outbox for that page, which Nick can edit or remove there. |
 
 The server builds a block's text from the Markdown in the same way as `visible-text.ts` does in the browser. The server's code for this is in `src/rendered-page/page-blocks.ts`. `visible-text.ts` and `page-blocks.ts` are both tested against `visible-text-fixtures.ts`. If you change how one of them builds the text, a test will fail until the other one builds the same text again.
 

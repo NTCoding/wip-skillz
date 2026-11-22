@@ -150,20 +150,29 @@ export function messagesSinceAgentReply(thread: Thread): readonly Message[] {
 }
 
 function checkAnchor(type: ThreadType, anchor: Anchor | undefined): void {
+  if (anchor !== undefined || type !== 'improvement') {
+    requiredAnchor(type, anchor)
+  }
+}
+
+// Returns the anchor of a comment or a grammar note, which always needs one.
+export function requiredAnchor(type: ThreadType, anchor: Anchor | undefined): Anchor {
   if (anchor === undefined) {
-    if (type === 'improvement') {
-      return
-    }
     throw new MissingAnchorError(type)
   }
   if (anchor.firstLine < 1 || anchor.lastLine < anchor.firstLine) {
     throw new InvalidAnchorError(anchor)
   }
+  return anchor
 }
 
-function message(author: Author, text: string, time: string): Message {
+export function checkMessageText(text: string): string {
   if (text.trim() === '') {
     throw new EmptyMessageError()
   }
-  return { author, text, time }
+  return text
+}
+
+function message(author: Author, text: string, time: string): Message {
+  return { author, text: checkMessageText(text), time }
 }

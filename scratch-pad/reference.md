@@ -219,6 +219,16 @@ Use these tokens rather than raw values so that the block looks like the rest of
 
 The frame sets the text's font and colour from the same tokens.
 
+### The agent-note block
+
+An `:::agent-note` block contains a point that Nick needs to be aware of before he trusts the rest of the page. The block can contain any Markdown, including several paragraphs. The page shows the block under an "Agent note" label so that Nick can tell the agent's note apart from the page's own messages.
+
+```markdown
+:::agent-note
+I haven't read the full code. I've only looked at the commit history.
+:::
+```
+
 ## The export
 
 The export is one HTML file that a reader can open from the disk without the server. `export` writes the browser page's bundle, the design system's CSS and the scratch pad's data into that file.

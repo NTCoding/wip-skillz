@@ -56,6 +56,13 @@ describe('Inbox', () => {
     expect(button.getAttribute('aria-expanded')).toBe('true')
   })
 
+  it('points the button at the menu of the items', async () => {
+    const { button } = renderInbox([decision])
+    await userEvent.click(button)
+    expect(button.getAttribute('aria-haspopup')).toBe('menu')
+    expect(button.getAttribute('aria-controls')).toBe(screen.getByRole('menu').id)
+  })
+
   it('goes to the item and closes the list when Nick chooses an item', async () => {
     const { button, onNavigate } = renderInbox([decision, reply])
     await userEvent.click(button)
@@ -111,6 +118,10 @@ describe('Inbox', () => {
     await userEvent.click(button)
     expect(screen.getByText('Nothing waits for you.').tagName).toBe('P')
     expect(button.textContent).toBe('Inbox')
+    expect(button.getAttribute('aria-haspopup')).toBeNull()
+    expect(button.getAttribute('aria-controls')).toBe(
+      screen.getByRole('group', { name: 'Inbox' }).id,
+    )
   })
 
   it('closes the list when Nick presses the button again or Escape on the button', async () => {

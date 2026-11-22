@@ -6,11 +6,13 @@ export type PadChange =
   | { readonly kind: 'decision'; readonly id: string }
   | { readonly kind: 'decision-log' }
   | { readonly kind: 'improvements' }
+  | { readonly kind: 'outbox' }
   | { readonly kind: 'progress-tracker' }
 
 export type PageVersions = ReadonlyMap<string, string>
 
 const progressTrackerChange: readonly PadChange[] = [{ kind: 'progress-tracker' }]
+const outboxChange: readonly PadChange[] = [{ kind: 'outbox' }]
 
 function threadChange(item: string | undefined): readonly PadChange[] {
   return item === undefined ? [] : [{ kind: 'thread', id: item }]
@@ -35,6 +37,10 @@ const changesOfKind: Readonly<
   'improvement-logged': () => [{ kind: 'improvements' }],
   'improvement-edited': () => [{ kind: 'improvements' }],
   'improvement-deleted': () => [{ kind: 'improvements' }],
+  'item-queued': () => outboxChange,
+  'queued-item-edited': () => outboxChange,
+  'queued-item-removed': () => outboxChange,
+  'outbox-sent': () => outboxChange,
   'goal-set': () => progressTrackerChange,
   'task-added': () => progressTrackerChange,
   'task-started': () => progressTrackerChange,

@@ -5,6 +5,10 @@ const blockFence = ':::'
 
 export const pageMarkdownParser = pageParser()
 
+// The body of a named block can't contain another named block, because the first ::: line
+// closes the block. So a ::: line in the body is rendered as text rather than lost.
+export const blockBodyParser = pageParser().disable(namedBlockType)
+
 function pageParser(): MarkdownIt {
   const parser = new MarkdownIt({ html: false })
   parser.block.ruler.before('fence', namedBlockType, namedBlockRule, {

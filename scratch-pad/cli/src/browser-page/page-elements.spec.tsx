@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen } from '@testing-library/react'
+import { act, fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import { type ViewedPage } from './api-responses'
@@ -213,6 +213,28 @@ describe('pageElements', () => {
       [`/${exportPad}/my%20queue.md`],
       [`/${exportPad}/caf%C3%A9.md#menu`],
     ])
+  })
+
+  it('opens the target page when Nick clicks a link to another page inside an agent note', async () => {
+    const onNavigate = vi.fn<(href: string) => void>()
+    const page = {
+      ...withHtml(
+        '<div class="agent-note" data-lines="1-3">\n<p>I haven’t read <a href="export-job.md#retry-limit">the export job</a>.</p>\n</div>',
+      ),
+      links: [
+        {
+          kind: 'page' as const,
+          href: 'export-job.md#retry-limit',
+          page: 'pages/export-job.md',
+          headingId: 'retry-limit',
+        },
+      ],
+    }
+    renderPage(page, { onNavigate })
+    const note = screen.getByRole('figure')
+    expect(note.textContent).toContain('Agent note')
+    await userEvent.click(within(note).getByRole('link', { name: 'the export job' }))
+    expect(onNavigate).toHaveBeenCalledWith(`/${exportPad}/export-job.md#retry-limit`)
   })
 
   it('shows the text of a link without the link when the link runs a script or isn’t a web address', () => {

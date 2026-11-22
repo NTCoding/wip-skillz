@@ -1,18 +1,29 @@
 import { type Answer } from '../decisions/decision-answer'
 import { type DecisionLogEntry } from '../decisions/decision-log'
 import { nickInbox } from '../nick-inbox/nick-inbox'
-import { isUnderNumber, parentNumberOf, type PageFile } from '../pages/page-files'
-import { findPage, pageTitle } from '../pages/page-markdown'
+import { type QueuedComment, type QueuedReply } from '../outbox/outbox'
+import { isUnderNumber, pageFileOf, parentNumberOf, type PageFile } from '../pages/page-files'
+import { existingPage, findPage, pageTitle } from '../pages/page-markdown'
 import { type PageSummary, type WaitingForNick } from '../pages/page-text'
 import { type ProgressTracker } from '../progress-tracker/progress-tracker'
 import { type DecisionBlock } from '../rendered-page/decision-block'
 import { pageDescription } from '../rendered-page/page-description'
 import { type Heading } from '../rendered-page/page-headings'
 import { type PageLink } from '../rendered-page/page-links'
-import { renderDetails, renderPage, type RenderedPage } from '../rendered-page/rendered-page'
+import {
+  pageHeadings,
+  renderDetails,
+  renderPage,
+  type RenderedPage,
+} from '../rendered-page/rendered-page'
 import { type ScratchPadFolder } from '../scratch-pad-folder/scratch-pad-folder'
 import { type Thread } from '../threads/thread'
-import { positionedThread, type PositionedThread } from '../threads/thread-position'
+import {
+  currentPosition,
+  positionedThread,
+  type PositionedThread,
+  type ThreadPosition,
+} from '../threads/thread-position'
 
 interface DecisionOnPage extends DecisionBlock {
   readonly answer: Answer | undefined
@@ -62,6 +73,12 @@ interface NickInboxItems {
   readonly decisions: readonly UnansweredDecision[]
 }
 
+type QueuedItemOnPage = (QueuedComment & { readonly position: ThreadPosition }) | QueuedReply
+
+interface Outbox {
+  readonly items: readonly QueuedItemOnPage[]
+}
+
 export function pageSummaries(folder: ScratchPadFolder): PageSummary[] {
   const openThreads = folder
     .read((pad) => pad.readThreads())
@@ -82,6 +99,7 @@ export function pageSummaries(folder: ScratchPadFolder): PageSummary[] {
       parent: parentOf(file, files),
       title: pageTitle(lines),
       description: pageDescription(lines.join('\n')),
+      headings: pageHeadings(lines.join('\n')),
       openThreads: openThreads.filter((thread) => thread.page === file.page).length,
       waitingForNick: waitingOn([file.page]),
       waitingForNickWithSubPages: waitingOn([file, ...pagesUnder].map((each) => each.page)),
@@ -119,8 +137,10 @@ export function viewPage(folder: ScratchPadFolder, requested: string): ViewedPag
   }
 }
 
+// The agent can delete a page that still has threads. The threads of a deleted page are returned
+// too, because Nick can still reply to them in the browser and edit the replies in his outbox.
 export function threadsOfPage(folder: ScratchPadFolder, requested: string): PositionedThread[] {
-  const page = findPage(folder.pages(), requested, folder.name)
+  const page = existingPage(folder.pages(), requested) ?? pageFileOf(`pages/${requested}`).page
   return withPositions(
     folder,
     folder.read((pad) => pad.readThreads()).filter((thread) => thread.page === page),
@@ -148,6 +168,21 @@ export function nickInboxItems(folder: ScratchPadFolder): NickInboxItems {
             ? [{ page, id: decision.id, line: decision.firstLine, question: decision.question }]
             : [],
         ),
+      ),
+  }
+}
+
+export function outboxOf(folder: ScratchPadFolder): Outbox {
+  return {
+    items: folder
+      .read((pad) => pad.readOutbox())
+      .map((item) =>
+        item.kind === 'reply'
+          ? item
+          : {
+              ...item,
+              position: currentPosition(item.anchor, folder.readPageLines(item.page).join('\n')),
+            },
       ),
   }
 }

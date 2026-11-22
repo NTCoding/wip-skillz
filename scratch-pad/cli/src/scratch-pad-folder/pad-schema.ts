@@ -13,6 +13,7 @@ export const padTables = [
   'events',
   'agent_inbox',
   'improvements',
+  'outbox',
 ] as const
 
 function oneOf(column: string, values: readonly string[]): string {
@@ -116,10 +117,36 @@ CREATE TABLE improvements (
 ) STRICT;
 `
 
+// A queued comment has a page and an anchor, whereas a queued reply has the id of its thread.
+// AUTOINCREMENT never gives a new item the number of a removed one, so a page that is out of date
+// never edits or removes another item.
+const outboxTable = `
+CREATE TABLE outbox (
+  number INTEGER PRIMARY KEY AUTOINCREMENT CHECK (number >= 1),
+  time TEXT NOT NULL,
+  text TEXT NOT NULL,
+  thread_id TEXT REFERENCES threads (id),
+  page TEXT,
+  first_line INTEGER CHECK (first_line >= 1),
+  last_line INTEGER CHECK (last_line >= first_line),
+  selected_text TEXT,
+  prefix TEXT,
+  suffix TEXT,
+  copies_on_page INTEGER CHECK (copies_on_page >= 0),
+  CHECK ((thread_id IS NULL) <> (page IS NULL)),
+  CHECK ((page IS NULL) = (first_line IS NULL)),
+  CHECK ((first_line IS NULL) = (last_line IS NULL)),
+  CHECK ((first_line IS NULL) = (selected_text IS NULL))
+) STRICT;
+`
+
 export const padSchema: PadSchema = {
-  version: 2,
+  version: 3,
   firstTables: firstPadTables,
-  migrations: [{ version: 2, sql: improvementsTable }],
+  migrations: [
+    { version: 2, sql: improvementsTable },
+    { version: 3, sql: outboxTable },
+  ],
 }
 
 export function padMigrationsAfter(schema: PadSchema, version: number): string {

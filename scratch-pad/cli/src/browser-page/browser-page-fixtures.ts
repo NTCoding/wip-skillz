@@ -4,7 +4,6 @@ import {
   type Improvements,
   type NickInbox,
   type PadChange,
-  type PageSummary,
   type ProgressTracker,
   type Thread,
   type ViewedPage,
@@ -12,11 +11,15 @@ import {
 import { BrowserPageError } from './browser-page-error'
 import { type NarrowWindow } from './sidebar-state'
 import { servedAddresses } from './browser-route'
+import { fakeOutbox } from './outbox-fixtures'
+import { pageSummaries } from './page-summary-fixtures'
 import {
   type ChangeListeners,
   type NewThread,
   type ScratchPadConnection,
 } from './scratch-pad-connection'
+
+export { pageSummaries } from './page-summary-fixtures'
 
 export const exportPad = '2026-11-20-invoice-export'
 
@@ -142,63 +145,6 @@ const firstRetryPage: ViewedPage = {
   decisions: [],
 }
 
-export const pageSummaries: PageSummary[] = [
-  {
-    page: 'pages/index.md',
-    file: 'pages/index.md',
-    parent: undefined,
-    title: 'Invoice export',
-    description: 'The export job writes the paid invoices of each shop to a CSV file.',
-    openThreads: 2,
-    waitingForNickWithSubPages: { decisions: 1, replies: 1 },
-  },
-  {
-    page: 'pages/invoice-template.md',
-    file: 'pages/1-invoice-template.md',
-    parent: undefined,
-    title: 'Invoice template',
-    description: 'Each invoice shows the tax number of the shop.',
-    openThreads: 0,
-    waitingForNickWithSubPages: { decisions: 0, replies: 0 },
-  },
-  {
-    page: 'pages/retry-limit.md',
-    file: 'pages/2-retry-limit.md',
-    parent: undefined,
-    title: undefined,
-    description: undefined,
-    openThreads: 1,
-    waitingForNickWithSubPages: { decisions: 1, replies: 2 },
-  },
-  {
-    page: 'pages/wait-between-retries.md',
-    file: 'pages/2.1-wait-between-retries.md',
-    parent: 'pages/retry-limit.md',
-    title: 'Wait between retries',
-    description: 'Each retry waits twice as long as the retry before it.',
-    openThreads: 0,
-    waitingForNickWithSubPages: { decisions: 1, replies: 1 },
-  },
-  {
-    page: 'pages/first-retry.md',
-    file: 'pages/2.1.1-first-retry.md',
-    parent: 'pages/wait-between-retries.md',
-    title: 'First retry',
-    description: 'The first retry waits 30 seconds.',
-    openThreads: 1,
-    waitingForNickWithSubPages: { decisions: 1, replies: 1 },
-  },
-  {
-    page: 'pages/shop-storage.md',
-    file: 'pages/shop-storage.md',
-    parent: undefined,
-    title: 'Shop storage',
-    description: 'Each shop has its own storage.',
-    openThreads: 2,
-    waitingForNickWithSubPages: { decisions: 0, replies: 2 },
-  },
-]
-
 export const progressTracker: ProgressTracker = {
   title: 'Invoice export',
   goal: 'Ship the invoice export job.',
@@ -312,6 +258,7 @@ export interface FakeConnection {
   readonly connection: ScratchPadConnection
   readonly pages: Map<string, ViewedPage>
   readonly threads: Map<string, Thread[]>
+  readonly outbox: ReturnType<typeof fakeOutbox>['items']
   readonly sendChange: (change: PadChange) => void
   readonly sendConnection: (connected: boolean) => void
   readonly closeChanges: () => void
@@ -367,6 +314,7 @@ export function fakeConnection(): FakeConnection {
     ['first-retry.md', firstRetryPage],
   ])
   const threads = new Map([['index.md', [retryQuestion, toneNote]]])
+  const outbox = fakeOutbox(retryQuestion)
   const listeners = new Set<ChangeListeners>()
   const closeChanges = vi.fn<() => void>()
   const connection: ScratchPadConnection = {
@@ -380,6 +328,7 @@ export function fakeConnection(): FakeConnection {
     threads: (file) => Promise.resolve(threads.get(file) ?? []),
     nickInbox: () => Promise.resolve(indexInbox),
     ...fakeActions,
+    ...outbox.actions,
     progressTracker: () => Promise.resolve(progressTracker),
     decisionLog: () => Promise.resolve(decisionLog),
     improvements: () => Promise.resolve(improvements),
@@ -395,6 +344,7 @@ export function fakeConnection(): FakeConnection {
     connection,
     pages,
     threads,
+    outbox: outbox.items,
     sendChange: (change) => listeners.forEach((listener) => listener.changed(change)),
     sendConnection: (connected) => listeners.forEach((listener) => listener.connection(connected)),
     closeChanges,

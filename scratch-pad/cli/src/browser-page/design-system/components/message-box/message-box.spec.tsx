@@ -85,6 +85,53 @@ describe('MessageBox', () => {
     expect(field).toHaveProperty('value', 'Thanks')
   })
 
+  it('sends the text with the second submit rather than the main one when Nick presses the second button', async () => {
+    const onSubmit = vi.fn(() => Promise.resolve())
+    const onQueue = vi.fn(() => Promise.resolve())
+    render(
+      <MessageBox
+        label="Write a comment…"
+        submitLabel="Send"
+        onSubmit={onSubmit}
+        secondSubmit={{ label: 'Add to outbox', onSubmit: onQueue }}
+      />,
+    )
+    const field = screen.getByRole('textbox', { name: 'Write a comment…' })
+    await userEvent.type(field, ' Is 5 retries enough? ')
+    await userEvent.click(screen.getByRole('button', { name: 'Add to outbox' }))
+    expect(onQueue).toHaveBeenCalledWith('Is 5 retries enough?')
+    expect(onSubmit).not.toHaveBeenCalled()
+    expect(field).toHaveProperty('value', '')
+  })
+
+  it('shows the second button disabled while the field of a box that can be cancelled is empty', () => {
+    render(
+      <MessageBox
+        label="Write a comment…"
+        submitLabel="Send"
+        onSubmit={() => Promise.resolve()}
+        secondSubmit={{ label: 'Add to outbox', onSubmit: () => Promise.resolve() }}
+        onCancel={() => undefined}
+      />,
+    )
+    expect(screen.getByRole('button', { name: 'Add to outbox' })).toHaveProperty('disabled', true)
+  })
+
+  it('starts with the initial text in the field and the cursor after it when it is given', () => {
+    render(
+      <MessageBox
+        label="Edit the comment"
+        submitLabel="Save"
+        onSubmit={() => Promise.resolve()}
+        initialText="Is 5 retries enough?"
+        focusOnMount
+      />,
+    )
+    const field = screen.getByRole('textbox', { name: 'Edit the comment' })
+    expect(field).toHaveProperty('value', 'Is 5 retries enough?')
+    expect(field).toHaveProperty('selectionStart', 20)
+  })
+
   it('describes a refusal without a message in its own words when the error isn’t an Error', () => {
     expect(problemOf('offline')).toBe('The server didn’t accept the message.')
   })

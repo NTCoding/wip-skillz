@@ -5,13 +5,19 @@ import {
   nickComments,
   nickDeletesImprovement,
   nickEditsImprovement,
+  nickEditsQueuedItem,
+  nickQueuesComment,
+  nickQueuesReply,
+  nickRemovesQueuedItem,
   nickReplies,
   nickResolves,
+  nickSendsOutbox,
 } from '../nick-actions/nick-actions'
 import {
   decisionLogOf,
   improvementsOf,
   nickInboxItems,
+  outboxOf,
   pageSummaries,
   progressTrackerOf,
   threadsOfPage,
@@ -180,6 +186,7 @@ const routes: readonly Route[] = [
   padRoute('GET', '/progress-tracker', (folder) => json(progressTrackerOf(folder))),
   padRoute('GET', '/decision-log', (folder) => json({ decisions: decisionLogOf(folder) })),
   padRoute('GET', '/improvements', (folder) => json(improvementsOf(folder))),
+  padRoute('GET', '/outbox', (folder) => json(outboxOf(folder))),
   padRoute('GET', '/changes', (folder) => ({ kind: 'changes', folder })),
   padRoute('POST', '/threads', (folder, request) =>
     json(threadBody(folder, nickComments(folder, commentRequestFrom(bodyOf(request)))), 201),
@@ -208,6 +215,26 @@ const routes: readonly Route[] = [
     nickDeletesImprovement(folder, Number(number))
     return json({ deleted: Number(number) })
   }),
+  padRoute('POST', '/outbox/comments', (folder, request) => {
+    nickQueuesComment(folder, commentRequestFrom(bodyOf(request)))
+    return json(outboxOf(folder), 201)
+  }),
+  padRoute('POST', '/outbox/replies', (folder, request) => {
+    const body = bodyOf(request)
+    nickQueuesReply(folder, body.text('thread'), body.messageText('message'))
+    return json(outboxOf(folder), 201)
+  }),
+  padRoute('POST', '/outbox/([0-9]+)', (folder, request, number) => {
+    nickEditsQueuedItem(folder, Number(number), bodyOf(request).messageText('message'))
+    return json(outboxOf(folder))
+  }),
+  padRoute('POST', '/outbox/([0-9]+)/delete', (folder, _request, number) => {
+    nickRemovesQueuedItem(folder, Number(number))
+    return json(outboxOf(folder))
+  }),
+  padRoute('POST', '/outbox/send', (folder) =>
+    json({ threads: withPositions(folder, nickSendsOutbox(folder)) }),
+  ),
   {
     method: 'GET',
     path: /^\/browser-page\/scratch-pad\.js$/,

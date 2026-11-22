@@ -128,6 +128,18 @@ describe('ScratchPadApp in an export', () => {
     expect(window.location.hash).toBe('#/invoice-template.md')
   })
 
+  it('shows the full tree under the list of pages and goes to a section of the tree in the hash', async () => {
+    renderExport()
+    await userEvent.click(await screen.findByRole('button', { name: /^Full tree/ }))
+    const tree = screen.getByRole('list', { name: 'Full tree' })
+    expect(within(tree).getByRole('link', { name: 'The logo' }).getAttribute('href')).toBe(
+      '#/invoice-template.md/the-logo',
+    )
+    await userEvent.click(within(tree).getByRole('link', { name: 'The logo' }))
+    await screen.findByRole('heading', { level: 1, name: 'Invoice template' })
+    expect(window.location.hash).toBe('#/invoice-template.md/the-logo')
+  })
+
   it('shows the parents of a sub page in the breadcrumb and the sidebar of the export', async () => {
     renderExport('#/first-retry.md')
     await screen.findByRole('heading', { level: 1, name: 'First retry' })

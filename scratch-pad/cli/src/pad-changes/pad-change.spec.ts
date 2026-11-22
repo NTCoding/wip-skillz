@@ -53,6 +53,17 @@ describe('changesOfEvents', () => {
     ).toStrictEqual([{ kind: 'improvements' }])
   })
 
+  it('returns one outbox change when Nick queues, edits, removes or sends items of the outbox', () => {
+    expect(
+      changesOfEvents([
+        event(1, 'item-queued'),
+        event(2, 'queued-item-edited'),
+        event(3, 'queued-item-removed'),
+        event(4, 'outbox-sent'),
+      ]),
+    ).toStrictEqual([{ kind: 'outbox' }])
+  })
+
   it('returns one progress tracker change when the goal and the tasks change', () => {
     expect(
       changesOfEvents([

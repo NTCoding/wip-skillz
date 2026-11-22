@@ -2,6 +2,7 @@ import { createElement, Fragment, type Key, type ReactNode } from 'react'
 import { type Answer, type ViewedPage } from './api-responses'
 import { fileOfPage, type PadAddresses } from './browser-route'
 import {
+  AgentNote,
   CodeBlock,
   DecisionAnswerForm,
   DecisionCard,
@@ -203,6 +204,9 @@ function nodeElement(node: ChildNode, key: Key, context: ConversionContext): Rea
   }
   if (node.classList.contains('decision')) {
     return decisionElement(node, key, context)
+  }
+  if (node.classList.contains('agent-note')) {
+    return wrapped(node, key, <AgentNote>{childrenOf(node, context)}</AgentNote>)
   }
   if (node.classList.contains('named-block-warning')) {
     return (

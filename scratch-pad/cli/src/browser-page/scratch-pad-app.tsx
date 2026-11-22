@@ -4,6 +4,7 @@ import {
   type DecisionLogEntry,
   type Improvements,
   type NickInbox,
+  type Outbox as LoadedOutbox,
   type PadChange,
   type PageSummary,
   type ProgressTracker,
@@ -15,9 +16,8 @@ import { fileOfPage, type BrowserRoute, type PadAddresses } from './browser-rout
 import { useCurrentSection } from './current-section'
 import {
   AppFrame,
-  Inbox,
+  FullTree,
   PageList,
-  StatusPill,
   TopBar,
   type ImprovementEdit,
   type Navigate,
@@ -28,17 +28,19 @@ import { MissingPageView } from './missing-page-view'
 import { nickInboxEntries } from './nick-inbox-entries'
 import { PadSidebar, sectionsOf } from './pad-sidebar'
 import { PageOutline } from './page-outline'
-import { pageListEntries, pageOfFileName, parentsOf } from './page-tree'
+import { fullTreeNodes, pageListEntries, pageOfFileName, parentsOf } from './page-tree'
 import { firstRevisions, pageRevisionOf, revisedAfterReconnect, revisedBy } from './pad-revisions'
 import { pagePreview } from './page-preview'
 import { type SavedSettings } from './saved-settings'
 import { PageWithThreads, type PageActions } from './page-with-threads'
+import { useOutboxEdits, type QueuedItemActions } from './queued-items'
 import {
   type NewThread,
   type ScratchPadReading,
   type ScratchPadWriting,
 } from './scratch-pad-connection'
 import { useSidebarState, type NarrowWindow } from './sidebar-state'
+import { TopBarActions } from './top-bar-actions'
 import { DecisionLogView, ImprovementsView, LoadingView, ProgressTrackerView } from './pad-views'
 
 interface ScratchPadAppProps {
@@ -51,6 +53,7 @@ interface ScratchPadAppProps {
 }
 
 const emptyNickInbox: NickInbox = { threads: [], decisions: [] }
+const emptyOutbox: LoadedOutbox = { items: [] }
 
 function loadedOr<T>(loaded: LoadedValue<T>, fallback: T): T {
   return loaded.status === 'loaded' ? loaded.value : fallback
@@ -107,6 +110,7 @@ interface RouteViewProps {
   readonly page: LoadedValue<ViewedPage>
   readonly pages: LoadedValue<PageSummary[]>
   readonly threads: readonly Thread[]
+  readonly outbox: LoadedOutbox
   readonly inboxThreads: readonly Thread[]
   readonly pageContext: PageContext
   readonly actions: PageActions | undefined
@@ -153,6 +157,8 @@ function RouteView(props: RouteViewProps) {
       <MissingPageView
         file={route.file}
         threads={props.inboxThreads.filter((thread) => thread.page === `pages/${route.file}`)}
+        pageThreads={threads}
+        outbox={props.outbox.items}
         actions={actions}
       />
     )
@@ -162,16 +168,24 @@ function RouteView(props: RouteViewProps) {
       key={page.value.page}
       page={page.value}
       threads={threads}
+      outbox={props.outbox.items}
       context={pageContext}
       actions={actions}
       address={{ section: route.section, navigations: props.navigations }}
       end={
         route.file === 'index.md' ? (
-          <PageList
-            label="Pages"
-            entries={pageListEntries(pageContext.addresses, loadedOr(props.pages, []))}
-            onNavigate={pageContext.onNavigate}
-          />
+          <>
+            <PageList
+              label="Pages"
+              entries={pageListEntries(pageContext.addresses, loadedOr(props.pages, []))}
+              onNavigate={pageContext.onNavigate}
+            />
+            <FullTree
+              label="Full tree"
+              nodes={fullTreeNodes(pageContext.addresses, loadedOr(props.pages, []))}
+              onNavigate={pageContext.onNavigate}
+            />
+          </>
         ) : undefined
       }
     />
@@ -183,6 +197,7 @@ function RouteView(props: RouteViewProps) {
 function usePageActions(
   writing: ScratchPadWriting | undefined,
   changed: (change: PadChange) => void,
+  editingQueuedItem: QueuedItemActions['editingQueuedItem'],
 ): PageActions | undefined {
   return useMemo(() => {
     if (writing === undefined) {
@@ -216,8 +231,30 @@ function usePageActions(
         await writing.deleteImprovement(number)
         changed({ kind: 'improvements' })
       },
+      queueComment: async (thread: NewThread) => {
+        await writing.queueComment(thread)
+        changed({ kind: 'outbox' })
+      },
+      queueReply: async (id: string, message: string) => {
+        await writing.queueReply(id, message)
+        changed({ kind: 'outbox' })
+      },
+      editQueuedItem: async (number: number, message: string) => {
+        await writing.editQueuedItem(number, message)
+        changed({ kind: 'outbox' })
+      },
+      removeQueuedItem: async (number: number) => {
+        await writing.removeQueuedItem(number)
+        changed({ kind: 'outbox' })
+      },
+      sendOutbox: async () => {
+        const sent = await writing.sendOutbox()
+        sent.forEach((thread) => changed({ kind: 'thread', id: thread.id }))
+        changed({ kind: 'outbox' })
+      },
+      editingQueuedItem,
     }
-  }, [writing, changed])
+  }, [writing, changed, editingQueuedItem])
 }
 
 function tabTitleOf(pageTitle: string | undefined, padTitle: string): string {
@@ -254,6 +291,7 @@ export function ScratchPadApp(props: ScratchPadAppProps) {
   const log = useLoadedValue(pad, revisions.decisionLog, connection.decisionLog)
   const improvements = useLoadedValue(pad, revisions.improvements, connection.improvements)
   const inbox = useLoadedValue(pad, revisions.nickInbox, connection.nickInbox)
+  const outbox = loadedOr(useLoadedValue(pad, revisions.outbox, connection.outbox), emptyOutbox)
   const page = useLoadedValue(file, pageRevisionOf(revisions, file), connection.page)
   const threads = useLoadedValue(file, revisions.threads, connection.threads)
   const viewedPage = route.kind === 'page' ? loadedOr(page, undefined) : undefined
@@ -281,7 +319,8 @@ export function ScratchPadApp(props: ScratchPadAppProps) {
       pagePreview(await connection.page(target), padTitle, section),
     [connection, padTitle],
   )
-  const actions = usePageActions(writing, changed)
+  const [outboxEditing, editingQueuedItem] = useOutboxEdits()
+  const actions = usePageActions(writing, changed, editingQueuedItem)
   const pageList = loadedOr(pages, [])
   const pageOfFile = route.kind === 'page' ? pageOfFileName(pageList, route.file) : undefined
   useEffect(() => {
@@ -304,14 +343,14 @@ export function ScratchPadApp(props: ScratchPadAppProps) {
           current={breadcrumb.current}
           onNavigate={navigate}
           actions={
-            <>
-              {serverStopped && (
-                <StatusPill>
-                  The server has stopped. The page will update when it’s back.
-                </StatusPill>
-              )}
-              {actions !== undefined && <Inbox entries={inboxEntries} onNavigate={navigate} />}
-            </>
+            <TopBarActions
+              serverStopped={serverStopped}
+              actions={actions}
+              inboxEntries={inboxEntries}
+              outboxCount={outbox.items.length}
+              outboxEditing={outboxEditing}
+              onNavigate={navigate}
+            />
           }
         />
       }
@@ -338,6 +377,7 @@ export function ScratchPadApp(props: ScratchPadAppProps) {
         page={page}
         pages={pages}
         threads={loadedOr(threads, [])}
+        outbox={outbox}
         inboxThreads={loadedOr(inbox, emptyNickInbox).threads}
         pageContext={{ addresses, onNavigate: navigate, loadPreview }}
         actions={actions}

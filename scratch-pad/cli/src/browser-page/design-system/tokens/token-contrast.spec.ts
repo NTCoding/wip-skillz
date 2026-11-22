@@ -111,6 +111,8 @@ const pairs = (
     { text: '--state-doing', background: '--tint' },
     { text: '--state-todo', background: '--tint' },
     { text: '--state-done', background: '--accent-pale' },
+    { text: '--text', background: '--accent-pale' },
+    { text: '--accent-strong', background: '--accent-pale' },
     { text: '--text', background: '--code-inline-bg' },
     { text: '--text', background: '--highlight-comment' },
     { text: '--text', background: '--highlight-comment-active' },
@@ -128,6 +130,7 @@ const pairs = (
     { text: '--button-primary-fg', background: '--button-primary-bg' },
     { text: '--button-primary-fg', background: '--button-primary-hover' },
     { text: '--inbox-count-fg', background: '--inbox-count-bg' },
+    { text: '--outbox-count-fg', background: '--outbox-count-bg' },
     ...[
       '--code-fg',
       '--code-comment',

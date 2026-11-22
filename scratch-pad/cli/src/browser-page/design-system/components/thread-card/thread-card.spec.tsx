@@ -150,4 +150,43 @@ describe('ThreadCard', () => {
     expect(within(card).queryByRole('textbox')).toBeNull()
     expect(within(card).queryByRole('button', { name: 'Resolve c-1' })).toBeNull()
   })
+  it('adds Nick’s reply to the outbox rather than sending it when Nick presses Add to outbox', async () => {
+    const onReply = vi.fn<(text: string) => Promise<void>>(() => Promise.resolve())
+    const onAddToOutbox = vi.fn<(text: string) => Promise<void>>(() => Promise.resolve())
+    render(
+      <ThreadCard
+        id="c-1"
+        kind="comment"
+        messages={[question, answer]}
+        state="waits-for-nick"
+        outcome={undefined}
+        textChanged={false}
+        active={false}
+        onActivate={() => undefined}
+        onReply={onReply}
+        onAddToOutbox={onAddToOutbox}
+      />,
+    )
+    await userEvent.type(screen.getByRole('textbox', { name: 'Write a reply…' }), 'Why 8?')
+    await userEvent.click(screen.getByRole('button', { name: 'Add to outbox' }))
+    expect(onAddToOutbox).toHaveBeenCalledWith('Why 8?')
+    expect(onReply).not.toHaveBeenCalled()
+  })
+
+  it('shows the replies in the outbox after the state of the thread', () => {
+    render(
+      <ThreadCard
+        id="c-1"
+        kind="comment"
+        messages={[question]}
+        state="waits-for-agent"
+        outcome={undefined}
+        textChanged={false}
+        active={false}
+        onActivate={() => undefined}
+        outbox={<p>Why 8?</p>}
+      />,
+    )
+    expect(screen.getByRole('region').textContent).toContain('Sent to the agentWhy 8?')
+  })
 })

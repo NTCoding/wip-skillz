@@ -187,6 +187,7 @@ export class ScratchPadFolder {
       this.storedPageIds(db).forEach(({ stored, page }) => {
         db.prepare('UPDATE threads SET page = ? WHERE page = ?').run(page, stored)
         db.prepare('UPDATE decisions SET page = ? WHERE page = ?').run(page, stored)
+        db.prepare('UPDATE outbox SET page = ? WHERE page = ?').run(page, stored)
       }),
     )
     db.exec('COMMIT')
@@ -197,7 +198,8 @@ export class ScratchPadFolder {
       db,
       this.name,
       'threads',
-      'SELECT page FROM threads UNION SELECT page FROM decisions',
+      `SELECT page FROM threads UNION SELECT page FROM decisions
+       UNION SELECT page FROM outbox WHERE page IS NOT NULL`,
     ).map((row) => row.text('page'))
     return storedPageIds(stored, this.pageFiles())
   }

@@ -91,4 +91,31 @@ describe('the links of a rendered page', () => {
 
     expect(page.links.map((link) => link.line)).toStrictEqual([3, 4, 5, 9])
   })
+
+  it('returns each link inside an agent note with its line on the page when the page has a note', () => {
+    const page = renderedInvoicePage([
+      'Intro',
+      '',
+      ':::agent-note',
+      "I haven't read [the export job](export-job.md#retry-limit).",
+      '',
+      'See [the queue](queue.md).',
+      ':::',
+      '',
+      'Then [the tax](#tax).',
+    ])
+
+    expect(page.links.map((link) => [link.href, link.line])).toStrictEqual([
+      ['export-job.md#retry-limit', 4],
+      ['queue.md', 6],
+      ['#tax', 9],
+    ])
+    expect(page.links[0]).toStrictEqual({
+      kind: 'page',
+      line: 4,
+      href: 'export-job.md#retry-limit',
+      page: 'pages/export-job.md',
+      headingId: 'retry-limit',
+    })
+  })
 })

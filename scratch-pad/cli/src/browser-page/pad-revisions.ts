@@ -9,6 +9,7 @@ interface PadRevisions {
   readonly progressTracker: number
   readonly decisionLog: number
   readonly improvements: number
+  readonly outbox: number
 }
 
 export const firstRevisions: PadRevisions = {
@@ -20,6 +21,7 @@ export const firstRevisions: PadRevisions = {
   progressTracker: 0,
   decisionLog: 0,
   improvements: 0,
+  outbox: 0,
 }
 
 export function revisedBy(revisions: PadRevisions, change: PadChange): PadRevisions {
@@ -31,6 +33,7 @@ export function revisedBy(revisions: PadRevisions, change: PadChange): PadRevisi
         page: { ...revisions.page, [change.page]: (revisions.page[change.page] ?? 0) + 1 },
         threads: revisions.threads + 1,
         nickInbox: revisions.nickInbox + 1,
+        outbox: revisions.outbox + 1,
       }
     case 'thread':
       return {
@@ -53,6 +56,8 @@ export function revisedBy(revisions: PadRevisions, change: PadChange): PadRevisi
       return { ...revisions, decisionLog: revisions.decisionLog + 1 }
     case 'improvements':
       return { ...revisions, improvements: revisions.improvements + 1 }
+    case 'outbox':
+      return { ...revisions, outbox: revisions.outbox + 1 }
   }
 }
 
@@ -66,6 +71,7 @@ export function revisedAfterReconnect(revisions: PadRevisions): PadRevisions {
     progressTracker: revisions.progressTracker + 1,
     decisionLog: revisions.decisionLog + 1,
     improvements: revisions.improvements + 1,
+    outbox: revisions.outbox + 1,
   }
 }
 

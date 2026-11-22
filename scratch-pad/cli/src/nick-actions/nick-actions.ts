@@ -12,9 +12,17 @@ import {
   type ImprovementEdit,
 } from '../improvements/improvements'
 import { nextItemId } from '../items/item-id'
+import {
+  editQueuedItem,
+  findQueuedItem,
+  queueComment,
+  queueReply,
+  type QueuedItem,
+} from '../outbox/outbox'
 import { findPage } from '../pages/page-markdown'
 import { pageBlocksOf } from '../rendered-page/page-blocks'
 import { ScratchPadError } from '../scratch-pad-error'
+import { type PadDb } from '../scratch-pad-folder/pad-db'
 import { type ScratchPadFolder } from '../scratch-pad-folder/scratch-pad-folder'
 import { copiesOnPage } from '../threads/thread-position'
 import {
@@ -74,26 +82,30 @@ export function nickComments(folder: ScratchPadFolder, comment: NickComment): Th
   const time = new Date().toISOString()
   const page = findPage(folder.pages(), comment.page, folder.name)
   const anchor = checkedAnchor(comment.anchor, page, folder.readPageLines(page).join('\n'))
-  return folder.change((pad) => {
-    const id = nextItemId(
-      comment.type,
-      pad.readThreads().map((thread) => thread.id),
-    )
-    const thread = openThread({ ...comment, anchor, id, page, time })
-    pad.writeThread(thread)
-    pad.appendEvent({ time, kind: 'thread-opened', by: 'nick', item: id })
-    return thread
-  })
+  return folder.change((pad) => writeNickComment(pad, { ...comment, anchor, page }, time))
 }
 
 export function nickReplies(folder: ScratchPadFolder, id: string, text: string): Thread {
   const time = new Date().toISOString()
-  return folder.change((pad) => {
-    const thread = addNickMessage(pad.readThread(id), text, time)
-    pad.writeThread(thread)
-    pad.appendEvent({ time, kind: 'thread-replied', by: 'nick', item: id })
-    return thread
-  })
+  return folder.change((pad) => writeNickReply(pad, id, text, time))
+}
+
+function writeNickComment(pad: PadDb, comment: NickComment, time: string): Thread {
+  const id = nextItemId(
+    comment.type,
+    pad.readThreads().map((thread) => thread.id),
+  )
+  const thread = openThread({ ...comment, id, time })
+  pad.writeThread(thread)
+  pad.appendEvent({ time, kind: 'thread-opened', by: 'nick', item: id })
+  return thread
+}
+
+function writeNickReply(pad: PadDb, id: string, text: string, time: string): Thread {
+  const thread = addNickMessage(pad.readThread(id), text, time)
+  pad.writeThread(thread)
+  pad.appendEvent({ time, kind: 'thread-replied', by: 'nick', item: id })
+  return thread
 }
 
 export function nickResolves(folder: ScratchPadFolder, id: string): Thread {
@@ -148,4 +160,74 @@ export function nickDeletesImprovement(folder: ScratchPadFolder, number: number)
     pad.deleteImprovement(findImprovement(pad.readImprovements(), number).number)
     pad.appendEvent({ time, kind: 'improvement-deleted', by: 'nick', item: undefined })
   })
+}
+
+export function nickQueuesComment(folder: ScratchPadFolder, comment: NickComment): QueuedItem {
+  const time = new Date().toISOString()
+  const page = findPage(folder.pages(), comment.page, folder.name)
+  const anchor = checkedAnchor(comment.anchor, page, folder.readPageLines(page).join('\n'))
+  const queued = queueComment({ ...comment, anchor, page, time })
+  return folder.change((pad) => {
+    const item = pad.saveQueuedItem(queued)
+    pad.appendEvent({ time, kind: 'item-queued', by: 'nick', item: undefined })
+    return item
+  })
+}
+
+export function nickQueuesReply(folder: ScratchPadFolder, id: string, text: string): QueuedItem {
+  const time = new Date().toISOString()
+  return folder.change((pad) => {
+    const item = pad.saveQueuedItem(queueReply(pad.readThread(id), text, time))
+    pad.appendEvent({ time, kind: 'item-queued', by: 'nick', item: undefined })
+    return item
+  })
+}
+
+export function nickEditsQueuedItem(
+  folder: ScratchPadFolder,
+  number: number,
+  text: string,
+): QueuedItem {
+  const time = new Date().toISOString()
+  return folder.change((pad) => {
+    const item = editQueuedItem(pad.readOutbox(), number, text)
+    pad.updateQueuedItem(item)
+    pad.appendEvent({ time, kind: 'queued-item-edited', by: 'nick', item: undefined })
+    return item
+  })
+}
+
+export function nickRemovesQueuedItem(folder: ScratchPadFolder, number: number): void {
+  const time = new Date().toISOString()
+  folder.change((pad) => {
+    pad.deleteQueuedItem(findQueuedItem(pad.readOutbox(), number).number)
+    pad.appendEvent({ time, kind: 'queued-item-removed', by: 'nick', item: undefined })
+  })
+}
+
+// Each item is sent in the order it was queued, with the time of the send, so the agent sees it as
+// if Nick had sent it on its own at that moment.
+export function nickSendsOutbox(folder: ScratchPadFolder): Thread[] {
+  const time = new Date().toISOString()
+  return folder.change((pad) => {
+    const items = pad.readOutbox()
+    const sent = items.map((item) => sendQueuedItem(pad, item, time))
+    items.forEach((item) => pad.deleteQueuedItem(item.number))
+    if (items.length > 0) {
+      pad.appendEvent({ time, kind: 'outbox-sent', by: 'nick', item: undefined })
+    }
+    return sent.filter(
+      (thread, index) => !sent.slice(index + 1).some((later) => later.id === thread.id),
+    )
+  })
+}
+
+function sendQueuedItem(pad: PadDb, item: QueuedItem, time: string): Thread {
+  return item.kind === 'reply'
+    ? writeNickReply(pad, item.thread, item.text, time)
+    : writeNickComment(
+        pad,
+        { type: 'comment', page: item.page, anchor: item.anchor, text: item.text },
+        time,
+      )
 }

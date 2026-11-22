@@ -1,4 +1,4 @@
-import { mkdirSync, renameSync } from 'node:fs'
+import { mkdirSync, renameSync, rmSync } from 'node:fs'
 import { join } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
 import { replyToThread } from '../agent-commands/thread-commands'
@@ -77,6 +77,10 @@ describe('pageSummaries', () => {
         parent: undefined,
         title: 'Export job',
         description: undefined,
+        headings: [
+          { level: 1, text: 'Export job', id: 'export-job', line: 1 },
+          { level: 2, text: 'Retry policy', id: 'retry-policy', line: 3 },
+        ],
         openThreads: 1,
         waitingForNick: { decisions: 0, replies: 0 },
         waitingForNickWithSubPages: { decisions: 0, replies: 0 },
@@ -327,6 +331,18 @@ describe('threadsOfPage', () => {
     expect(
       threadsOfPage(folder, 'board-edge.md').map((thread) => [thread.page, thread.position?.kind]),
     ).toStrictEqual([['pages/board-edge.md', 'attached']])
+  })
+
+  it('returns the threads of a page that the agent has deleted, without a position on the page', () => {
+    const folder = numberedScratchPad()
+    const anchor = { firstLine: 1, lastLine: 1, selectedText: 'Board edge', prefix: '', suffix: '' }
+    nickComments(folder, { type: 'comment', page: '2-board-edge.md', anchor, text: 'Why?' })
+    rmSync(join(folder.path, 'pages/2-board-edge.md'))
+
+    expect(
+      threadsOfPage(folder, 'board-edge.md').map((thread) => [thread.id, thread.position?.kind]),
+    ).toStrictEqual([['c-1', 'detached']])
+    expect(threadsOfPage(folder, 'queue.md')).toStrictEqual([])
   })
 })
 

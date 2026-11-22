@@ -1,4 +1,5 @@
 import { type Token } from 'markdown-it'
+import { agentNoteBlockContent, agentNoteBlockName } from './agent-note-block'
 import { decisionBlockContent, type DecisionBlock } from './decision-block'
 import { htmlBlockContent, type CustomFileReader } from './html-block'
 import { type NamedBlock, type NamedBlockContent } from './named-block'
@@ -7,7 +8,8 @@ import { firstWordOf, namedBlockType, pageMarkdownParser } from './page-markdown
 import { type PageProblem } from './page-problem'
 import { linesAttribute, sourceLinesOf } from './source-lines'
 
-const blockNames = ['decision', 'html']
+const blockNames = ['decision', 'html', agentNoteBlockName]
+const blockList = new Intl.ListFormat('en-GB', { type: 'conjunction' })
 
 interface NamedBlockContext {
   readonly headings: readonly Heading[]
@@ -93,11 +95,14 @@ function namedBlockContent(block: NamedBlock, context: NamedBlockContext): Named
   if (block.name === 'html') {
     return htmlBlockContent(block, context.readCustomFile)
   }
+  if (block.name === agentNoteBlockName) {
+    return agentNoteBlockContent(block)
+  }
   return unknownBlockContent(block)
 }
 
 function unknownBlockContent(block: NamedBlock): NamedBlockContent {
-  const known = blockNames.map((name) => `:::${name}`).join(' and ')
+  const known = blockList.format(blockNames.map((name) => `:::${name}`))
   return {
     className: 'unknown-block',
     attributes: [],

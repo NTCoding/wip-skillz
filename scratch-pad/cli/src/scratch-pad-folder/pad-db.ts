@@ -4,6 +4,7 @@ import { type DecisionAnswer } from '../decisions/decision-answer'
 import { type DecisionLogEntry } from '../decisions/decision-log'
 import { type NewEvent, type ScratchPadEvent } from '../events/scratch-pad-event'
 import { type Improvement, type NewImprovement } from '../improvements/improvements'
+import { type NewQueuedItem, type QueuedItem } from '../outbox/outbox'
 import { type ProgressTracker } from '../progress-tracker/progress-tracker'
 import { type Thread } from '../threads/thread'
 import { StoredAgentInbox } from './stored-agent-inbox'
@@ -11,6 +12,7 @@ import { StoredDecisionAnswers } from './stored-decision-answers'
 import { StoredDecisionLog } from './stored-decision-log'
 import { StoredEvents } from './stored-events'
 import { StoredImprovements } from './stored-improvements'
+import { StoredOutbox } from './stored-outbox'
 import { StoredProgressTracker } from './stored-progress-tracker'
 import { StoredThreads } from './stored-threads'
 
@@ -20,6 +22,7 @@ export class PadDb {
   private readonly decisionAnswers: StoredDecisionAnswers
   private readonly decisionLog: StoredDecisionLog
   private readonly improvements: StoredImprovements
+  private readonly outbox: StoredOutbox
   private readonly events: StoredEvents
   private readonly agentInbox: StoredAgentInbox
 
@@ -29,6 +32,7 @@ export class PadDb {
     this.decisionAnswers = new StoredDecisionAnswers(db, padName)
     this.decisionLog = new StoredDecisionLog(db, padName)
     this.improvements = new StoredImprovements(db, padName)
+    this.outbox = new StoredOutbox(db, padName)
     this.events = new StoredEvents(db, padName)
     this.agentInbox = new StoredAgentInbox(db, padName)
   }
@@ -95,6 +99,22 @@ export class PadDb {
 
   deleteImprovement(number: number): void {
     this.improvements.delete(number)
+  }
+
+  readOutbox(): QueuedItem[] {
+    return this.outbox.read()
+  }
+
+  saveQueuedItem(item: NewQueuedItem): QueuedItem {
+    return this.outbox.save(item)
+  }
+
+  updateQueuedItem(item: QueuedItem): void {
+    this.outbox.updateText(item)
+  }
+
+  deleteQueuedItem(number: number): void {
+    this.outbox.delete(number)
   }
 
   readLastPrintedEvents(): LastPrintedEvents {

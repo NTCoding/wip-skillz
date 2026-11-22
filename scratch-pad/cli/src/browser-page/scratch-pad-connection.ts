@@ -7,6 +7,7 @@ import {
   improvementEditResponse,
   improvementsResponse,
   nickInboxResponse,
+  outboxResponse,
   padChange,
   pagesResponse,
   progressTrackerResponse,
@@ -17,6 +18,7 @@ import {
   type DecisionLogEntry,
   type Improvements,
   type NickInbox,
+  type Outbox,
   type PadChange,
   type PageSummary,
   type ProgressTracker,
@@ -51,6 +53,7 @@ export interface ScratchPadReading {
   readonly progressTracker: () => Promise<ProgressTracker>
   readonly decisionLog: () => Promise<DecisionLogEntry[]>
   readonly improvements: () => Promise<Improvements>
+  readonly outbox: () => Promise<Outbox>
   readonly onChange: (listeners: ChangeListeners) => () => void
 }
 
@@ -61,6 +64,11 @@ export interface ScratchPadWriting {
   readonly answerDecision: (id: string, page: string, answer: Answer) => Promise<void>
   readonly editImprovement: (number: number, edit: ImprovementEdit) => Promise<void>
   readonly deleteImprovement: (number: number) => Promise<void>
+  readonly queueComment: (thread: NewThread) => Promise<void>
+  readonly queueReply: (id: string, message: string) => Promise<void>
+  readonly editQueuedItem: (number: number, message: string) => Promise<void>
+  readonly removeQueuedItem: (number: number) => Promise<void>
+  readonly sendOutbox: () => Promise<Thread[]>
 }
 
 export type ScratchPadConnection = ScratchPadReading & ScratchPadWriting
@@ -150,6 +158,7 @@ export function scratchPadConnection(pad: string, network: BrowserNetwork): Scra
     decisionLog: async () =>
       (await readJson(network, `${api}/decision-log`, decisionLogResponse)).decisions,
     improvements: () => readJson(network, `${api}/improvements`, improvementsResponse),
+    outbox: () => readJson(network, `${api}/outbox`, outboxResponse),
     startThread: async (thread) =>
       (await readJson(network, `${api}/threads`, threadResponse, postOf(thread))).thread,
     replyToThread: async (id, message) =>
@@ -181,6 +190,25 @@ export function scratchPadConnection(pad: string, network: BrowserNetwork): Scra
         postOf({}),
       )
     },
+    queueComment: async (thread) => {
+      await readJson(network, `${api}/outbox/comments`, outboxResponse, postOf(thread))
+    },
+    queueReply: async (id, message) => {
+      await readJson(
+        network,
+        `${api}/outbox/replies`,
+        outboxResponse,
+        postOf({ thread: id, message }),
+      )
+    },
+    editQueuedItem: async (number, message) => {
+      await readJson(network, `${api}/outbox/${number}`, outboxResponse, postOf({ message }))
+    },
+    removeQueuedItem: async (number) => {
+      await readJson(network, `${api}/outbox/${number}/delete`, outboxResponse, postOf({}))
+    },
+    sendOutbox: async () =>
+      (await readJson(network, `${api}/outbox/send`, threadsResponse, postOf({}))).threads,
     onChange: (listeners) => {
       const stream = network.openChangeStream(`${api}/changes`)
       const state = { connected: true }

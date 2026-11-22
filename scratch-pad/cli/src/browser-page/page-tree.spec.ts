@@ -1,15 +1,25 @@
 import { describe, expect, it } from 'vitest'
 import { exportPad, exportPadAddresses, pageSummaries } from './browser-page-fixtures'
 import { type PageSummary } from './api-responses'
-import { pageListEntries, pageOfFileName, parentsOf, subPagesOf, topLevelPages } from './page-tree'
+import { type FullTreeNode } from './design-system/design-system'
+import {
+  fullTreeNodes,
+  pageListEntries,
+  pageOfFileName,
+  parentsOf,
+  subPagesOf,
+  topLevelPages,
+} from './page-tree'
 
 function summaryOf(page: string, parent: string | undefined): PageSummary {
   return {
     page,
     file: page,
+    number: undefined,
     parent,
     title: undefined,
     description: undefined,
+    headings: [],
     openThreads: 0,
     waitingForNickWithSubPages: { decisions: 0, replies: 0 },
   }
@@ -81,6 +91,67 @@ describe('the page tree', () => {
         decisions: 0,
         replies: 2,
       },
+    ])
+  })
+})
+
+function treeOf(nodes: readonly FullTreeNode[]): unknown[] {
+  return nodes.map((node) =>
+    node.children.length === 0
+      ? `${node.kind} ${node.title} ${node.href}`
+      : [`${node.kind} ${node.title} ${node.href}`, treeOf(node.children)],
+  )
+}
+
+describe('the full tree', () => {
+  it('shows the numbered pages, their sections and their sub pages 3 levels deep', () => {
+    const pad = `/${exportPad}/`
+    expect(treeOf(fullTreeNodes(exportPadAddresses, pageSummaries))).toStrictEqual([
+      [
+        `page 1 Invoice template ${pad}invoice-template.md`,
+        [
+          [
+            `section The tax number ${pad}invoice-template.md#the-tax-number`,
+            [`section Shops outside the EU ${pad}invoice-template.md#shops-outside-the-eu`],
+          ],
+          `section The logo ${pad}invoice-template.md#the-logo`,
+        ],
+      ],
+      [
+        `page 2 retry-limit.md ${pad}retry-limit.md`,
+        [
+          `section Why 5 retries ${pad}retry-limit.md#why-5-retries`,
+          [
+            `page 2.1 Wait between retries ${pad}wait-between-retries.md`,
+            [
+              `section Why the wait doubles ${pad}wait-between-retries.md#why-the-wait-doubles`,
+              `page 2.1.1 First retry ${pad}first-retry.md`,
+            ],
+          ],
+        ],
+      ],
+      `page Shop storage ${pad}shop-storage.md`,
+    ])
+  })
+
+  it('shows a section of level 3 beside the sections of level 2 when it comes before all of them and leaves out the other levels', () => {
+    const page = {
+      ...summaryOf('pages/retry-limit.md', undefined),
+      headings: [
+        { level: 1, text: 'Retry limit', id: 'retry-limit' },
+        { level: 3, text: 'The default', id: 'the-default' },
+        { level: 2, text: 'Why 5 retries', id: 'why-5-retries' },
+        { level: 4, text: 'The retries of a small shop', id: 'the-retries-of-a-small-shop' },
+      ],
+    }
+    expect(treeOf(fullTreeNodes(exportPadAddresses, [page]))).toStrictEqual([
+      [
+        `page retry-limit.md /${exportPad}/retry-limit.md`,
+        [
+          `section The default /${exportPad}/retry-limit.md#the-default`,
+          `section Why 5 retries /${exportPad}/retry-limit.md#why-5-retries`,
+        ],
+      ],
     ])
   })
 })

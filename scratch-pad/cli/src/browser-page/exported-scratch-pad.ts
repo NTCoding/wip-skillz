@@ -38,6 +38,7 @@ export function exportedScratchPad(json: string): ScratchPadReading {
     progressTracker: () => Promise.resolve(data.progressTracker),
     decisionLog: () => Promise.resolve(data.decisionLog),
     improvements: () => Promise.resolve(data.improvements),
+    outbox: () => Promise.resolve({ items: [] }),
     onChange: () => () => undefined,
   }
 }

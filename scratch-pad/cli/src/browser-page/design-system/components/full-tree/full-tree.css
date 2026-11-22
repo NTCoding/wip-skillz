@@ -1,0 +1,144 @@
+.full-tree {
+  font-family: var(--font-ui);
+  font-size: var(--fs-ui);
+  line-height: var(--lh-ui);
+}
+
+.full-tree__toggle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  width: 100%;
+  padding: var(--space-lg) var(--space-xl);
+  border: var(--hairline) solid var(--line);
+  border-radius: var(--r-md);
+  background: none;
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+}
+
+.full-tree__toggle:hover {
+  background: var(--table-row-hover);
+}
+
+.full-tree__toggle[aria-expanded='true'] {
+  border-bottom-right-radius: var(--space-0);
+  border-bottom-left-radius: var(--space-0);
+}
+
+.full-tree__toggle .icon,
+.full-tree__chevron .icon {
+  color: var(--icon);
+}
+
+/* The chevron points right when its branch is collapsed and down when its branch is open. */
+:is(.full-tree__toggle, .full-tree__chevron)[aria-expanded='true'] .icon {
+  transform: rotate(90deg);
+}
+
+.full-tree__title {
+  font-size: var(--fs-md);
+  line-height: var(--lh-md);
+  font-weight: var(--fw-medium);
+}
+
+.full-tree__counts {
+  margin-left: auto;
+  color: var(--text-2);
+  font-size: var(--fs-sm);
+  line-height: var(--lh-sm);
+}
+
+.full-tree__root {
+  margin: var(--space-0);
+  padding: var(--space-md) var(--space-md) var(--space-lg);
+  border: var(--hairline) solid var(--line);
+  border-top: 0;
+  border-radius: var(--space-0) var(--space-0) var(--r-md) var(--r-md);
+  list-style: none;
+}
+
+/* The line of a branch is under the middle of the chevron of its node. */
+.full-tree__children {
+  margin: var(--space-0) var(--space-0) var(--space-0)
+    calc(var(--tree-chevron-size) / 2 - var(--hairline));
+  padding: var(--space-0) var(--space-0) var(--space-0) var(--space-md);
+  border-left: var(--hairline) solid var(--line-strong);
+  list-style: none;
+}
+
+.full-tree__node {
+  margin: var(--space-0);
+  padding: var(--space-0);
+}
+
+.full-tree__node[data-level='1'] + .full-tree__node[data-level='1'] {
+  margin-top: var(--space-xs);
+}
+
+.full-tree__row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2xs);
+}
+
+.full-tree__chevron {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: var(--tree-chevron-size);
+  height: var(--tree-chevron-size);
+  padding: var(--space-0);
+  border: 0;
+  border-radius: var(--r-pill);
+  background: none;
+  cursor: pointer;
+}
+
+.full-tree__chevron:hover {
+  background: var(--tint);
+}
+
+.full-tree__chevron:hover .icon {
+  color: var(--text);
+}
+
+.full-tree__spacer {
+  flex: none;
+  width: var(--tree-chevron-size);
+}
+
+.full-tree__link {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: var(--space-md);
+  min-width: 0;
+  padding: var(--space-xs) var(--space-md);
+  border-radius: var(--r-md);
+  color: var(--text-nav);
+  text-decoration: none;
+}
+
+.full-tree__link:hover {
+  background: var(--tint);
+  color: var(--text);
+}
+
+.full-tree__link .icon {
+  color: var(--icon);
+}
+
+.full-tree__node[data-kind='section'] > .full-tree__row .full-tree__link {
+  color: var(--text-2);
+  font-size: var(--fs-sm);
+  line-height: var(--lh-sm);
+}
+
+.full-tree__node[data-level='1'] > .full-tree__row .full-tree__link {
+  color: var(--text);
+  font-size: var(--fs-md);
+  line-height: var(--lh-md);
+  font-weight: var(--fw-medium);
+}
