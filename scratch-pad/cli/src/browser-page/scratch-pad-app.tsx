@@ -28,6 +28,8 @@ import {
   type Navigate,
   type PreviewContent,
 } from './design-system/design-system'
+import { type DesktopNotifications } from './desktop-notifications'
+import { useInboxNotifications } from './inbox-notifications'
 import { InboxOutboxView } from './inbox-outbox-view'
 import { useLoadedValue, type LoadedValue } from './loaded-value'
 import { MissingPageView } from './missing-page-view'
@@ -55,6 +57,8 @@ interface ScratchPadAppProps {
   readonly writing: ScratchPadWriting | undefined
   readonly settings: SavedSettings
   readonly narrowWindow: NarrowWindow
+  // The export and a browser without the Notification API don't have any desktop notifications.
+  readonly notifications?: DesktopNotifications | undefined
 }
 
 const emptyNickInbox: NickInbox = { threads: [], decisions: [] }
@@ -287,6 +291,7 @@ export function ScratchPadApp(props: ScratchPadAppProps) {
   const threadsOfPad = useThreadsOfPad(connection, route, outbox, revisions.threads)
   const viewedPage = route.kind === 'page' ? loadedOr(page, undefined) : undefined
   const padTitle = loadedOr(tracker, undefined)?.title ?? pad
+  useInboxNotifications(props.notifications, padTitle, inbox)
   const address = { section: route.kind === 'page' ? route.section : undefined, navigations }
   const currentSection = useCurrentSection(
     sectionsOf(viewedPage).map((heading) => heading.id),
@@ -344,6 +349,7 @@ export function ScratchPadApp(props: ScratchPadAppProps) {
             <TopBarActions
               serverStopped={serverStopped}
               actions={actions}
+              notifications={props.notifications}
               inboxEntries={inboxEntries}
               outboxCount={outbox.items.length}
               outboxEntries={queuedEntries}

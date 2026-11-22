@@ -1,6 +1,7 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { BrowserPageError } from './browser-page-error'
+import { browserNotifications } from './desktop-notifications'
 import { narrowAppFrameQuery } from './design-system/design-system'
 import { exportedAddresses, servedAddresses } from './browser-route'
 import { exportedScratchPad } from './exported-scratch-pad'
@@ -20,7 +21,12 @@ function servedScratchPad(pad: string) {
     fetch: (url, request) => window.fetch(url, request),
     openChangeStream: (url) => new EventSource(url),
   })
-  return { addresses: servedAddresses(pad), connection, writing: connection }
+  return {
+    addresses: servedAddresses(pad),
+    connection,
+    writing: connection,
+    notifications: browserNotifications(),
+  }
 }
 
 function exportedScratchPadOf(pad: string, data: Element) {
@@ -28,6 +34,7 @@ function exportedScratchPadOf(pad: string, data: Element) {
     addresses: exportedAddresses(pad),
     connection: exportedScratchPad(String(data.textContent)),
     writing: undefined,
+    notifications: undefined,
   }
 }
 
