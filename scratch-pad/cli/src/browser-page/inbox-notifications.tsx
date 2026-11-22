@@ -9,15 +9,16 @@ interface WaitingItem {
   readonly text: string
 }
 
-// The id of a decision is only unique on its own page, which is why the key of a decision contains
-// its page. A thread without any messages isn't shown in the Inbox. That's why it isn't a waiting
-// item either.
+// The key of a thread contains the time of its last message. So a new message from the agent
+// results in a new key, even if the thread already waited for Nick before. The id of a decision is
+// only unique on its own page, which is why the key of a decision contains its page. A thread
+// without any messages isn't shown in the Inbox. That's why it isn't a waiting item either.
 function waitingItemsOf(inbox: NickInbox): WaitingItem[] {
   const replies = inbox.threads.flatMap((thread): WaitingItem[] => {
     const last = thread.messages.at(-1)
     return last === undefined
       ? []
-      : [{ key: `thread ${thread.id}`, text: `The agent replied: ${last.text}` }]
+      : [{ key: `thread ${thread.id} ${last.time}`, text: `The agent replied: ${last.text}` }]
   })
   const decisions = inbox.decisions.map((decision): WaitingItem => ({
     key: `decision ${decision.page} ${decision.id}`,

@@ -95,6 +95,54 @@ describe('the desktop notifications of the Inbox', () => {
     )
   })
 
+  it('shows a notification when the agent writes another message on a thread that already waits for Nick', async () => {
+    const fake = fakeConnection()
+    const { notifications } = fakeNotifications('granted')
+    await openPad(fake, notifications)
+    const withSecondMessage: Thread = {
+      ...retryQuestion,
+      messages: [
+        ...retryQuestion.messages,
+        {
+          author: 'agent',
+          text: 'The upload retries 8 times too.',
+          time: '2026-11-20T21:40:00.000Z',
+        },
+      ],
+    }
+    await inboxChanges(fake, { ...indexInbox, threads: [withSecondMessage] }, 2)
+    await waitFor(() =>
+      expect(notifications.show.mock.calls).toStrictEqual([
+        ['Invoice export', 'The agent replied: The upload retries 8 times too.'],
+      ]),
+    )
+  })
+
+  it('shows a notification when Nick and the agent both reply before the Inbox has been loaded again', async () => {
+    const fake = fakeConnection()
+    const { notifications } = fakeNotifications('granted')
+    await openPad(fake, notifications)
+    const bothReplied: Thread = {
+      ...retryQuestion,
+      messages: [
+        ...retryQuestion.messages,
+        { author: 'nick', text: 'Can a shop ask for 10?', time: '2026-11-20T21:20:00.000Z' },
+        { author: 'agent', text: 'Yes. The limit is 10.', time: '2026-11-20T21:25:00.000Z' },
+      ],
+    }
+    vi.spyOn(fake.connection, 'nickInbox')
+      .mockReturnValueOnce(new Promise<NickInbox>(() => undefined))
+      .mockResolvedValue({ ...indexInbox, threads: [bothReplied] })
+    act(() => fake.sendChange({ kind: 'thread', id: 'c-1' }))
+    act(() => fake.sendChange({ kind: 'thread', id: 'c-1' }))
+    await waitFor(() =>
+      expect(notifications.show.mock.calls).toStrictEqual([
+        ['Invoice export', 'The agent replied: Yes. The limit is 10.'],
+      ]),
+    )
+    expect(fake.connection.nickInbox).toHaveBeenCalledTimes(2)
+  })
+
   it('shows a notification for a decision on another page when its id is the same as the id of a waiting decision', async () => {
     const fake = fakeConnection()
     const { notifications } = fakeNotifications('granted')
