@@ -13,3 +13,7 @@ These are the main sections of DESIGN.md:
 - [How to add a theme](src/browser-page/design-system/DESIGN.md#how-to-add-a-theme)
 - [How the comments are attached to the page](src/browser-page/design-system/DESIGN.md#how-the-comments-are-attached-to-the-page)
 - [How the export uses the same page](src/browser-page/design-system/DESIGN.md#how-the-export-uses-the-same-page)
+
+## How to try a branch
+
+Run `pnpm build` and then `pnpm try` to start the build on port 4800 with the invented "Invoice export" scratch pad in a temporary folder. Run `pnpm try <folder>` to use a copy of a scratch pad in ~/scratchpads instead. Add `--port <port>` when port 4800 is in use. Never stop the server on port 4747, because it's Nick's real server. Ctrl+C stops the try server, or you can run the `kill` command that it prints.

@@ -14,6 +14,7 @@
     "build": "node esbuild.config.mjs",
     "built-tool:check": "node scripts/built-tool-check.mjs",
     "scratch-pad": "node dist/scratch-pad",
+    "try": "node scripts/try.mjs",
     "format": "prettier --write --config .prettierrc . ../SKILL.md ../reference.md ../README.md",
     "format:check": "prettier --check --config .prettierrc . ../SKILL.md ../reference.md ../README.md",
     "lint": "eslint . --max-warnings 0 && stylelint \"src/**/*.css\" --max-warnings 0",

@@ -8,7 +8,7 @@ import { tmpdir } from 'node:os'
 import { basename, extname, join, resolve } from 'node:path'
 import puppeteer from 'puppeteer-core'
 import {
-  examplePages,
+  createExampleScratchPad,
   indexPage,
   invoiceTemplatePage,
   retryLimitPage,
@@ -19,11 +19,7 @@ const tool = resolve('dist/scratch-pad')
 const output = resolve(process.argv[2] ?? 'screenshots')
 const home = mkdtempSync(join(tmpdir(), 'scratch-pad-screens-'))
 const environment = { ...process.env, SCRATCH_PADS_HOME: home }
-const pad = basename(
-  run('new', 'Invoice export')
-    .split('\n')[0]
-    .replace(/^created /, ''),
-)
+const pad = createExampleScratchPad(run, home)
 environment.SCRATCH_PAD = pad
 const checks = {}
 
@@ -66,22 +62,6 @@ function servedGallery(port) {
   return new Promise((resolveServer) =>
     server.listen(port, '127.0.0.1', () => resolveServer(server)),
   )
-}
-
-function writePages() {
-  run('goal', 'Ship the invoice export job.')
-  run('task', 'add', 'Design the export job')
-  run('task', 'add', 'Write the invoice template')
-  run('task', 'add', 'Check the retry limit')
-  run('task', 'start', '1')
-  run('task', 'done', '1')
-  run('decide', 'The export job runs every night.')
-  run('decide', 'A guest without a company sees the word Private.')
-  const pages = join(home, pad, 'pages')
-  for (const [file, markdown] of Object.entries(examplePages)) {
-    writeFileSync(join(pages, file), markdown)
-  }
-  checks.check = run('check').trim()
 }
 
 // A scratch pad from before the numbers, whose pages are all top level pages
@@ -385,7 +365,7 @@ async function galleryShots(page) {
 }
 
 mkdirSync(output, { recursive: true })
-writePages()
+checks.check = run('check').trim()
 const padWithoutNumbers = writePadWithoutNumbers()
 const port = await freePort()
 checks.started = run('start', '--port', String(port)).trim()

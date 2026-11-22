@@ -1,4 +1,6 @@
-// The invented scratch pad that the screenshots of the browser page show.
+// The invented scratch pad that the screenshots of the browser page and pnpm try show.
+import { writeFileSync } from 'node:fs'
+import { basename, join } from 'node:path'
 
 export const indexPage = `# Invoice export
 
@@ -126,4 +128,28 @@ export const examplePages = {
   '2-retry-limit.md': retryLimitPage,
   '2.1-wait-between-retries.md': waitBetweenRetriesPage,
   '2.1.1-first-retry.md': firstRetryPage,
+}
+
+// Creates the invented scratch pad in the folder `home` and returns the name of its folder.
+// `run` runs the built tool with the words it's passed and returns what the tool printed.
+export function createExampleScratchPad(run, home) {
+  const pad = basename(
+    run('new', 'Invoice export')
+      .split('\n')[0]
+      .replace(/^created /, ''),
+  )
+  const runInPad = (...words) => run('--pad', pad, ...words)
+  runInPad('goal', 'Ship the invoice export job.')
+  runInPad('task', 'add', 'Design the export job')
+  runInPad('task', 'add', 'Write the invoice template')
+  runInPad('task', 'add', 'Check the retry limit')
+  runInPad('task', 'start', '1')
+  runInPad('task', 'done', '1')
+  runInPad('decide', 'The export job runs every night.')
+  runInPad('decide', 'A guest without a company sees the word Private.')
+  const pages = join(home, pad, 'pages')
+  for (const [file, markdown] of Object.entries(examplePages)) {
+    writeFileSync(join(pages, file), markdown)
+  }
+  return pad
 }
