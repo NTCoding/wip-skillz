@@ -284,13 +284,14 @@ The export doesn't contain any read marks, because a reader can't mark anything 
 
 ## How the export uses the same page
 
-`scratch-pad export` writes one HTML file, which contains the same bundle that the server sends to the browser. It also contains the scratch pad's data in a `<script id="scratch-pad-export">` element. If that element is there, `start-browser-page.tsx` reads the element and starts the page in its read-only mode. The export differs from the page from the server in these 4 ways:
+`scratch-pad export` writes one HTML file, which contains the same bundle that the server sends to the browser. It also contains the scratch pad's data in a `<script id="scratch-pad-export">` element. If that element is there, `start-browser-page.tsx` reads the element and starts the page in its read-only mode. The export differs from the page from the server in these 5 ways:
 
 | The page from the server                         | The export                                      |
 | ------------------------------------------------ | ----------------------------------------------- |
 | `scratchPadConnection` sends requests to the API | `exportedScratchPad` reads the data in the file |
 | `servedAddresses`, like `/<pad>/retry-limit.md`  | `exportedAddresses`, like `#/retry-limit.md`    |
 | `writing` is the connection                      | `writing` is `undefined`                        |
+| `notifications` is `browserNotifications()`      | `notifications` is `undefined`                  |
 | The frame of an `:::html` block has a `src`      | The frame of an `:::html` block has a `srcdoc`  |
 
 If you add a control that changes something, like a reply box or a decision button, only show the control when `writing` isn't `undefined`, because that's how the read-only mode hides the existing controls. `exported-scratch-pad.spec.tsx` tests the page in its read-only mode.

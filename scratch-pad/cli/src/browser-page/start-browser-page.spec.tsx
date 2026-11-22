@@ -73,6 +73,27 @@ describe('startBrowserPage', () => {
     expect(window.fetch).not.toHaveBeenCalled()
   })
 
+  it('shows the button for the desktop notifications when the browser has the Notification API', async () => {
+    vi.stubGlobal('Notification', { permission: 'default' })
+    document.body.innerHTML = `<div id="scratch-pad-page" data-scratch-pad="${exportPad}"></div>`
+    startBrowserPage()
+    expect(
+      (await screen.findByRole('button', { name: 'Turn on desktop notifications' })).title,
+    ).toBe('Turn on desktop notifications')
+  })
+
+  it('doesn’t show the button for the desktop notifications when the page is an export', async () => {
+    vi.stubGlobal('Notification', { permission: 'default' })
+    document.body.innerHTML = [
+      `<div id="scratch-pad-page" data-scratch-pad="${exportPad}"></div>`,
+      `<script type="application/json" id="scratch-pad-export">${exportedPadJson}</script>`,
+    ].join('')
+    window.history.replaceState(null, '', '/Users/jo/export.html#/invoice-template.md')
+    startBrowserPage()
+    await screen.findByRole('heading', { level: 1, name: 'Invoice template' })
+    expect(screen.queryByRole('button', { name: /desktop notifications/ })).toBeNull()
+  })
+
   it('throws MissingPageRootError when the page doesn’t have a root', () => {
     expect(() => startBrowserPage()).toThrow(MissingPageRootError)
     expect(() => startBrowserPage()).toThrow(
