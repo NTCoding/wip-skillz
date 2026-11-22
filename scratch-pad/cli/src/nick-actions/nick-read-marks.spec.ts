@@ -30,10 +30,12 @@ function readMarksOf(folder: ScratchPadFolder) {
 
 // The hash of each section that the browser shows now
 function shownSections(folder: ScratchPadFolder): SectionHash[] {
-  return sectionTexts(folder.readPageLines('pages/index.md').join('\n')).map(({ id, hash }) => ({
-    id,
-    hash,
-  }))
+  return sectionTexts(folder.readPageLines('pages/index.md').join('\n'), 'pages/index.md').map(
+    ({ id, hash }) => ({
+      id,
+      hash,
+    }),
+  )
 }
 
 function changedSectionsOf(folder: ScratchPadFolder): string[] {

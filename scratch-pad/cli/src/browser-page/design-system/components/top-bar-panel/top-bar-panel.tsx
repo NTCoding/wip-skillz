@@ -51,14 +51,17 @@ export function TopBarPanel({
     if (!open) {
       return undefined
     }
+    // The listener runs in the capture phase so it runs before the listener of MarginLane. It
+    // prevents the default so that the same Escape doesn't close an open card in the margin too.
     const closeOnEscape = (event: KeyboardEvent): void => {
       if (event.key === 'Escape') {
+        event.preventDefault()
         setOpen(false)
         document.getElementById(buttonId)?.focus()
       }
     }
-    document.addEventListener('keydown', closeOnEscape)
-    return () => document.removeEventListener('keydown', closeOnEscape)
+    document.addEventListener('keydown', closeOnEscape, true)
+    return () => document.removeEventListener('keydown', closeOnEscape, true)
   }, [open, buttonId])
   const closeWhenFocusLeaves = (event: FocusEvent<HTMLDivElement>): void => {
     if (!root.current?.contains(event.relatedTarget)) {

@@ -16,7 +16,12 @@ interface SectionChangeProps {
 export function SectionChange({ title, shownTime, active, onMarkAsRead }: SectionChangeProps) {
   const { pending, problem, run } = usePendingAction(onMarkAsRead)
   return (
-    <MarginCard label={`${title} has changed`} kind="comment" active={active}>
+    <MarginCard
+      label={`${title} has changed`}
+      name={`the change to ${title}`}
+      kind="comment"
+      active={active}
+    >
       <div className="section-change">
         <p className="section-change__title">
           <Icon name="text-changed" />

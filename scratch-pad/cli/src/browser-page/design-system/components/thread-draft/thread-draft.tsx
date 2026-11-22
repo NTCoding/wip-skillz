@@ -20,7 +20,12 @@ const placeholders: Readonly<Record<ThreadKindName, string>> = {
 export function ThreadDraft(props: ThreadDraftProps) {
   const { kind, selectedText, onSend, onAddToOutbox, onCancel } = props
   return (
-    <MarginCard label={`New ${threadKindLabels[kind].toLowerCase()}`} kind={kind} active>
+    <MarginCard
+      label={`New ${threadKindLabels[kind].toLowerCase()}`}
+      name={`the new ${threadKindLabels[kind].toLowerCase()}`}
+      kind={kind}
+      active
+    >
       <ThreadKind kind={kind} />
       {selectedText !== '' && (
         <blockquote className="thread-draft__quote" data-kind={kind}>

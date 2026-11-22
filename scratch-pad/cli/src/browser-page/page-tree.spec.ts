@@ -186,6 +186,18 @@ describe('the subtree of a page', () => {
     expect(subtree?.root.title).toBe('2 retry-limit.md')
   })
 
+  it('only shows the pages rather than the sections of the pages', () => {
+    const titles = (node: FullTreeNode): unknown[] => [
+      `${node.kind} ${node.title}`,
+      ...node.children.map(titles),
+    ]
+    const subtree = subtreeOf(exportPadAddresses, pageSummaries, 'pages/wait-between-retries.md')
+    expect(subtree === undefined ? undefined : titles(subtree.root)).toStrictEqual([
+      'page 2 retry-limit.md',
+      ['page 2.1 Wait between retries', ['page 2.1.1 First retry']],
+    ])
+  })
+
   it('starts at the page itself when the page is on the top level', () => {
     const subtree = subtreeOf(exportPadAddresses, pageSummaries, 'pages/shop-storage.md')
     expect(subtree?.root.href).toBe(`/${exportPad}/shop-storage.md`)

@@ -118,7 +118,11 @@ function answeredDecisionOf(
   const decision = context.page.decisions.find((each) => each.id === id)
   const answer = decision?.answer ?? context.answersOnThisPage.get(id)
   const above = elementsAbove(element)
-  const headingIndex = above.findIndex((each) => headingTags.has(each.tagName))
+  // The headings that the server adds to the index page aren't in the file, so they don't have
+  // any lines. The question of a decision is always a heading from the file.
+  const headingIndex = above.findIndex(
+    (each) => headingTags.has(each.tagName) && each.hasAttribute('data-lines'),
+  )
   const heading = above[headingIndex]
   const warning = element.querySelector(':scope > .named-block-warning')
   const movable = element.parentElement?.tagName === 'BODY' && warning === null

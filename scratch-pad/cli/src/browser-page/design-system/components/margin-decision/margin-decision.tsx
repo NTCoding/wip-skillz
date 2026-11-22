@@ -1,5 +1,4 @@
 import { type ReactNode } from 'react'
-import { FullSizeView } from '../full-size-view/full-size-view'
 import { Icon } from '../icon/icon'
 import { IconButton } from '../icon-button/icon-button'
 import { MarginCard } from '../margin-card/margin-card'
@@ -84,22 +83,20 @@ export function MarginDecision({ open, onToggle, ...decision }: MarginDecisionPr
         />
       </span>
       {open && (
-        <MarginCard id={id} label={`Decision ${id}`} kind="comment" active>
-          <FullSizeView label={`Decision: ${decision.question}`}>
-            {({ open: fullSize, openFullSize }) => (
-              <div className="margin-decision__card" data-full-size={fullSize}>
-                <span className="margin-decision__tools">
-                  <IconButton
-                    icon="full-size"
-                    label={`Open ${id} at full size`}
-                    onClick={openFullSize}
-                  />
-                  <IconButton icon="close" label={`Close ${id}`} onClick={onToggle} />
-                </span>
-                <DecisionContent {...decision} fullSize={fullSize} />
-              </div>
-            )}
-          </FullSizeView>
+        <MarginCard
+          id={id}
+          label={`Decision ${id}`}
+          name={id}
+          fullSizeLabel={`Decision: ${decision.question}`}
+          kind="comment"
+          active
+          tools={<IconButton icon="close" label={`Close ${id}`} onClick={onToggle} />}
+        >
+          {(fullSize) => (
+            <div className="margin-decision__card" data-full-size={fullSize}>
+              <DecisionContent {...decision} fullSize={fullSize} />
+            </div>
+          )}
         </MarginCard>
       )}
     </div>

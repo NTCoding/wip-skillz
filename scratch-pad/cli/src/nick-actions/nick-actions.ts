@@ -234,7 +234,7 @@ function sendQueuedItem(pad: PadDb, item: QueuedItem, time: string): Thread {
 }
 
 function sectionsOfPage(folder: ScratchPadFolder, page: string) {
-  return sectionTexts(folder.readPageLines(page).join('\n'))
+  return sectionTexts(folder.readPageLines(page).join('\n'), page)
 }
 
 // Marking a page as read also marks each section as read with the hash that the browser showed

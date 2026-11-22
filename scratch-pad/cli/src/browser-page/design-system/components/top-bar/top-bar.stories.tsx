@@ -7,19 +7,12 @@ function node(kind: FullTreeNode['kind'], title: string, children: readonly Full
   return { kind, title, href: `#${title}`, children }
 }
 
+// The subtree in the breadcrumb only shows the pages.
 const retryLimit = node('page', '1 Retry limit', [
-  node('section', 'Why 5 retries', [
-    node('section', 'A small shop'),
-    node('section', 'A big shop'),
-  ]),
-  node('section', 'Wait between retries'),
   node('page', '1.1 Wait between retries', [
-    node('section', 'Why the wait doubles'),
-    node('page', '1.1.1 First retry', [
-      node('section', 'Why 30 seconds'),
-      node('page', '1.1.1.1 Wait for the queue'),
-    ]),
+    node('page', '1.1.1 First retry', [node('page', '1.1.1.1 Wait for the queue')]),
   ]),
+  node('page', '1.2 Storage errors'),
 ])
 
 const meta = {

@@ -1,8 +1,5 @@
 .margin-card {
   position: relative;
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-xl);
   padding: var(--space-3xl) var(--space-4xl) var(--space-4xl);
   border-radius: var(--r-md);
   background: var(--surface-raised);
@@ -30,4 +27,34 @@
 
 .margin-card[data-kind='improvement'][data-active='true'] {
   box-shadow: var(--margin-card-shadow, var(--shadow-card-improvement));
+}
+
+.margin-card__content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xl);
+}
+
+/* The tools are in the top right corner of the card, outside its padding. */
+.margin-card__tools {
+  display: flex;
+  gap: var(--space-2xs);
+  position: absolute;
+  top: calc(var(--space-md) - var(--space-3xl));
+  right: calc(var(--space-md) - var(--space-4xl));
+  z-index: 1;
+}
+
+/* The tools stay in the page at full size. That's how FullSizeView gives the focus back to the
+   expand button that opened the view. */
+.margin-card__content[data-full-size='true'] > .margin-card__tools {
+  display: none;
+}
+
+/* At full size, the content is shown in the reading column's width. */
+.margin-card__content[data-full-size='true'] {
+  width: 100%;
+  max-width: var(--col-w);
+  min-height: 100%;
+  margin: var(--space-0) auto;
 }

@@ -13,6 +13,7 @@ import {
   type SectionText,
 } from '../read-marks/read-marks'
 import { type DecisionBlock } from '../rendered-page/decision-block'
+import { shownHeadings } from '../rendered-page/index-page'
 import { pageDescription } from '../rendered-page/page-description'
 import { type Heading } from '../rendered-page/page-headings'
 import { type PageLink } from '../rendered-page/page-links'
@@ -119,7 +120,7 @@ export function pageSummaries(folder: ScratchPadFolder): PageSummary[] {
       parent: parentOf(file, files),
       title: pageTitle(lines),
       description: pageDescription(lines.join('\n')),
-      headings: pageHeadings(lines.join('\n')),
+      headings: shownHeadings(file.page, pageHeadings(lines.join('\n'))),
       openThreads: openThreads.filter((thread) => thread.page === file.page).length,
       waitingForNick: waitingOn([file.page]),
       waitingForNickWithSubPages: waitingOn([file, ...pagesUnder].map((each) => each.page)),
@@ -214,7 +215,7 @@ export function readMarksOf(folder: ScratchPadFolder): { readonly pages: PageRea
   const marks = folder.read((pad) => pad.readReadMarks())
   return {
     pages: folder.pages().map((page) => {
-      const sections = sectionTexts(folder.readPageLines(page).join('\n'))
+      const sections = sectionTexts(folder.readPageLines(page).join('\n'), page)
       const state = pageReadState(page, sections, marks)
       return {
         page,

@@ -32,6 +32,7 @@ import { InboxOutboxView } from './inbox-outbox-view'
 import { useLoadedValue, type LoadedValue } from './loaded-value'
 import { MissingPageView } from './missing-page-view'
 import { nickInboxEntries } from './nick-inbox-entries'
+import { outboxEntries } from './outbox-entries'
 import { usePageActions } from './page-actions'
 import { PadSidebar, sectionsOf } from './pad-sidebar'
 import { PageOutline } from './page-outline'
@@ -96,6 +97,26 @@ function isMissing(pages: LoadedValue<PageSummary[]>, file: string): boolean {
   return (
     pages.status === 'loaded' && !pages.value.some((summary) => summary.page === `pages/${file}`)
   )
+}
+
+// Returns the page whose cards a link can point to. It also returns whether every list of those
+// cards is loaded. MissingPageView shows the cards of a deleted page, which include the threads from the Inbox.
+// That's why a deleted page waits for the Inbox too.
+function cardsShownOn(
+  route: BrowserRoute,
+  page: LoadedValue<ViewedPage>,
+  pages: LoadedValue<PageSummary[]>,
+  cardLists: {
+    readonly onPage: readonly LoadedValue<unknown>[]
+    readonly inbox: LoadedValue<NickInbox>
+  },
+): { readonly page: string | undefined; readonly cardsRead: boolean } {
+  const deleted = route.kind === 'page' && page.status === 'failed' && isMissing(pages, route.file)
+  const lists = deleted ? [...cardLists.onPage, cardLists.inbox] : cardLists.onPage
+  return {
+    page: deleted ? `pages/${route.file}` : loadedOr(page, undefined)?.page,
+    cardsRead: lists.every((list) => list.status !== 'loading'),
+  }
 }
 
 function InboxOutboxRoute(props: RouteViewProps) {
@@ -206,6 +227,25 @@ function tabTitleOf(pageTitle: string | undefined, padTitle: string): string {
   return pageTitle === undefined || pageTitle === padTitle ? padTitle : `${pageTitle} · ${padTitle}`
 }
 
+// The Inbox / Outbox view shows every thread of the scratch pad. The Outbox in the top bar needs
+// the thread of each queued reply to show the place of the reply.
+function useThreadsOfPad(
+  connection: ScratchPadReading,
+  route: BrowserRoute,
+  outbox: LoadedOutbox,
+  revision: number,
+): readonly ThreadOfPad[] {
+  const needed = route.kind === 'inbox-outbox' || outbox.items.some((item) => item.kind === 'reply')
+  return loadedOr(
+    useLoadedValue(
+      needed ? 'threads of the pad' : 'no threads',
+      revision,
+      needed ? connection.threadsOfPad : noThreads,
+    ),
+    [],
+  )
+}
+
 export function ScratchPadApp(props: ScratchPadAppProps) {
   const { pad, addresses, connection, writing, settings, narrowWindow } = props
   const { route, navigate, replace, navigations } = useBrowserNavigation(addresses.routeOf)
@@ -236,18 +276,15 @@ export function ScratchPadApp(props: ScratchPadAppProps) {
   const log = useLoadedValue(pad, revisions.decisionLog, connection.decisionLog)
   const improvements = useLoadedValue(pad, revisions.improvements, connection.improvements)
   const inbox = useLoadedValue(pad, revisions.nickInbox, connection.nickInbox)
-  const outbox = loadedOr(useLoadedValue(pad, revisions.outbox, connection.outbox), emptyOutbox)
+  const loadedOutbox = useLoadedValue(pad, revisions.outbox, connection.outbox)
+  const outbox = loadedOr(loadedOutbox, emptyOutbox)
   const page = useLoadedValue(file, pageRevisionOf(revisions, file), connection.page)
   const threads = useLoadedValue(file, revisions.threads, connection.threads)
   const readMarks = loadedOr(
     useLoadedValue(pad, revisions.readMarks, connection.readMarks),
     noReadMarks,
   )
-  const threadsOfPad = useLoadedValue(
-    route.kind,
-    revisions.threads,
-    route.kind === 'inbox-outbox' ? connection.threadsOfPad : noThreads,
-  )
+  const threadsOfPad = useThreadsOfPad(connection, route, outbox, revisions.threads)
   const viewedPage = route.kind === 'page' ? loadedOr(page, undefined) : undefined
   const padTitle = loadedOr(tracker, undefined)?.title ?? pad
   const address = { section: route.kind === 'page' ? route.section : undefined, navigations }
@@ -255,13 +292,11 @@ export function ScratchPadApp(props: ScratchPadAppProps) {
     sectionsOf(viewedPage).map((heading) => heading.id),
     address,
   )
+  // A link can point to the card of a thread or of a comment in the outbox, so the page only
+  // scrolls once both are loaded.
+  const cards = cardsShownOn(route, page, pages, { onPage: [threads, loadedOutbox], inbox })
   useScrollOnNavigation(
-    scrollTargetOf(
-      route,
-      viewedPage,
-      threads.status !== 'loading',
-      improvements.status !== 'loading',
-    ),
+    scrollTargetOf(route, cards.page, cards.cardsRead, improvements.status !== 'loading'),
     navigations,
   )
   useEffect(() => {
@@ -288,6 +323,7 @@ export function ScratchPadApp(props: ScratchPadAppProps) {
     pageList,
     readMarks,
   )
+  const queuedEntries = outboxEntries(addresses, outbox.items, pageList, threadsOfPad)
   const breadcrumb = breadcrumbOf(route, viewedPage, pageList, addresses)
   const readMark = route.kind === 'page' ? readMarkOf(readMarks, `pages/${route.file}`) : undefined
 
@@ -310,6 +346,7 @@ export function ScratchPadApp(props: ScratchPadAppProps) {
               actions={actions}
               inboxEntries={inboxEntries}
               outboxCount={outbox.items.length}
+              outboxEntries={queuedEntries}
               outboxEditing={outboxEditing}
               onNavigate={navigate}
             />
@@ -344,7 +381,7 @@ export function ScratchPadApp(props: ScratchPadAppProps) {
         outbox={outbox}
         inboxThreads={loadedOr(inbox, emptyNickInbox).threads}
         inboxEntries={inboxEntries}
-        threadsOfPad={loadedOr(threadsOfPad, [])}
+        threadsOfPad={threadsOfPad}
         readMark={readMark}
         pageContext={{ addresses, onNavigate: navigate, loadPreview }}
         actions={actions}

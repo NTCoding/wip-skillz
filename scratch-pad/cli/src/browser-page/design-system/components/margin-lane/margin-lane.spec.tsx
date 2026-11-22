@@ -105,6 +105,31 @@ describe('layOutMarginLane', () => {
     expect(lane.style.getPropertyValue('--margin-lane-height')).toBe('2436px')
   })
 
+  it('computes the layout once, with the first top of every new item, before it turns on the transition of the new items', () => {
+    const scope = document.createElement('div')
+    const lane = laneWith(scope)
+    placeAt(scope.querySelector('[data-lines="5-5"]') ?? scope, 260)
+    const item = lane.querySelector<HTMLElement>('[data-key="i-1"]') ?? lane
+    const computed: { readonly top: string; readonly placed: boolean }[] = []
+    vi.spyOn(lane, 'getBoundingClientRect').mockImplementation(() => {
+      computed.push({
+        top: item.style.getPropertyValue('--margin-item-top'),
+        placed: item.hasAttribute('data-placed'),
+      })
+      return DOMRect.fromRect({ y: 100 })
+    })
+    layOutMarginLane(lane, scope)
+    layOutMarginLane(lane, scope)
+    expect([computed, item.hasAttribute('data-placed')]).toStrictEqual([
+      [
+        { top: '', placed: false },
+        { top: '148px', placed: false },
+        { top: '148px', placed: true },
+      ],
+      true,
+    ])
+  })
+
   it('makes the lane 0 pixels tall when the lane doesn’t have any items', () => {
     const lane = document.createElement('aside')
     layOutMarginLane(lane, document.createElement('div'))

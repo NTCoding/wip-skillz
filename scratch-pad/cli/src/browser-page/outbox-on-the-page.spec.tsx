@@ -99,6 +99,43 @@ describe('the outbox on a page', () => {
     expect(outboxButton().getAttribute('aria-label')).toBe('Outbox: 1 item is in the outbox.')
   })
 
+  it('opens the queued comment at full size when Nick clicks the expand button of its card', async () => {
+    await renderIndex(fakeWithQueuedItems())
+    const queued = await screen.findByRole('region', { name: 'Comment in the outbox' })
+    expect(within(queued).queryByRole('blockquote')).toBeNull()
+
+    await userEvent.click(
+      within(queued).getByRole('button', { name: 'Open the comment in the outbox at full size' }),
+    )
+
+    const view = screen.getByRole('dialog', { name: 'Comment in the outbox' })
+    expect(within(view).getByRole('button', { name: 'Edit' })).not.toBeNull()
+    expect(within(view).getByRole('blockquote').textContent).toBe(
+      'The export job writes the paid invoices of each shop to a CSV file.',
+    )
+  })
+
+  it('keeps the edit of a queued comment and only closes the full size view when Nick presses Escape in the edit at full size', async () => {
+    await renderIndex(fakeWithQueuedItems())
+    const queued = await screen.findByRole('region', { name: 'Comment in the outbox' })
+    await userEvent.click(
+      within(queued).getByRole('button', { name: 'Open the comment in the outbox at full size' }),
+    )
+    const view = screen.getByRole('dialog', { name: 'Comment in the outbox' })
+    await userEvent.click(within(view).getByRole('button', { name: 'Edit' }))
+    await userEvent.type(
+      within(view).getByRole('textbox', { name: 'Edit the comment' }),
+      ' Or all of them?',
+    )
+    await userEvent.keyboard('{Escape}')
+
+    expect(screen.queryByRole('dialog')).toBeNull()
+    expect(within(queued).getByRole('textbox', { name: 'Edit the comment' })).toHaveProperty(
+      'value',
+      'Only the paid ones? Or all of them?',
+    )
+  })
+
   it('doesn’t offer the outbox for a new grammar note', async () => {
     await renderIndex()
     selectInBlock('3-4', 4, 14)
@@ -145,6 +182,25 @@ describe('the outbox on a page', () => {
     expect(await screen.findAllByRole('region', { name: 'Comment in the outbox' })).toHaveLength(1)
     expect(within(card('Comment c-1')).getByRole('group', { name: 'Reply' })).toBeDefined()
     expect(outboxButton().textContent).toBe('Outbox3')
+  })
+
+  it('scrolls to a queued comment when Nick opens a link to it and the outbox loads after the threads', async () => {
+    const fake = fakeWithQueuedItems()
+    const loadOutbox = fake.connection.outbox
+    const outboxLoaded = Promise.withResolvers<void>()
+    vi.spyOn(fake.connection, 'outbox').mockImplementation(async () => {
+      await outboxLoaded.promise
+      return loadOutbox()
+    })
+    renderApp(`/${exportPad}/#outbox-1`, fake)
+    await screen.findByRole('region', { name: 'Comment c-1' })
+    outboxLoaded.resolve()
+
+    await vi.waitFor(() =>
+      expect(document.getElementById('outbox-1')?.getAttribute('data-scrolled-into-view')).toBe(
+        'true',
+      ),
+    )
   })
 
   it('saves the new text when Nick edits a queued comment', async () => {

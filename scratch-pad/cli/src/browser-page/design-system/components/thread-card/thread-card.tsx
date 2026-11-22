@@ -1,12 +1,11 @@
 import { useState, type ReactNode } from 'react'
 import { Button } from '../button/button'
-import { FullSizeView } from '../full-size-view/full-size-view'
-import { Highlight } from '../highlight/highlight'
 import { Icon, type IconName } from '../icon/icon'
 import { IconButton } from '../icon-button/icon-button'
 import { MarginCard } from '../margin-card/margin-card'
 import { Message } from '../message/message'
 import { MessageBox, problemOf } from '../message-box/message-box'
+import { SelectedTextQuote, type ThreadQuote } from '../selected-text-quote/selected-text-quote'
 import { ThreadKind, threadKindLabels, type ThreadKindName } from '../thread-kind/thread-kind'
 import './thread-card.css'
 
@@ -18,14 +17,6 @@ export interface ThreadMessage {
 }
 
 export type ThreadState = 'waits-for-agent' | 'waits-for-nick' | 'resolved'
-
-// The text that Nick selected for the thread and the text around it, which the full size view
-// quotes above the messages
-export interface ThreadQuote {
-  readonly prefix: string | undefined
-  readonly selectedText: string
-  readonly suffix: string | undefined
-}
 
 interface ThreadCardProps {
   readonly id: string
@@ -116,35 +107,6 @@ function fullSizeLabel(quote: ThreadQuote | undefined): string {
   return `Thread on “${shown}”`
 }
 
-function Quote({ quote, kind }: { readonly quote: ThreadQuote; readonly kind: ThreadKindName }) {
-  return (
-    <blockquote className="thread-card__quote">
-      {quote.prefix}
-      <Highlight threads={[]} kind={kind} active={false}>
-        {quote.selectedText}
-      </Highlight>
-      {quote.suffix}
-    </blockquote>
-  )
-}
-
-interface ThreadToolsProps {
-  readonly id: string
-  readonly openFullSize: () => void
-  readonly resolve: (() => void) | undefined
-}
-
-function ThreadTools({ id, openFullSize, resolve }: ThreadToolsProps) {
-  return (
-    <span className="thread-card__tools">
-      <IconButton icon="full-size" label={`Open ${id} at full size`} onClick={openFullSize} />
-      {resolve !== undefined && (
-        <IconButton icon="check" label={`Resolve ${id}`} onClick={resolve} />
-      )}
-    </span>
-  )
-}
-
 interface ThreadMessagesProps {
   readonly messages: readonly ThreadMessage[]
   readonly state: ThreadState
@@ -169,8 +131,6 @@ function ThreadMessages({ messages, state, fullSize }: ThreadMessagesProps) {
   )
 }
 
-// The full size view shows the same content as the card, so a reply that Nick has started in the
-// card is still in the reply box at full size.
 export function ThreadCard(props: ThreadCardProps) {
   const { id, kind, messages, state, outcome, textChanged, onReply, onAddToOutbox, onResolve } =
     props
@@ -187,38 +147,44 @@ export function ThreadCard(props: ThreadCardProps) {
     <MarginCard
       id={id}
       label={`${threadKindLabels[kind]} ${id}`}
+      name={id}
+      fullSizeLabel={fullSizeLabel(props.quote)}
       kind={kind}
       active={props.active}
       onFocus={props.onActivate}
+      tools={
+        resolve === undefined ? undefined : (
+          <IconButton icon="check" label={`Resolve ${id}`} onClick={resolve} />
+        )
+      }
     >
-      <FullSizeView label={fullSizeLabel(props.quote)}>
-        {({ open, openFullSize }) => (
-          <div className="thread-card" data-full-size={open}>
-            <ThreadTools id={id} openFullSize={openFullSize} resolve={resolve} />
-            {kind !== 'comment' && <ThreadKind kind={kind} />}
-            {open && props.quote !== undefined && <Quote quote={props.quote} kind={kind} />}
-            {textChanged && !resolved && (
-              <p className="thread-card__changed">
-                <Icon name="text-changed" />
-                The text has changed
-              </p>
-            )}
-            <ThreadMessages messages={messages} state={state} fullSize={open} />
-            {outcome !== undefined && <p className="thread-card__outcome">Done: {outcome}</p>}
-            {props.outbox}
-            {problem !== undefined && (
-              <p className="thread-card__problem" role="alert">
-                {problem}
-              </p>
-            )}
-            {onReply !== undefined && (
-              <div className="thread-card__reply">
-                <ReplyBox resolved={resolved} onReply={onReply} onAddToOutbox={onAddToOutbox} />
-              </div>
-            )}
-          </div>
-        )}
-      </FullSizeView>
+      {(fullSize) => (
+        <div className="thread-card" data-full-size={fullSize}>
+          {kind !== 'comment' && <ThreadKind kind={kind} />}
+          {fullSize && props.quote !== undefined && (
+            <SelectedTextQuote quote={props.quote} kind={kind} />
+          )}
+          {textChanged && !resolved && (
+            <p className="thread-card__changed">
+              <Icon name="text-changed" />
+              The text has changed
+            </p>
+          )}
+          <ThreadMessages messages={messages} state={state} fullSize={fullSize} />
+          {outcome !== undefined && <p className="thread-card__outcome">Done: {outcome}</p>}
+          {props.outbox}
+          {problem !== undefined && (
+            <p className="thread-card__problem" role="alert">
+              {problem}
+            </p>
+          )}
+          {onReply !== undefined && (
+            <div className="thread-card__reply">
+              <ReplyBox resolved={resolved} onReply={onReply} onAddToOutbox={onAddToOutbox} />
+            </div>
+          )}
+        </div>
+      )}
     </MarginCard>
   )
 }

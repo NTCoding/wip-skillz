@@ -12,8 +12,8 @@ function node(kind: FullTreeNode['kind'], title: string, children: readonly Full
 }
 
 const retryLimit = node('page', '1 Retry limit', [
-  node('section', 'Why 5 retries'),
-  node('page', '1.1 Wait between retries', [node('section', 'Why the wait doubles')]),
+  node('page', '1.1 Wait between retries', [node('page', '1.1.1 First retry')]),
+  node('page', '1.2 Storage errors'),
 ])
 
 function renderWithSubtree(onNavigate: (href: string) => void = () => undefined) {
@@ -61,21 +61,27 @@ describe('TopBar', () => {
     expect(screen.getByText('Actions').textContent).toBe('Actions')
   })
 
-  it('shows only the name of the scratch pad as the current crumb when there isn’t a current view', () => {
+  it('shows only the name of the scratch pad as the current crumb, which links to the index page, when there isn’t a current view', async () => {
+    const onNavigate = vi.fn<(href: string) => void>()
     render(
       <TopBar
         title="Invoice export"
         titleHref="/pad/"
         parents={[]}
         current={undefined}
-        onNavigate={() => undefined}
+        onNavigate={onNavigate}
         actions={undefined}
       />,
     )
     const breadcrumb = screen.getByRole('navigation', { name: 'Breadcrumb' })
     expect(breadcrumb.textContent).toBe('Invoice export')
-    expect(screen.getByText('Invoice export').getAttribute('aria-current')).toBe('page')
-    expect(screen.queryAllByRole('link')).toHaveLength(0)
+    const title = screen.getByRole('link', { name: 'Invoice export' })
+    expect([title.getAttribute('aria-current'), title.getAttribute('href')]).toStrictEqual([
+      'page',
+      '/pad/',
+    ])
+    await userEvent.click(title)
+    expect(onNavigate).toHaveBeenCalledWith('/pad/')
   })
 
   it('shows every parent of the current page as a link between the scratch pad and the page', async () => {
@@ -119,7 +125,7 @@ describe('TopBar', () => {
     expect(subtreeList()).toBeNull()
     await userEvent.hover(currentCrumb())
     expect(subtreeList()?.textContent).toBe(
-      '1 Retry limitWhy 5 retries1.1 Wait between retriesYou are hereWhy the wait doubles',
+      '1 Retry limit1.1 Wait between retriesYou are here1.1.1 First retry1.2 Storage errors',
     )
     expect(currentCrumb().getAttribute('aria-expanded')).toBe('true')
     expect(

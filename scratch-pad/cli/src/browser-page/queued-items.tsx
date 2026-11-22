@@ -26,6 +26,11 @@ export function queuedItemMessage(actions: QueuedItemActions, item: QueuedItem, 
   )
 }
 
+// The id of the card of a queued comment, which is also the address of the card on its page
+export function queuedKey(item: QueuedItem): string {
+  return `outbox-${item.number}`
+}
+
 export function queuedRepliesTo(outbox: readonly QueuedItem[], id: string): QueuedItem[] {
   return outbox.filter((item) => item.kind === 'reply' && item.thread === id)
 }

@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto'
+import { shownHeadings } from '../rendered-page/index-page'
 import { pageHeadings } from '../rendered-page/rendered-page'
 import { ScratchPadError } from '../scratch-pad-error'
 
@@ -42,9 +43,13 @@ function hashOf(text: string): string {
   return createHash('sha256').update(text).digest('hex')
 }
 
-export function sectionTexts(markdown: string): SectionText[] {
+// The levels of the headings are the levels that the browser shows, which are one lower than in
+// the file on the index page.
+export function sectionTexts(markdown: string, page: string): SectionText[] {
   const lines = markdown.split('\n')
-  const headings = pageHeadings(markdown).filter((heading) => heading.level <= 3)
+  const headings = shownHeadings(page, pageHeadings(markdown)).filter(
+    (heading) => heading.level <= 3,
+  )
   return headings.flatMap((heading, index) => {
     if (heading.level === 1) {
       return []

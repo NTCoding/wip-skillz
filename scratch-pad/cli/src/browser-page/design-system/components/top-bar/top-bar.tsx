@@ -109,6 +109,8 @@ function CurrentCrumb({
   )
 }
 
+// The title of the scratch pad is always a link to the index page. On the index page itself, the link takes Nick back
+// to the top of the page, for example after he has followed a link to a decision on the index page.
 export function TopBar({
   title,
   titleHref,
@@ -124,9 +126,14 @@ export function TopBar({
     <div className="top-bar">
       <nav className="top-bar__crumbs" aria-label="Breadcrumb">
         {current === undefined ? (
-          <span className="top-bar__crumb" aria-current="page">
+          <a
+            className="top-bar__crumb"
+            href={titleHref}
+            aria-current="page"
+            onClick={navigationClick(titleHref, onNavigate)}
+          >
             {title}
-          </span>
+          </a>
         ) : (
           <>
             {links.map((link) => (

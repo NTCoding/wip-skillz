@@ -8,6 +8,7 @@ import { tmpdir } from 'node:os'
 import { basename, extname, join, resolve } from 'node:path'
 import puppeteer from 'puppeteer-core'
 import {
+  addFeatureExamples,
   createExampleScratchPad,
   indexPage,
   invoiceTemplatePage,
@@ -75,30 +76,6 @@ function writePadWithoutNumbers() {
   return padWithoutNumbers
 }
 
-function anchorOf(markdown, selectedText) {
-  const lines = markdown.split('\n')
-  const index = lines.findIndex((line) => line.includes(selectedText))
-  const [prefix, suffix] = lines[index].split(selectedText)
-  return {
-    firstLine: index + 1,
-    lastLine: index + 1,
-    selectedText,
-    prefix: prefix.trim(),
-    suffix: suffix.trim(),
-  }
-}
-
-async function post(path, body) {
-  const response = await fetch(`${checks.address}api/scratch-pads/${pad}/${path}`, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify(body),
-  })
-  if (!response.ok) {
-    throw new Error(`POST ${path} returned ${response.status}: ${await response.text()}`)
-  }
-}
-
 async function shoot(page, name) {
   await new Promise((resolveWait) => setTimeout(resolveWait, 300))
   await page.screenshot({ path: join(output, `${name}.png`) })
@@ -137,28 +114,18 @@ async function numberedPageShots(page, padWithoutNumbers) {
 }
 
 // The 3 images of README.md. Copy them from <output folder>/docs into ../docs/ when they change.
+// The thread c-1 and the decision d-2 are examples in the demo scratch pad.
 async function docsShots(page) {
-  await post('threads', {
-    type: 'comment',
-    page: 'pages/index.md',
-    ...anchorOf(indexPage, 'uploads the file to the storage of the shop'),
-    message: 'Does the upload retry with the same limit as the export job?',
-  })
-  run(
-    'reply',
-    'c-1',
-    'Yes. The upload uses the retry limit of the job, so it will retry 8 times too.',
-  )
   mkdirSync(join(output, 'docs'), { recursive: true })
   await page.setViewport({ width: 1440, height: 900 })
-  await openPad(page)
+  await openPad(page, 'how-the-job-runs.md')
   await page.waitForSelector('[aria-label="Comment c-1"]')
   await shoot(page, 'docs/page-with-comment-thread')
   await page.click('button[aria-haspopup="menu"]')
   await page.waitForSelector('[role="menu"]')
   await shoot(page, 'docs/inbox')
   await page.keyboard.press('Escape')
-  await openPad(page, '#d-1')
+  await openPad(page, 'wait-between-retries.md#d-2')
   await page.evaluate(() => document.activeElement?.blur())
   await page.mouse.move(5, 500)
   await shoot(page, 'docs/decision')
@@ -222,19 +189,18 @@ async function reviewShots(page) {
     address: location.pathname,
     breadcrumb: document.querySelector('nav[aria-label="Breadcrumb"]').innerText,
   }))
-  checks.decisionTarget1100 = await targetTop(page, '#d-1', 'd-1')
+  checks.decisionTarget1100 = await targetTop(page, 'wait-between-retries.md#d-2', 'd-2')
   await shoot(page, '23-link-to-a-decision-1100')
-  checks.subPageDecisionTarget1100 = await targetTop(page, 'wait-between-retries.md#d-2', 'd-2')
   checks.headingTarget1100 = await targetTop(
     page,
     'retry-limit.md#what-the-agent-logs',
     'what-the-agent-logs',
   )
-  checks.threadTarget1100 = await targetTop(page, '#c-1', 'c-1')
+  checks.threadTarget1100 = await targetTop(page, 'how-the-job-runs.md#c-1', 'c-1')
   await shoot(page, '24-link-to-a-thread-1100')
   await page.setViewport({ width: 1440, height: 900 })
-  checks.decisionTarget1440 = await targetTop(page, '#d-1', 'd-1')
-  checks.threadTarget1440 = await targetTop(page, '#c-1', 'c-1')
+  checks.decisionTarget1440 = await targetTop(page, 'wait-between-retries.md#d-2', 'd-2')
+  checks.threadTarget1440 = await targetTop(page, 'how-the-job-runs.md#c-1', 'c-1')
 }
 
 async function pageShots(page) {
@@ -242,6 +208,7 @@ async function pageShots(page) {
   await openPad(page)
   await shoot(page, '01-page-1440')
 
+  await openPad(page, 'how-the-job-runs.md')
   await page.evaluate(() =>
     document.querySelector('figure.code-block').scrollIntoView({ block: 'center' }),
   )
@@ -253,7 +220,7 @@ async function pageShots(page) {
     () => document.querySelector('[role="dialog"]') === null,
   )
 
-  await page.evaluate(() => window.scrollTo(0, 0))
+  await openPad(page)
   const link = await page.waitForSelector('article a[href$="invoice-template.md#tax-number"]')
   await link.hover()
   await page.waitForSelector('[role="tooltip"]')
@@ -262,11 +229,15 @@ async function pageShots(page) {
 }
 
 async function liveUpdateShots(page) {
+  await openPad(page, 'how-the-job-runs.md')
+  // The page scrolls to the top once its threads have loaded. That's why the script scrolls after that.
+  await page.waitForSelector('[aria-label="Comment c-1"]')
+  await new Promise((resolveWait) => setTimeout(resolveWait, 300))
   await page.evaluate(() => window.scrollTo(0, 400))
   await new Promise((resolveWait) => setTimeout(resolveWait, 300))
   const scrollBefore = await page.evaluate(() => window.scrollY)
   await shoot(page, '05-live-update-before')
-  const file = join(home, pad, 'pages', 'index.md')
+  const file = join(home, pad, 'pages', '1-how-the-job-runs.md')
   writeFileSync(
     file,
     readFileSync(file, 'utf8').replace(
@@ -291,7 +262,7 @@ async function navigationChecks(page) {
   checks.addressAfterClick = await page.evaluate(() => location.pathname)
   await page.goBack()
   await page.waitForFunction(
-    () => document.querySelector('article h1')?.textContent === 'Invoice export',
+    () => document.querySelector('article h1')?.textContent === 'How the job runs',
   )
   checks.addressAfterBack = await page.evaluate(() => location.pathname)
   await openPad(page, 'invoice-template.md#layout')
@@ -370,6 +341,7 @@ const padWithoutNumbers = writePadWithoutNumbers()
 const port = await freePort()
 checks.started = run('start', '--port', String(port)).trim()
 checks.address = `http://127.0.0.1:${port}/`
+await addFeatureExamples({ run, home, pad, address: checks.address })
 const browser = await puppeteer.launch({ executablePath: chrome, headless: true })
 try {
   const page = await browser.newPage()

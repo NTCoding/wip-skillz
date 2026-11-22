@@ -4,39 +4,11 @@
   gap: var(--space-xl);
 }
 
-/* The tools are in the top right corner of the margin card, outside its padding. */
-.thread-card__tools {
-  display: flex;
-  gap: var(--space-2xs);
-  position: absolute;
-  top: calc(var(--space-md) - var(--space-3xl));
-  right: calc(var(--space-md) - var(--space-4xl));
-}
-
-/* The tools stay in the page at full size, so that FullSizeView can give the focus back to the
-   button that opened the view. */
-.thread-card[data-full-size='true'] > .thread-card__tools {
-  display: none;
-}
-
 .thread-card[data-full-size='true'] {
+  flex: 1;
   gap: var(--space-6xl);
-  width: 100%;
-  max-width: var(--col-w);
-  min-height: 100%;
-  margin: var(--space-0) auto;
   font-size: var(--fs-md);
   line-height: var(--lh-md);
-}
-
-.thread-card__quote {
-  margin: var(--space-0);
-  padding-left: var(--quote-indent);
-  border-left: var(--line-w-quote) solid var(--highlight-comment-line);
-  color: var(--text);
-  font-family: var(--font-body);
-  font-size: var(--fs-decision);
-  line-height: var(--lh-decision);
 }
 
 /* At full size, the reply box stays at the bottom of the view. */

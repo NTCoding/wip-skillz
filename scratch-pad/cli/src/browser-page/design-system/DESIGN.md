@@ -254,6 +254,10 @@ The server builds a block's text from the Markdown in the same way as `visible-t
 
 Nick comments on an `:::html` block with its comment button. The draft of that comment has an empty `selectedText` so the server stores the whole block's text as the selected text.
 
+The server adds 2 headings to the index page in `src/rendered-page/index-page.ts`. The "Introduction" heading is shown under the title of index.md. The "Table of contents" heading is shown after the rest of index.md. Each heading that the agent writes in index.md is shown one level lower. The id of the heading stays the same.
+
+The 2 headings of the server aren't in index.md so they don't have any `data-lines`. That's why a thread can't be attached to them by `selected-block.ts` or by `thread-anchors.ts`. A decision that Nick has decided isn't shown beside them either.
+
 A change to how the server finds a thread's text again belongs in `src/threads/thread-position.ts` rather than in the browser page. The server works out where each thread's text is now and returns that as the `position` of every thread from the API. `thread-anchors.ts` only turns that position into a block on the page.
 
 ## How the read marks work
@@ -271,6 +275,7 @@ The read marks feature is made of these files:
 | `read-marks.ts`             | Finds the read mark of a page and the dot of the page in the sidebar. It also builds the entries of the Inbox for the new pages and the changed sections. |
 | `changed-section-items.tsx` | Shows the line at the top of a new page and the card in the margin beside each changed section                                                            |
 | `item-places.ts`            | Builds the place of an item from the page and the section of the item, like "Invoice template › 1.1 Tax number › Shops outside the EU"                    |
+| `outbox-entries.ts`         | Builds the entries of the Outbox in the top bar. Each entry links to the card of its item on its page, where Nick edits or removes the item.              |
 | `inbox-outbox-view.tsx`     | Shows every item of the Inbox and of the Outbox under the heading of its status. The buttons at the top filter the items by status.                       |
 
 Each block of a changed section has `data-changed-section`, which `ReadingColumn` draws as a bar on the left of the block.

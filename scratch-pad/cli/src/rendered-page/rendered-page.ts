@@ -3,6 +3,7 @@ import { type CustomFileReader } from './html-block'
 import { renderNamedBlocks, type HtmlBlockSource } from './named-blocks'
 import { type Token } from 'markdown-it'
 import { addHeadingIds, headingsOf, type Heading } from './page-headings'
+import { indexLayout, indexPage, plainLayout, type PageLayout } from './index-page'
 import { linksOf, type PageLink } from './page-links'
 import { pageMarkdownParser } from './page-markdown-parser'
 import { byLine, type PageProblem } from './page-problem'
@@ -23,19 +24,26 @@ export interface RenderedPage {
   readonly problems: readonly PageProblem[]
 }
 
+type Layout = (
+  tokens: readonly Token[],
+  headings: readonly Heading[],
+  lineCount: number,
+) => PageLayout
+
 export function renderPage(source: PageSource): RenderedPage {
-  return rendered(source, addHeadingIds)
+  return rendered(source, addHeadingIds, source.page === indexPage ? indexLayout : plainLayout)
 }
 
 // The details of every improvement are shown on the same tab so a heading in the details
 // doesn't have an id that could clash with another heading or with an anchor on the tab.
 export function renderDetails(source: PageSource): RenderedPage {
-  return rendered(source, headingsOf)
+  return rendered(source, headingsOf, plainLayout)
 }
 
 function rendered(
   source: PageSource,
   headingsFrom: (tokens: readonly Token[]) => Heading[],
+  layout: Layout,
 ): RenderedPage {
   const tokens = pageMarkdownParser.parse(source.markdown, {})
   const lines = source.markdown.split('\n')
@@ -46,9 +54,10 @@ function rendered(
     headings,
     readCustomFile: source.readCustomFile,
   })
+  const shown = layout(tokens, headings, lines.length)
   return {
-    html: pageMarkdownParser.renderer.render(tokens, pageMarkdownParser.options, {}),
-    headings,
+    html: shown.html,
+    headings: shown.headings,
     links,
     decisions: namedBlocks.decisions,
     htmlBlocks: namedBlocks.htmlBlocks,

@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useState } from 'react'
-import { type ViewedPage } from './api-responses'
 import { type BrowserRoute, type PadAddresses } from './browser-route'
 
 interface BrowserNavigation {
@@ -40,8 +39,9 @@ export function useBrowserNavigation(routeOf: PadAddresses['routeOf']): BrowserN
 
 export function scrollTargetOf(
   route: BrowserRoute,
-  page: ViewedPage | undefined,
-  threadsRead: boolean,
+  // shownPage is the page that is shown, like pages/retry-limit.md.
+  shownPage: string | undefined,
+  cardsRead: boolean,
   improvementsRead: boolean,
 ): string | undefined {
   if (route.kind === 'improvements') {
@@ -53,15 +53,16 @@ export function scrollTargetOf(
   if (route.kind !== 'page') {
     return route.kind
   }
-  if (page?.page !== `pages/${route.file}` || !threadsRead) {
+  if (shownPage !== `pages/${route.file}` || !cardsRead) {
     return undefined
   }
   return route.section === undefined ? route.file : `${route.file}#${route.section}`
 }
 
-// A target is a heading, the card of a thread or a decision block. The card and the decision block
-// receive the focus too. That's how Nick can write in them straight after he has chosen an item
-// of his Inbox.
+// A target is a heading or a decision block in the text. It can be a card in the margin as well,
+// like the card of a thread, of a comment in the outbox or of a decision with Nick's choice. The
+// card and the decision block receive the focus too. That's how Nick can write in them straight
+// after he has chosen an item of his Inbox.
 export function useScrollOnNavigation(target: string | undefined, navigations: number): void {
   useEffect(() => {
     if (target === undefined) {

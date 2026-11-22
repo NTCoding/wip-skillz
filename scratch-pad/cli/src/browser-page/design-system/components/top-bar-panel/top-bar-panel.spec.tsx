@@ -1,6 +1,7 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
+import { MarginLane } from '../margin-lane/margin-lane'
 import { TopBarPanel, type TopBarPanelControls } from './top-bar-panel'
 
 function Exports({ controls }: { readonly controls: TopBarPanelControls }) {
@@ -88,6 +89,33 @@ describe('TopBarPanel', () => {
     await userEvent.keyboard('{Escape}')
     expect(panel()).toBeNull()
     expect(document.activeElement).toBe(button)
+  })
+
+  it('only closes the panel, rather than the open card in the margin too, when Nick presses Escape', async () => {
+    const onClosePopup = vi.fn<() => void>()
+    render(
+      <MarginLane
+        label="Comments and notes"
+        items={[
+          {
+            key: 'c-1',
+            anchorLines: '3-3',
+            content: <p>Is 5 retries enough?</p>,
+            marker: undefined,
+            popup: true,
+          },
+        ]}
+        onClosePopup={onClosePopup}
+      />,
+    )
+    renderPanel().focus()
+    await userEvent.keyboard('{Enter}')
+    expect(panel()).not.toBeNull()
+    await userEvent.keyboard('{Escape}')
+    expect(panel()).toBeNull()
+    expect(onClosePopup).not.toHaveBeenCalled()
+    await userEvent.keyboard('{Escape}')
+    expect(onClosePopup).toHaveBeenCalledTimes(1)
   })
 
   it('closes the panel from its content and leaves the focus where it is when the content calls close', async () => {

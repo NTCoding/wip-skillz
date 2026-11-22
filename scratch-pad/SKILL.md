@@ -59,7 +59,7 @@ If the server isn't running, the tool won't print any links. It will print a lin
 This is an example of a status update in the chat, with invented content. Everything that the update mentions is a link:
 
 ```markdown
-I've replied to [your comment on "every night"](http://127.0.0.1:4747/2026-11-21-invoice-export/#c-1). I've also rewritten [How the job runs](http://127.0.0.1:4747/2026-11-21-invoice-export/#how-the-job-runs) because you picked the proposal in [Will the export job retry 8 times?](http://127.0.0.1:4747/2026-11-21-invoice-export/#d-1).
+I've replied to [your comment on "every night"](http://127.0.0.1:4747/2026-11-21-invoice-export/how-the-job-runs.md#c-1). I've also rewritten [How the job runs](http://127.0.0.1:4747/2026-11-21-invoice-export/how-the-job-runs.md) because you picked the proposal in [Will the export job retry 8 times?](http://127.0.0.1:4747/2026-11-21-invoice-export/how-the-job-runs.md#d-1).
 ```
 
 ## Start a scratch pad
@@ -105,7 +105,8 @@ Follow these rules on every page:
 - Link to another page without its number so that the link still works after the page is renumbered. This is an example: `[the retry limit](retry-limit.md#wait-between-retries)`.
 - Keep a bullet point to one or two sentences. Write a longer point as a paragraph or a section.
 - Write a proposal in its own `:::decision` block rather than in a bullet point.
-- Don't write a list of the pages on the index page, because the server shows the table of contents under your overview on that page.
+- Write `index.md` as the introduction of the scratch pad. Write a few paragraphs about the topic of the scratch pad and link to a content page for anything more.
+- Don't write the "Introduction" heading or the "Table of contents" heading on the index page, because the server adds both headings as well as the table of contents itself.
 
 ### Number the pages
 
@@ -176,15 +177,15 @@ Run `wait` in the background and end your turn. Once Nick has been quiet for 10 
 $ scratch-pad wait --pad 2026-11-21-invoice-export
 2 new items in 2026-11-21-invoice-export
 
-[c-1] comment · pages/index.md:3 · section "How the job runs"
-  link: http://127.0.0.1:4747/2026-11-21-invoice-export/#c-1
+[c-1] comment · pages/1-how-the-job-runs.md:3 · section "How the job runs"
+  link: http://127.0.0.1:4747/2026-11-21-invoice-export/how-the-job-runs.md#c-1
   selected: "every night"
   Nick: Can a shop pick another time?
   block:
     3 | The export job writes the paid invoices of each shop to a CSV file every night.
 
-[d-1] decision · pages/index.md:9 · "Will the export job retry 8 times?"
-  link: http://127.0.0.1:4747/2026-11-21-invoice-export/#d-1
+[d-1] decision · pages/1-how-the-job-runs.md:9 · "Will the export job retry 8 times?"
+  link: http://127.0.0.1:4747/2026-11-21-invoice-export/how-the-job-runs.md#d-1
   Nick chose: proposal
 
 1 grammar note waits for a subagent
@@ -201,7 +202,7 @@ If Nick has asked for a change in his comment, change the page first and then re
 ```text
 $ scratch-pad reply --pad 2026-11-21-invoice-export c-1 "No. Every shop exports at 02:00, which I've added to the page."
 c-1 now waits for Nick
-link: http://127.0.0.1:4747/2026-11-21-invoice-export/#c-1
+link: http://127.0.0.1:4747/2026-11-21-invoice-export/how-the-job-runs.md#c-1
 ```
 
 ### Follow Nick's decision
@@ -210,13 +211,13 @@ When Nick has decided, rewrite the text under the question so that it describes 
 
 ```text
 $ scratch-pad show --pad 2026-11-21-invoice-export d-1
-[d-1] decision · pages/index.md:9 · "Will the export job retry 8 times?" · waits for the agent
-  link: http://127.0.0.1:4747/2026-11-21-invoice-export/#d-1
+[d-1] decision · pages/1-how-the-job-runs.md:9 · "Will the export job retry 8 times?" · waits for the agent
+  link: http://127.0.0.1:4747/2026-11-21-invoice-export/how-the-job-runs.md#d-1
   Nick chose: proposal
 
 $ scratch-pad done --pad 2026-11-21-invoice-export d-1 "Raised the retry limit to 8 on the page."
 d-1 is done
-link: http://127.0.0.1:4747/2026-11-21-invoice-export/#d-1
+link: http://127.0.0.1:4747/2026-11-21-invoice-export/how-the-job-runs.md#d-1
 ```
 
 Don't run `reply` or `decide` for a decision, because a decision can't be replied to and the server has already logged Nick's choice. If Nick has written his own reply and it leaves something open, write the open point as a new question below the old one. Put a new `:::decision` block under the new question.
@@ -238,8 +239,8 @@ This is an example of what the subagent runs and what it sees:
 
 ```text
 $ scratch-pad inbox --pad 2026-11-21-invoice-export --type grammar,improvement
-[g-1] grammar note · pages/index.md:7 · section "Will the export job retry 8 times?"
-  link: http://127.0.0.1:4747/2026-11-21-invoice-export/#g-1
+[g-1] grammar note · pages/1-how-the-job-runs.md:7 · section "Will the export job retry 8 times?"
+  link: http://127.0.0.1:4747/2026-11-21-invoice-export/how-the-job-runs.md#g-1
   selected: "can be slow"
   Nick: Write when it is slow.
   block:
@@ -247,7 +248,7 @@ $ scratch-pad inbox --pad 2026-11-21-invoice-export --type grammar,improvement
 
 $ scratch-pad done --pad 2026-11-21-invoice-export g-1 "Wrote that the network is slow in the evening."
 g-1 is done
-link: http://127.0.0.1:4747/2026-11-21-invoice-export/#g-1
+link: http://127.0.0.1:4747/2026-11-21-invoice-export/how-the-job-runs.md#g-1
 ```
 
 Nick still sees the closed note on the page. The note includes the line about the change.

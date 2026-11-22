@@ -243,7 +243,7 @@ describe('the threads of a page', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Open c-1 at full size' }))
     const view = screen.getByRole('dialog', { name: 'Thread on “retries 5 times”' })
     expect(within(view).getByRole('blockquote').textContent).toBe(
-      'The jobretries 5 times. See this section and the retry',
+      'The job retries 5 times. See this section and the retry',
     )
     await userEvent.type(within(view).getByRole('textbox', { name: 'Write a reply…' }), 'Why 8?')
     await userEvent.click(within(view).getByRole('button', { name: 'Add to outbox' }))

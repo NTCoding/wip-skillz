@@ -63,11 +63,19 @@ export function pageOfFileName(pages: readonly PageSummary[], file: string): str
 
 // The full tree shows the pages, the sub pages and the sections of the pages on every level. The sections are the
 // headings of level 2 and 3. A section of level 3 is shown under the section of level 2 above it. Under each page, the
-// sections are shown first and the sub pages after them. A page that is already above in the tree isn't shown again
-// so that a cycle in `parent` can't loop forever.
+// sections are shown first and the sub pages after them.
 export function fullTreeNodes(
   addresses: PadAddresses,
   pages: readonly PageSummary[],
+): FullTreeNode[] {
+  return pageNodes(addresses, pages, 'with-sections')
+}
+
+// A page that is already above in the tree isn't shown again so that a cycle in `parent` can't loop forever.
+function pageNodes(
+  addresses: PadAddresses,
+  pages: readonly PageSummary[],
+  sections: 'with-sections' | 'pages-only',
 ): FullTreeNode[] {
   const pageNode = (summary: PageSummary, above: ReadonlySet<string>): FullTreeNode => {
     const file = fileOfPage(summary.page)
@@ -78,7 +86,9 @@ export function fullTreeNodes(
       title: summary.number === undefined ? title : `${summary.number} ${title}`,
       href: addresses.pageHref(file),
       children: [
-        ...sectionNodes(summary.headings, (id) => addresses.pageHref(file, id)),
+        ...(sections === 'with-sections'
+          ? sectionNodes(summary.headings, (id) => addresses.pageHref(file, id))
+          : []),
         ...subPagesOf(pages, summary.page)
           .filter((subPage) => !seen.has(subPage.page))
           .map((subPage) => pageNode(subPage, seen)),
@@ -94,15 +104,17 @@ function containsHref(node: FullTreeNode, href: string): boolean {
   return node.href === href || node.children.some((child) => containsHref(child, href))
 }
 
-// The subtree of a page starts at the top level page above it. A page that isn't in the full tree doesn't have a
-// subtree.
+// The subtree of a page starts at the top level page above it. The subtree only shows the pages, because the sidebar and
+// the margin already show the sections of the current page. A page that isn't in the full tree doesn't have a subtree.
 export function subtreeOf(
   addresses: PadAddresses,
   pages: readonly PageSummary[],
   page: string,
 ): CurrentSubtree | undefined {
   const currentHref = addresses.pageHref(fileOfPage(page))
-  const root = fullTreeNodes(addresses, pages).find((node) => containsHref(node, currentHref))
+  const root = pageNodes(addresses, pages, 'pages-only').find((node) =>
+    containsHref(node, currentHref),
+  )
   return root === undefined ? undefined : { root, currentHref }
 }
 

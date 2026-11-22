@@ -14,7 +14,7 @@ const meta = {
         key: 'c-1',
         anchorLines: '3-3',
         content: (
-          <MarginCard label="Comment c-1" kind="comment" active={false}>
+          <MarginCard label="Comment c-1" name="c-1" kind="comment" active={false}>
             <p>Is 5 retries enough on a slow network?</p>
           </MarginCard>
         ),
@@ -33,7 +33,7 @@ const meta = {
         key: 'g-1',
         anchorLines: '3-3',
         content: (
-          <MarginCard label="Grammar / tone g-1" kind="grammar" active={false}>
+          <MarginCard label="Grammar / tone g-1" name="g-1" kind="grammar" active={false}>
             <p>Write who retries the export rather than “it”.</p>
           </MarginCard>
         ),

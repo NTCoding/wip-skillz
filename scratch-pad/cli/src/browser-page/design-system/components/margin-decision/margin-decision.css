@@ -21,21 +21,6 @@
   gap: var(--space-md);
 }
 
-/* The tools are in the top right corner of the margin card, outside its padding. */
-.margin-decision__tools {
-  display: flex;
-  gap: var(--space-2xs);
-  position: absolute;
-  top: calc(var(--space-md) - var(--space-3xl));
-  right: calc(var(--space-md) - var(--space-4xl));
-}
-
-/* The tools stay in the page at full size, so that FullSizeView can give the focus back to the
-   button that opened the view. */
-.margin-decision__card[data-full-size='true'] > .margin-decision__tools {
-  display: none;
-}
-
 .margin-decision__head {
   display: flex;
   align-items: center;
@@ -94,12 +79,9 @@
   font-weight: var(--fw-medium);
 }
 
-/* At full size, the decision is shown in the reading column's width with each field in a box. */
+/* At full size, each field of the decision is shown in a box. */
 .margin-decision__card[data-full-size='true'] {
   gap: var(--space-5xl);
-  width: 100%;
-  max-width: var(--col-w);
-  margin: var(--space-0) auto;
 }
 
 .margin-decision__card[data-full-size='true'] .margin-decision__head {

@@ -170,7 +170,7 @@ CREATE TABLE read_sections (
 // The read marks are new in version 4. Every page of an existing scratch pad counts as read then,
 // so that Nick doesn't see every page of an older scratch pad as new.
 function markEveryPageRead(pad: PadDb, pages: readonly PageMarkdown[]): void {
-  pages.forEach(({ page, markdown }) => pad.markPageRead(page, sectionTexts(markdown)))
+  pages.forEach(({ page, markdown }) => pad.markPageRead(page, sectionTexts(markdown, page)))
 }
 
 export const padSchema: PadSchema = {

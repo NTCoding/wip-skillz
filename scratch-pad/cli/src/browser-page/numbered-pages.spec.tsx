@@ -83,7 +83,10 @@ describe('ScratchPadApp with numbered pages', () => {
     vi.spyOn(fake.connection, 'pages').mockResolvedValue(pageSummaries.slice(0, 1))
     renderApp(`/${exportPad}/`, fake)
     await shownPage('Invoice export')
-    await screen.findByRole('link', { name: 'Invoice export', current: 'page' })
+    await within(screen.getByRole('navigation', { name: 'Breadcrumb' })).findByRole('link', {
+      name: 'Invoice export',
+      current: 'page',
+    })
     expect(screen.queryByRole('list', { name: 'Pages' })).toBeNull()
     expect(screen.queryByRole('button', { name: /^Full tree/ })).toBeNull()
   })

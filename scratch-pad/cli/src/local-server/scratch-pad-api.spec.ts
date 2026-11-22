@@ -102,7 +102,7 @@ describe('respondToApiRequest for the pages', () => {
           description: undefined,
           headings: [
             { level: 1, text: 'Export job', id: 'export-job', line: 1 },
-            { level: 2, text: 'Retry policy', id: 'retry-policy', line: 3 },
+            { level: 3, text: 'Retry policy', id: 'retry-policy', line: 3 },
           ],
           openThreads: 0,
           waitingForNick: { decisions: 0, replies: 0 },

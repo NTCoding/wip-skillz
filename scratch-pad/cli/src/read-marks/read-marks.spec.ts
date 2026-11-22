@@ -24,13 +24,19 @@ const retryPage = [
 ].join('\n')
 
 function hashesOf(markdown: string): Record<string, string> {
-  return Object.fromEntries(sectionTexts(markdown).map((section) => [section.id, section.hash]))
+  return Object.fromEntries(
+    sectionTexts(markdown, 'pages/retry-limit.md').map((section) => [section.id, section.hash]),
+  )
 }
 
 describe('sectionTexts', () => {
   it('returns each heading of level 2 or 3 with its title and the hash of its text', () => {
     expect(
-      sectionTexts(retryPage).map((section) => [section.id, section.title, section.hash.length]),
+      sectionTexts(retryPage, 'pages/retry-limit.md').map((section) => [
+        section.id,
+        section.title,
+        section.hash.length,
+      ]),
     ).toStrictEqual([
       ['the-default', 'The default', 64],
       ['slow-networks', 'Slow networks', 64],
@@ -68,20 +74,28 @@ describe('sectionTexts', () => {
 describe('findSection', () => {
   it('returns the section with the id', () => {
     expect(
-      findSection(sectionTexts(retryPage), 'slow-networks', 'pages/retry-limit.md').title,
+      findSection(
+        sectionTexts(retryPage, 'pages/retry-limit.md'),
+        'slow-networks',
+        'pages/retry-limit.md',
+      ).title,
     ).toBe('Slow networks')
   })
 
   it("throws UnknownSectionError when the page doesn't have the section", () => {
-    expect(() => findSection(sectionTexts(retryPage), 'the-logo', 'pages/retry-limit.md')).toThrow(
-      UnknownSectionError,
-    )
+    expect(() =>
+      findSection(
+        sectionTexts(retryPage, 'pages/retry-limit.md'),
+        'the-logo',
+        'pages/retry-limit.md',
+      ),
+    ).toThrow(UnknownSectionError)
   })
 })
 
 describe('pageReadState', () => {
   const page = 'pages/retry-limit.md'
-  const sections = sectionTexts(retryPage)
+  const sections = sectionTexts(retryPage, 'pages/retry-limit.md')
   const readSections = sections.map((section) => ({
     page,
     section: section.id,
@@ -102,7 +116,10 @@ describe('pageReadState', () => {
   })
 
   it("returns the sections whose text has changed and the sections that weren't there when Nick read the page", () => {
-    const changed = sectionTexts(`${retryPage.replace('5 times', '6 times')}\n\n## The logo\n\nA.`)
+    const changed = sectionTexts(
+      `${retryPage.replace('5 times', '6 times')}\n\n## The logo\n\nA.`,
+      'pages/retry-limit.md',
+    )
     const marks = {
       pages: [page],
       sections: [...readSections, { page: 'pages/index.md', section: 'the-logo', hash: 'x' }],

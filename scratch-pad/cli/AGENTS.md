@@ -18,4 +18,6 @@ These are the main sections of DESIGN.md:
 
 Run `pnpm build` and then `pnpm try` to start the build on port 4800 with the invented "Invoice export" scratch pad in a temporary folder. Run `pnpm try <folder>` to use a copy of a scratch pad in ~/scratchpads instead. Add `--port <port>` when port 4800 is in use. Never stop the server on port 4747, because it's Nick's real server. Ctrl+C stops the try server, or you can run the `kill` command that it prints.
 
+Every time you add a new feature, add an example of the feature to the demo scratch pad that `pnpm try` starts. The demo is built from the `featureExamples` list in `scripts/example-scratch-pad.mjs`. So a new example is one more entry in that list. Nick checks a feature on the demo without any setup. That's why a feature without an example can't be checked.
+
 Every time you finish a new feature, remind Nick that he can check it with `pnpm try` before he commits. Give him the full command and the folder to run it from, because he'll forget that the command exists.

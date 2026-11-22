@@ -29,14 +29,19 @@ export function FullSizeView({ label, actions, children }: FullSizeViewProps) {
     const restorePageBehind = makePageBehindInert(view.current)
     root.dataset['fullSize'] = 'open'
     closeButton.current?.focus()
+    // The listener runs in the capture phase and stops the propagation of the Escape that closes the
+    // view. So a draft or a reply box in the view doesn't cancel on the same Escape. MarginLane
+    // doesn't close the card in the margin on that Escape either.
     const closeOnEscape = (event: KeyboardEvent): void => {
       if (event.key === 'Escape') {
+        event.stopPropagation()
+        event.preventDefault()
         setOpen(false)
       }
     }
-    document.addEventListener('keydown', closeOnEscape)
+    document.addEventListener('keydown', closeOnEscape, true)
     return () => {
-      document.removeEventListener('keydown', closeOnEscape)
+      document.removeEventListener('keydown', closeOnEscape, true)
       restorePageBehind()
       delete root.dataset['fullSize']
       opener?.focus()

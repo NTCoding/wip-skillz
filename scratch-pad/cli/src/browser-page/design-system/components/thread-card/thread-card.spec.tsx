@@ -1,7 +1,8 @@
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
-import { ThreadCard, type ThreadMessage, type ThreadQuote, type ThreadState } from './thread-card'
+import { type ThreadQuote } from '../selected-text-quote/selected-text-quote'
+import { ThreadCard, type ThreadMessage, type ThreadState } from './thread-card'
 
 class ClosedThreadError extends Error {}
 

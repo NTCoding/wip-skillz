@@ -39,11 +39,12 @@ export { Message } from './components/message/message'
 export { MessageBox } from './components/message-box/message-box'
 export { NewPageLine } from './components/new-page-line/new-page-line'
 export { Notice } from './components/notice/notice'
-export { Outbox } from './components/outbox/outbox'
+export { Outbox, type OutboxEntry } from './components/outbox/outbox'
 export { OutboxMessage } from './components/outbox-message/outbox-message'
 export { Outline } from './components/outline/outline'
 export { PageLink } from './components/page-link/page-link'
 export { PageList, type PageListEntry } from './components/page-list/page-list'
+export { PanelMenu } from './components/panel-menu/panel-menu'
 export { ReadingColumn } from './components/reading-column/reading-column'
 export { SectionChange } from './components/section-change/section-change'
 export { SelectionTools } from './components/selection-tools/selection-tools'
@@ -57,9 +58,12 @@ export {
 export { StatusPill } from './components/status-pill/status-pill'
 export { TaskList, type TaskRow } from './components/task-list/task-list'
 export {
+  SelectedTextQuote,
+  type ThreadQuote,
+} from './components/selected-text-quote/selected-text-quote'
+export {
   ThreadCard,
   type ThreadMessage,
-  type ThreadQuote,
   type ThreadState,
 } from './components/thread-card/thread-card'
 export { ThreadDraft } from './components/thread-draft/thread-draft'

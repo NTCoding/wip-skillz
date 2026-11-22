@@ -2,7 +2,7 @@ import { Fragment, useState } from 'react'
 import { type QueuedComment, type QueuedItem, type Thread } from './api-responses'
 import { MarginCard, Notice, ReadingColumn, ThreadCard } from './design-system/design-system'
 import { shownTime } from './message-time'
-import { queuedItemMessage, queuedRepliesTo } from './queued-items'
+import { queuedItemMessage, queuedKey, queuedRepliesTo } from './queued-items'
 import {
   threadCardActions,
   threadStates,
@@ -93,7 +93,9 @@ export function MissingPageView(props: MissingPageViewProps) {
           <Fragment key={item.number}>
             <blockquote>{item.anchor.selectedText}</blockquote>
             <MarginCard
+              id={queuedKey(item)}
               label="Comment in the outbox"
+              name="the comment in the outbox"
               kind="comment"
               active={false}
               onFocus={() => undefined}

@@ -10,7 +10,7 @@ import { renderPage } from './rendered-page'
 describe('pageBlocksOf', () => {
   it('returns the same text as the browser for each block when the page has a table, lists, code and a quote', () => {
     const html = renderPage({
-      page: 'pages/index.md',
+      page: 'pages/retry-limit.md',
       markdown: visibleTextMarkdown,
       readCustomFile: () => undefined,
     }).html

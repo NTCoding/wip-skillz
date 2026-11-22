@@ -187,6 +187,18 @@ describe('a changed section', () => {
     expect(document.querySelectorAll('[data-changed-section]')).toHaveLength(0)
   })
 
+  it('opens the card of the changed section at full size when Nick clicks its expand button', async () => {
+    await renderIndex(fakeWithMark(changedIndex))
+    const changed = await screen.findByRole('region', { name: 'Retry limit has changed' })
+
+    await userEvent.click(
+      within(changed).getByRole('button', { name: 'Open the change to Retry limit at full size' }),
+    )
+
+    const view = screen.getByRole('dialog', { name: 'Retry limit has changed' })
+    expect(within(view).getByRole('button', { name: 'Mark as read' })).not.toBeNull()
+  })
+
   it('opens and closes the card when Nick clicks its marker beside the text', async () => {
     await renderIndex(fakeWithMark(changedIndex))
     const marker = await screen.findByRole('button', { name: 'Retry limit has changed' })

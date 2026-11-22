@@ -4,8 +4,10 @@
   gap: var(--space-md);
 }
 
+/* The title only takes the width of its text, which leaves the top right corner to the tools of the card. */
 .section-change__title {
   display: flex;
+  align-self: flex-start;
   align-items: center;
   gap: var(--space-sm);
   margin: var(--space-0);

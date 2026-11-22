@@ -182,10 +182,8 @@ describe('ScratchPadApp in an export', () => {
         .map((item) => item.firstElementChild?.textContent),
     ).toStrictEqual([
       '2 retry-limit.md',
-      'Why 5 retries',
       '2.1 Wait between retries',
-      'Why the wait doubles+1 more',
-      '2.1.1 First retry+1 moreYou are here',
+      '2.1.1 First retryYou are here',
     ])
     expect(within(subtree).queryAllByRole('link')).toStrictEqual([])
   })

@@ -13,6 +13,7 @@ import {
   MarginLane,
   MarginMarker,
   ReadingColumn,
+  SelectedTextQuote,
   SelectionTools,
   ThreadCard,
   ThreadDraft,
@@ -23,7 +24,12 @@ import {
   type ThreadState,
 } from './design-system/design-system'
 import { shownTime } from './message-time'
-import { queuedItemMessage, queuedRepliesTo, type QueuedItemActions } from './queued-items'
+import {
+  queuedItemMessage,
+  queuedKey,
+  queuedRepliesTo,
+  type QueuedItemActions,
+} from './queued-items'
 import { anchorLinesOf, decisionMarginItems } from './answered-decision-items'
 import { elementContextOf, type PageContext } from './page-element-context'
 import { fileOfPage } from './browser-route'
@@ -129,10 +135,6 @@ function useSelectionTools(
     }
   }, [pageText, tools])
   return [selected, setSelected]
-}
-
-function queuedKey(item: QueuedItem): string {
-  return `outbox-${item.number}`
 }
 
 function highlightsOf(
@@ -318,11 +320,17 @@ export function PageWithThreads(props: PageWithThreadsProps) {
               <MarginCard
                 id={key}
                 label="Comment in the outbox"
+                name="the comment in the outbox"
                 kind="comment"
                 active={key === active}
                 onFocus={() => setActive(key)}
               >
-                {queuedItemMessage(actions, item, 'Comment')}
+                {(fullSize) => (
+                  <>
+                    {fullSize && <SelectedTextQuote quote={item.anchor} kind="comment" />}
+                    {queuedItemMessage(actions, item, 'Comment')}
+                  </>
+                )}
               </MarginCard>
             ),
             marker: (

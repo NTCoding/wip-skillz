@@ -65,7 +65,7 @@ describe('pageSummaries', () => {
     ])
   })
 
-  it('returns each page with its title and its open threads when Nick has commented', () => {
+  it('returns each page with its title, its open threads and its headings at the levels that the browser shows when Nick has commented', () => {
     const folder = exportJobScratchPad(temporaryHome())
     commentOnRetryPolicy(folder, 'Is 5 retries enough?')
 
@@ -79,7 +79,7 @@ describe('pageSummaries', () => {
         description: undefined,
         headings: [
           { level: 1, text: 'Export job', id: 'export-job', line: 1 },
-          { level: 2, text: 'Retry policy', id: 'retry-policy', line: 3 },
+          { level: 3, text: 'Retry policy', id: 'retry-policy', line: 3 },
         ],
         openThreads: 1,
         waitingForNick: { decisions: 0, replies: 0 },
@@ -216,16 +216,22 @@ function numberedScratchPad(): ScratchPadFolder {
 }
 
 describe('viewPage', () => {
-  it('returns the rendered page with its title and headings when the page exists', () => {
+  it('returns the index page with the title, the introduction and the table of contents when Nick opens the index page', () => {
     const page = viewPage(exportJobScratchPad(temporaryHome()), 'index')
 
-    expect({ ...page, html: page.html.split('\n')[0] }).toStrictEqual({
+    expect({ ...page, html: page.html.split('\n').slice(0, 3) }).toStrictEqual({
       page: 'pages/index.md',
       title: 'Export job',
-      html: '<h1 data-lines="1-1" id="export-job">Export job</h1>',
+      html: [
+        '<h1 data-lines="1-1" id="export-job">Export job</h1>',
+        '<h2 id="introduction">Introduction</h2>',
+        '<h3 data-lines="3-3" id="retry-policy">Retry policy</h3>',
+      ],
       headings: [
         { level: 1, text: 'Export job', id: 'export-job', line: 1 },
-        { level: 2, text: 'Retry policy', id: 'retry-policy', line: 3 },
+        { level: 2, text: 'Introduction', id: 'introduction', line: 2 },
+        { level: 3, text: 'Retry policy', id: 'retry-policy', line: 3 },
+        { level: 2, text: 'Table of contents', id: 'table-of-contents', line: 8 },
       ],
       links: [],
       decisions: [],

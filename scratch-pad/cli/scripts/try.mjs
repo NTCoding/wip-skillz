@@ -8,7 +8,7 @@ import { createServer } from 'node:net'
 import { homedir, tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { backup, DatabaseSync } from 'node:sqlite'
-import { createExampleScratchPad } from './example-scratch-pad.mjs'
+import { addFeatureExamples, createExampleScratchPad } from './example-scratch-pad.mjs'
 
 const tool = resolve('dist/scratch-pad')
 const defaultPort = 4800
@@ -80,12 +80,12 @@ async function copyScratchPad(folder, home) {
   return folder
 }
 
-function exampleScratchPad(home) {
+// Runs the built tool on the scratch pads in the temporary folder, as the agent does
+function toolIn(home) {
   const environment = { ...process.env, SCRATCH_PADS_HOME: home }
   delete environment.SCRATCH_PAD
-  const run = (...words) =>
+  return (...words) =>
     execFileSync(process.execPath, [tool, ...words], { env: environment, encoding: 'utf8' })
-  return createExampleScratchPad(run, home)
 }
 
 async function serverIsListening(port) {
@@ -105,7 +105,10 @@ if (!(await portIsFree(port))) {
   fail(`Port ${port} is already in use. Pass another port with: pnpm try --port <port>`)
 }
 const home = mkdtempSync(join(tmpdir(), 'scratch-pad-try-'))
-const pad = folder === undefined ? exampleScratchPad(home) : await copyScratchPad(folder, home)
+const pad =
+  folder === undefined
+    ? createExampleScratchPad(toolIn(home), home)
+    : await copyScratchPad(folder, home)
 const server = spawn(process.execPath, [tool, 'serve', '--port', String(port)], {
   stdio: 'inherit',
   env: { ...process.env, SCRATCH_PADS_HOME: home, SCRATCH_PAD: pad },
@@ -116,13 +119,27 @@ process.once('SIGTERM', stop)
 server.once('exit', (code) => {
   rmSync(home, { recursive: true, force: true })
   console.log(`The try server has stopped and ${home} has been removed.`)
-  process.exit(code ?? 0)
+  process.exit(code ?? process.exitCode ?? 0)
 })
 const deadline = Date.now() + 5000
 while (!(await serverIsListening(port)) && Date.now() < deadline && server.exitCode === null) {
   await new Promise((resolveWait) => setTimeout(resolveWait, 100))
 }
-if (server.exitCode === null) {
+// The examples need the server, because Nick's part of each example is made through the API of
+// the browser page.
+async function examplesAdded() {
+  try {
+    await addFeatureExamples({ run: toolIn(home), home, pad, address: `http://127.0.0.1:${port}/` })
+    return true
+  } catch (error) {
+    console.error(`The examples couldn't be added to the demo: ${error.message}`)
+    process.exitCode = 1
+    stop()
+    return false
+  }
+}
+
+if (server.exitCode === null && (folder !== undefined || (await examplesAdded()))) {
   console.log(`Try the scratch pad at http://127.0.0.1:${port}/${pad}/`)
   console.log(`The scratch pads of the try server are in ${home}.`)
   console.log(`Press Ctrl+C to stop the try server, or run: kill ${process.pid}`)

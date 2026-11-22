@@ -11,9 +11,10 @@ import {
   type ItemRow,
   type Navigate,
 } from './design-system/design-system'
-import { queuedCommentPlace, quoteOf, threadPlace } from './item-places'
+import { queuedItemPlace, quoteOf, threadPlace } from './item-places'
 import { timeAgo } from './message-time'
 import { authorNames } from './nick-inbox-entries'
+import { queuedKey } from './queued-items'
 
 // A comment that has waited for the agent for longer than this is shown as late.
 const lateAfterMilliseconds = 15 * 60_000
@@ -119,37 +120,23 @@ function threadRow(thread: ThreadOfPad, context: ThreadRowContext): ItemRow[] {
 }
 
 function queuedRow(item: QueuedItem, props: InboxOutboxViewProps): ItemRow[] {
-  const shared = {
-    key: `outbox-${item.number}`,
-    kind: 'In the outbox',
-    quoteKind: 'text',
-    last: `Nick: ${item.text}`,
-    time: item.time,
-    shownTime: 'Not sent yet',
-    late: false,
-    linkLabel: 'Open the thread',
-  } as const
-  if (item.kind === 'comment') {
-    return [
-      {
-        ...shared,
-        where: queuedCommentPlace(props.pages, item),
-        quote: item.position.kind === 'attached' ? item.position.text : item.anchor.selectedText,
-        href: props.addresses.pageHref(fileOfPage(item.page), shared.key),
-      },
-    ]
-  }
-  const thread = props.threads.find((each) => each.id === item.thread)
-  const first = thread?.messages[0]
-  if (thread === undefined || first === undefined) {
+  const place = queuedItemPlace(props.pages, props.threads, item)
+  if (place === undefined) {
     return []
   }
   return [
     {
-      ...shared,
-      where: threadPlace(props.pages, thread),
-      quote: quoteOf(thread, first.text),
-      href: props.addresses.pageHref(fileOfPage(thread.page), thread.id),
+      key: queuedKey(item),
+      kind: 'In the outbox',
+      where: place.where,
+      quote: place.quote,
+      quoteKind: 'text',
+      last: `Nick: ${item.text}`,
+      time: item.time,
+      shownTime: 'Not sent yet',
+      late: false,
+      linkLabel: 'Open the thread',
+      href: props.addresses.pageHref(fileOfPage(place.page), place.card),
     },
   ]
 }
