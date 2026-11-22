@@ -4,6 +4,8 @@ import {
   type Improvements,
   type NickInbox,
   type PadChange,
+  type PageReadMark,
+  type SectionHash,
   type ProgressTracker,
   type Thread,
   type ViewedPage,
@@ -83,13 +85,14 @@ export const indexPage: ViewedPage = {
   title: 'Invoice export',
   html: indexHtml,
   headings: [
-    { level: 1, text: 'Invoice export', id: 'invoice-export' },
-    { level: 2, text: 'Retry limit', id: 'retry-limit' },
-    { level: 3, text: 'Wait between retries', id: 'wait-between-retries' },
+    { level: 1, text: 'Invoice export', id: 'invoice-export', line: 1 },
+    { level: 2, text: 'Retry limit', id: 'retry-limit', line: 6 },
+    { level: 3, text: 'Wait between retries', id: 'wait-between-retries', line: 22 },
     {
       level: 2,
       text: 'Will the export job retry 8 times?',
       id: 'will-the-export-job-retry-8-times',
+      line: 26,
     },
   ],
   links: [
@@ -120,9 +123,9 @@ export const invoiceTemplatePage: ViewedPage = {
     '<p>Each invoice has one page.</p>',
   ].join('\n'),
   headings: [
-    { level: 1, text: 'Invoice template', id: 'invoice-template' },
-    { level: 2, text: 'Tax number', id: 'tax-number' },
-    { level: 2, text: 'Layout', id: 'layout' },
+    { level: 1, text: 'Invoice template', id: 'invoice-template', line: 1 },
+    { level: 2, text: 'Tax number', id: 'tax-number', line: 3 },
+    { level: 2, text: 'Layout', id: 'layout', line: 8 },
   ],
   links: [],
   decisions: [],
@@ -138,8 +141,8 @@ const firstRetryPage: ViewedPage = {
     '<p>The storage of a shop is often back after 30 seconds.</p>',
   ].join('\n'),
   headings: [
-    { level: 1, text: 'First retry', id: 'first-retry' },
-    { level: 2, text: 'Why 30 seconds?', id: 'why-30-seconds' },
+    { level: 1, text: 'First retry', id: 'first-retry', line: 1 },
+    { level: 2, text: 'Why 30 seconds?', id: 'why-30-seconds', line: 3 },
   ],
   links: [],
   decisions: [],
@@ -259,6 +262,8 @@ export interface FakeConnection {
   readonly pages: Map<string, ViewedPage>
   readonly threads: Map<string, Thread[]>
   readonly outbox: ReturnType<typeof fakeOutbox>['items']
+  // The read marks that the fake returns. A test sets them to show new pages and changed sections.
+  readonly readMarks: PageReadMark[]
   readonly sendChange: (change: PadChange) => void
   readonly sendConnection: (connected: boolean) => void
   readonly closeChanges: () => void
@@ -315,6 +320,14 @@ export function fakeConnection(): FakeConnection {
   ])
   const threads = new Map([['index.md', [retryQuestion, toneNote]]])
   const outbox = fakeOutbox(retryQuestion)
+  const readMarks: PageReadMark[] = []
+  const changeMark = (file: string, change: (mark: PageReadMark) => PageReadMark): void => {
+    const index = readMarks.findIndex((mark) => mark.page === `pages/${file}`)
+    const mark = readMarks[index]
+    if (mark !== undefined) {
+      readMarks[index] = change(mark)
+    }
+  }
   const listeners = new Set<ChangeListeners>()
   const closeChanges = vi.fn<() => void>()
   const connection: ScratchPadConnection = {
@@ -332,6 +345,26 @@ export function fakeConnection(): FakeConnection {
     progressTracker: () => Promise.resolve(progressTracker),
     decisionLog: () => Promise.resolve(decisionLog),
     improvements: () => Promise.resolve(improvements),
+    readMarks: () => Promise.resolve({ pages: [...readMarks] }),
+    threadsOfPad: () =>
+      Promise.resolve(
+        [...threads.values()].flat().map((thread) => ({ ...thread, resolvedTime: undefined })),
+      ),
+    markPageRead: vi.fn((file: string) => {
+      changeMark(file, (mark) => ({ ...mark, state: 'read', changedSections: [] }))
+      return Promise.resolve()
+    }),
+    markPageUnread: vi.fn((file: string) => {
+      changeMark(file, (mark) => ({ ...mark, state: 'new', changedSections: [] }))
+      return Promise.resolve()
+    }),
+    markSectionRead: vi.fn((file: string, section: SectionHash) => {
+      changeMark(file, (mark) => ({
+        ...mark,
+        changedSections: mark.changedSections.filter((each) => each.id !== section.id),
+      }))
+      return Promise.resolve()
+    }),
     onChange: (changeListeners) => {
       listeners.add(changeListeners)
       return () => {
@@ -345,6 +378,7 @@ export function fakeConnection(): FakeConnection {
     pages,
     threads,
     outbox: outbox.items,
+    readMarks,
     sendChange: (change) => listeners.forEach((listener) => listener.changed(change)),
     sendConnection: (connected) => listeners.forEach((listener) => listener.connection(connected)),
     closeChanges,

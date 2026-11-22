@@ -138,4 +138,33 @@ describe('Inbox', () => {
     const { button } = renderInbox([reply])
     expect(button.getAttribute('aria-label')).toBe('Inbox: 1 item waits for you')
   })
+
+  it('shows a new page with its title and its description and a changed section without a quote', async () => {
+    const page: InboxEntry = {
+      key: 'page pages/retry-limit.md',
+      href: '/pad/retry-limit.md',
+      kind: 'page',
+      where: 'Retry limit',
+      quote: 'The export job retries the upload of the invoices.',
+      last: undefined,
+      time: '2026-11-20T21:20:00.000Z',
+      shownTime: '20 Nov, 21:20',
+    }
+    const section: InboxEntry = {
+      key: 'section pages/invoice-template.md the-logo',
+      href: '/pad/invoice-template.md#the-logo',
+      kind: 'section',
+      where: 'Invoice template › The logo',
+      quote: undefined,
+      last: undefined,
+      time: '2026-11-20T21:15:00.000Z',
+      shownTime: 'Changed 20 Nov, 21:15',
+    }
+    const { button } = renderInbox([page, section])
+    await userEvent.click(button)
+    expect(screen.getAllByRole('menuitem').map((item) => item.textContent)).toStrictEqual([
+      'A new page20 Nov, 21:20Retry limitThe export job retries the upload of the invoices.',
+      'A section changedChanged 20 Nov, 21:15Invoice template › The logo',
+    ])
+  })
 })

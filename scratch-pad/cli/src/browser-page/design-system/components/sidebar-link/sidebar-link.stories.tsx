@@ -26,6 +26,10 @@ export const Other: Story = {}
 
 export const Current: Story = { args: { current: true } }
 
+export const NewPage: Story = { args: { mark: 'new' } }
+
+export const ChangedPage: Story = { args: { current: true, mark: 'changed' } }
+
 export const WithSubPages: Story = {
   args: {
     current: true,

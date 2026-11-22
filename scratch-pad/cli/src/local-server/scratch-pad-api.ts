@@ -6,6 +6,9 @@ import {
   nickDeletesImprovement,
   nickEditsImprovement,
   nickEditsQueuedItem,
+  nickMarksPageRead,
+  nickMarksPageUnread,
+  nickMarksSectionRead,
   nickQueuesComment,
   nickQueuesReply,
   nickRemovesQueuedItem,
@@ -20,6 +23,8 @@ import {
   outboxOf,
   pageSummaries,
   progressTrackerOf,
+  readMarksOf,
+  threadsOfPad,
   threadsOfPage,
   viewPage,
   withPositions,
@@ -39,6 +44,7 @@ import {
   commentRequestFrom,
   improvementEditFrom,
   RequestBody,
+  sectionHashesFrom,
   type AnswerRequest,
 } from './request-body'
 
@@ -187,6 +193,8 @@ const routes: readonly Route[] = [
   padRoute('GET', '/decision-log', (folder) => json({ decisions: decisionLogOf(folder) })),
   padRoute('GET', '/improvements', (folder) => json(improvementsOf(folder))),
   padRoute('GET', '/outbox', (folder) => json(outboxOf(folder))),
+  padRoute('GET', '/read-marks', (folder) => json(readMarksOf(folder))),
+  padRoute('GET', '/threads', (folder) => json({ threads: threadsOfPad(folder) })),
   padRoute('GET', '/changes', (folder) => ({ kind: 'changes', folder })),
   padRoute('POST', '/threads', (folder, request) =>
     json(threadBody(folder, nickComments(folder, commentRequestFrom(bodyOf(request)))), 201),
@@ -231,6 +239,20 @@ const routes: readonly Route[] = [
   padRoute('POST', '/outbox/([0-9]+)/delete', (folder, _request, number) => {
     nickRemovesQueuedItem(folder, Number(number))
     return json(outboxOf(folder))
+  }),
+  // The browser reads the read marks again after it has marked a page or a section, so these routes
+  // only return the page rather than the read marks of every page.
+  padRoute('POST', '/pages/([^/]+)/read', (folder, request, file) => {
+    nickMarksPageRead(folder, file, sectionHashesFrom(bodyOf(request)))
+    return json({ page: file })
+  }),
+  padRoute('POST', '/pages/([^/]+)/unread', (folder, _request, file) => {
+    nickMarksPageUnread(folder, file)
+    return json({ page: file })
+  }),
+  padRoute('POST', '/pages/([^/]+)/sections/([^/]+)/read', (folder, request, file, section) => {
+    nickMarksSectionRead(folder, file, { id: section, hash: bodyOf(request).text('hash') })
+    return json({ page: file })
   }),
   padRoute('POST', '/outbox/send', (folder) =>
     json({ threads: withPositions(folder, nickSendsOutbox(folder)) }),

@@ -37,6 +37,13 @@ describe('routeOf', () => {
     })
   })
 
+  it('returns the Inbox / Outbox when the address ends in inbox-outbox', () => {
+    expect(routeOf({ pathname: '/pad/inbox-outbox', hash: '' })).toStrictEqual({
+      kind: 'inbox-outbox',
+      pad: 'pad',
+    })
+  })
+
   it('returns the log of decisions when the address ends in decisions', () => {
     expect(routeOf({ pathname: '/pad/decisions', hash: '' })).toStrictEqual({
       kind: 'decision-log',
@@ -143,10 +150,11 @@ describe('exportedAddresses', () => {
       '#/invoice%20template.md/tax%20number',
     )
     expect(addresses.pageHref('index.md')).toBe('#/index.md')
-    expect([addresses.progressTrackerHref, addresses.decisionLogHref]).toStrictEqual([
-      '#/progress-tracker',
-      '#/decisions',
-    ])
+    expect([
+      addresses.progressTrackerHref,
+      addresses.decisionLogHref,
+      addresses.inboxOutboxHref,
+    ]).toStrictEqual(['#/progress-tracker', '#/decisions', '#/inbox-outbox'])
     expect([
       addresses.improvementsHref(),
       addresses.improvementsHref('improvement-1'),

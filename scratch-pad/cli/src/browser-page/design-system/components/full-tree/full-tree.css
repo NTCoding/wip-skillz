@@ -142,3 +142,66 @@
   line-height: var(--lh-md);
   font-weight: var(--fw-medium);
 }
+
+/* A link with a count after it only takes the width of its title so that the count is beside the title. */
+.full-tree__row > .full-tree__link:has(+ .full-tree__more) {
+  flex: 0 1 auto;
+}
+
+.full-tree__more {
+  flex: none;
+  margin-left: var(--space-md);
+  padding: var(--space-0) var(--space-md);
+  border-radius: var(--r-pill);
+  background: var(--tint);
+  color: var(--text-2);
+  font-size: var(--fs-xs);
+  line-height: var(--lh-ui);
+  font-weight: var(--fw-regular);
+}
+
+/* A subtree doesn't have any chevrons so its branches are indented less than the branches of the full tree. */
+.full-tree__root[data-subtree] {
+  padding: var(--space-xs) var(--space-0) var(--space-0);
+  border: 0;
+  border-radius: var(--space-0);
+}
+
+.full-tree__root[data-subtree] .full-tree__spacer {
+  width: var(--space-md);
+}
+
+.full-tree__root[data-subtree] .full-tree__children {
+  margin-left: calc(var(--space-md) + var(--space-md));
+}
+
+/* The nodes of a subtree aren't links so they don't change when Nick hovers on them. */
+:where(.full-tree__root[data-subtree]) .full-tree__link:hover {
+  background: none;
+  color: var(--text-nav);
+}
+
+.full-tree__root[data-subtree]
+  .full-tree__node
+  > .full-tree__row
+  .full-tree__link[aria-current='page'] {
+  background: var(--accent-pale);
+  color: var(--state-done);
+  font-weight: var(--fw-medium);
+}
+
+.full-tree__root[data-subtree] .full-tree__link[aria-current='page'] .icon {
+  color: var(--state-done);
+}
+
+.full-tree__here {
+  flex: none;
+  margin-left: auto;
+  padding: var(--space-0) var(--space-md);
+  border-radius: var(--r-pill);
+  background: var(--surface-raised);
+  color: var(--state-done);
+  font-size: var(--fs-2xs);
+  line-height: var(--lh-xs);
+  font-weight: var(--fw-strong);
+}

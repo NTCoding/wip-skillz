@@ -6,9 +6,11 @@ import './inbox.css'
 export interface InboxEntry {
   readonly key: string
   readonly href: string
-  readonly kind: 'reply' | 'decision'
+  // A page entry is a new page and a section entry is a section that has changed since Nick read
+  // it. Their quote is undefined, apart from the description of a new page.
+  readonly kind: 'reply' | 'decision' | 'page' | 'section'
   readonly where: string
-  readonly quote: string
+  readonly quote: string | undefined
   readonly last: string | undefined
   readonly time: string | undefined
   readonly shownTime: string | undefined
@@ -19,7 +21,12 @@ interface InboxProps {
   readonly onNavigate: Navigate
 }
 
-const headings = { reply: 'The agent replied', decision: 'A decision to make' } as const
+const headings = {
+  reply: 'The agent replied',
+  decision: 'A decision to make',
+  page: 'A new page',
+  section: 'A section changed',
+} as const
 
 function countText(count: number): string {
   return count === 1 ? '1 item waits for you' : `${count} items wait for you`
@@ -38,10 +45,14 @@ function InboxItem({ entry }: { readonly entry: InboxEntry }) {
             </time>
           )}
         </span>
-        <span className="inbox__where">{entry.where}</span>
-        <span className="inbox__quote" data-kind={entry.kind}>
-          {entry.quote}
+        <span className="inbox__where" data-kind={entry.kind}>
+          {entry.where}
         </span>
+        {entry.quote !== undefined && (
+          <span className="inbox__quote" data-kind={entry.kind}>
+            {entry.quote}
+          </span>
+        )}
         {entry.last !== undefined && <span className="inbox__last">{entry.last}</span>}
       </span>
     </>

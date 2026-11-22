@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode, type RefObject } 
 import { createPortal } from 'react-dom'
 import {
   type Answer,
+  type PageReadMark,
   type QueuedComment,
   type QueuedItem,
   type Thread,
@@ -23,19 +24,18 @@ import {
 } from './design-system/design-system'
 import { shownTime } from './message-time'
 import { queuedItemMessage, queuedRepliesTo, type QueuedItemActions } from './queued-items'
-import { pageElements, parsedPageBody, type PageElementContext } from './page-elements'
+import { anchorLinesOf, decisionMarginItems } from './answered-decision-items'
+import { elementContextOf, type PageContext } from './page-element-context'
+import { fileOfPage } from './browser-route'
+import { changedSectionItems, pageMarksOf, type ReadMarkActions } from './changed-section-items'
+import { answeredDecisions, pageElements, parsedPageBody } from './page-elements'
 import { type PageAddress } from './current-section'
 import { type NewThread } from './scratch-pad-connection'
-import {
-  selectedBlockText,
-  wholeBlockSelection,
-  type BlockSelection,
-  type SelectedBlockText,
-} from './selected-block'
+import { selectedBlockText, type BlockSelection, type SelectedBlockText } from './selected-block'
 import { highlightedTexts, type TextHighlight } from './text-highlights'
 import { placeThreads, type PlacedThread } from './thread-anchors'
 
-export interface PageActions extends QueuedItemActions {
+export interface PageActions extends QueuedItemActions, ReadMarkActions {
   readonly startThread: (thread: NewThread) => Promise<Thread>
   readonly replyToThread: (id: string, message: string) => Promise<Thread>
   readonly resolveThread: (id: string) => Promise<Thread>
@@ -46,11 +46,6 @@ export interface PageActions extends QueuedItemActions {
   readonly queueReply: (id: string, message: string) => Promise<void>
   readonly sendOutbox: () => Promise<void>
 }
-
-type PageContext = Omit<
-  PageElementContext,
-  'page' | 'onAnswerDecision' | 'onCommentOnBlock' | 'answersOnThisPage'
->
 
 // When Nick goes to the address of a thread, for example from his Inbox, that thread becomes active.
 interface PageWithThreadsProps {
@@ -64,6 +59,9 @@ interface PageWithThreadsProps {
   readonly address: PageAddress
   // What the page shows under the last block of the agent's text, like the list of pages on the index page
   readonly end?: ReactNode
+  // Whether Nick has read the page and which sections have changed since he read it. The export
+  // doesn't have any read marks.
+  readonly readMark?: PageReadMark | undefined
 }
 
 interface Draft {
@@ -247,13 +245,32 @@ export function PageWithThreads(props: PageWithThreadsProps) {
     await writing.queueComment(newThreadOf(current, page.page, message))
     setDraft(undefined)
   }
+  const elementContext = elementContextOf(context, page, choices, actions?.answerDecision, {
+    startDraft,
+    answered: (id, choice) => {
+      setChoices((current) => new Map([...current, [id, choice]]))
+      setActive(id)
+    },
+  })
+  const decisions = answeredDecisions(elementContext, body)
+  const toggle = (key: string): void => {
+    if (draft === undefined) {
+      setActive(key === active ? undefined : key)
+    }
+  }
+  const decisionItems = decisionMarginItems(
+    decisions,
+    draft === undefined ? active : undefined,
+    toggle,
+  )
   const items: MarginItem[] = placed.map(({ thread, blockLines, textChanged }) => ({
     key: thread.id,
-    anchorLines: blockLines,
+    anchorLines: anchorLinesOf(blockLines, decisions),
     content: (
       <ThreadCard
         id={thread.id}
         kind={thread.type}
+        quote={thread.anchor}
         messages={thread.messages.map((message) => ({
           ...message,
           shownTime: shownTime(message.time),
@@ -284,11 +301,7 @@ export function PageWithThreads(props: PageWithThreadsProps) {
         kind={thread.type}
         messages={thread.messages.length}
         open={draft === undefined && thread.id === active}
-        onClick={() => {
-          if (draft === undefined) {
-            setActive(thread.id === active ? undefined : thread.id)
-          }
-        }}
+        onClick={() => toggle(thread.id)}
       />
     ),
     popup: draft === undefined && thread.id === active,
@@ -300,9 +313,10 @@ export function PageWithThreads(props: PageWithThreadsProps) {
           const key = queuedKey(item)
           return {
             key,
-            anchorLines: blockLines,
+            anchorLines: anchorLinesOf(blockLines, decisions),
             content: (
               <MarginCard
+                id={key}
                 label="Comment in the outbox"
                 kind="comment"
                 active={key === active}
@@ -317,11 +331,7 @@ export function PageWithThreads(props: PageWithThreadsProps) {
                 kind="comment"
                 messages={1}
                 open={draft === undefined && key === active}
-                onClick={() => {
-                  if (draft === undefined) {
-                    setActive(key === active ? undefined : key)
-                  }
-                }}
+                onClick={() => toggle(key)}
               />
             ),
             popup: draft === undefined && key === active,
@@ -352,27 +362,13 @@ export function PageWithThreads(props: PageWithThreadsProps) {
             popup: true,
           },
         ]
-  const elementContext: PageElementContext = {
-    ...context,
-    page,
-    answersOnThisPage: choices,
-    onCommentOnBlock:
-      actions === undefined
-        ? undefined
-        : (lines) => {
-            const selection = wholeBlockSelection(lines)
-            if (selection !== undefined) {
-              startDraft('comment', selection)
-            }
-          },
-    onAnswerDecision:
-      actions === undefined
-        ? undefined
-        : async (id, choice) => {
-            await actions.answerDecision(id, page.page, choice)
-            setChoices((current) => new Map([...current, [id, choice]]))
-          },
-  }
+  const file = fileOfPage(page.page)
+  const changedItems = changedSectionItems(props.readMark, actions, {
+    body,
+    file,
+    active: draft === undefined ? active : undefined,
+    toggle,
+  })
   const highlighted = highlightedTexts(body, highlightsOf(placed, placedQueued, active, draft))
   return (
     <>
@@ -382,12 +378,18 @@ export function PageWithThreads(props: PageWithThreadsProps) {
         margin={
           <MarginLane
             label="Comments and notes"
-            items={[...items, ...queuedItems, ...draftItems]}
+            items={[...items, ...decisionItems, ...queuedItems, ...changedItems, ...draftItems]}
             onClosePopup={draft === undefined ? () => setActive(undefined) : undefined}
           />
         }
       >
-        {pageElements(elementContext, body, highlighted)}
+        {pageElements(
+          elementContext,
+          body,
+          highlighted,
+          pageMarksOf(props.readMark, actions, file),
+          new Set(decisions.map((decision) => decision.id)),
+        )}
       </ReadingColumn>
       {selected !== undefined &&
         actions !== undefined &&

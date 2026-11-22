@@ -16,6 +16,9 @@ export const eventKinds = [
   'queued-item-edited',
   'queued-item-removed',
   'outbox-sent',
+  'page-read',
+  'page-unread',
+  'section-read',
   'goal-set',
   'task-added',
   'task-started',
@@ -29,6 +32,10 @@ export const outboxEventKinds: readonly EventKind[] = [
   'queued-item-edited',
   'queued-item-removed',
 ]
+
+// The read marks are Nick's own state, which the agent never sees. That's why these events don't count as
+// Nick being busy either.
+export const readMarkEventKinds: readonly EventKind[] = ['page-read', 'page-unread', 'section-read']
 
 export interface ScratchPadEvent {
   readonly number: number

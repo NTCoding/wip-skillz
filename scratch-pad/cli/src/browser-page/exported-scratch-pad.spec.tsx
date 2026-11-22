@@ -20,13 +20,13 @@ import { ScratchPadApp } from './scratch-pad-app'
 
 const exportPath = '/Users/jo/invoice-export/export.html'
 
-function renderExport(hash = '') {
+function renderExport(hash = '', json = exportedPadJson) {
   window.history.replaceState(null, '', `${exportPath}${hash}`)
   return render(
     <ScratchPadApp
       pad={exportPad}
       addresses={exportedAddresses(exportPad)}
-      connection={exportedScratchPad(exportedPadJson)}
+      connection={exportedScratchPad(json)}
       writing={undefined}
       settings={window.localStorage}
       narrowWindow={fakeNarrowWindow()}
@@ -58,6 +58,11 @@ describe('exportedScratchPad', () => {
   it('returns an empty Inbox and doesn’t return any threads when the page doesn’t have any', async () => {
     expect(await exported.nickInbox()).toStrictEqual({ threads: [], decisions: [] })
     expect(await exported.threads('invoice-template.md')).toStrictEqual([])
+  })
+
+  it('doesn’t return any read marks or any threads for the Inbox / Outbox', async () => {
+    expect(await exported.readMarks()).toStrictEqual({ pages: [] })
+    expect(await exported.threadsOfPad()).toStrictEqual([])
   })
 
   it('returns a stream of changes that never changes when the export is open', () => {
@@ -96,6 +101,16 @@ describe('ScratchPadApp in an export', () => {
     expect(screen.queryByRole('button', { name: /Inbox/u })).toBeNull()
     expect(screen.queryByRole('button', { name: 'Proposal' })).toBeNull()
     expect(screen.queryByRole('button', { name: 'Comment on the HTML block' })).toBeNull()
+  })
+
+  it('shows a decision that Nick has answered in the margin beside its question when the export is opened', async () => {
+    const answered = exportedPadJson.replace('"answer":null', '"answer":{"choice":"proposal"}')
+    renderExport('#/index.md/d-1', answered)
+    const card = await screen.findByRole('region', { name: 'Decision d-1' })
+    expect(card.textContent).toContain("Nick's answer: proposal")
+    expect(card.closest('[data-key]')?.getAttribute('data-anchor-lines')).toBe('26-26')
+    await userEvent.click(within(card).getByRole('button', { name: 'Open d-1 at full size' }))
+    expect(screen.getByRole('dialog').textContent).toContain('Decision for Nick')
   })
 
   it('puts the frame of the html block in the page when the export is opened', async () => {
@@ -153,6 +168,26 @@ describe('ScratchPadApp in an export', () => {
     expect(
       within(sidebar).getByRole('link', { name: 'Wait between retries' }).getAttribute('href'),
     ).toBe('#/wait-between-retries.md')
+  })
+
+  it('shows the subtree of the current page when the reader hovers on its name in the breadcrumb of the export', async () => {
+    renderExport('#/first-retry.md')
+    await screen.findByRole('heading', { level: 1, name: 'First retry' })
+    const breadcrumb = screen.getByRole('navigation', { name: 'Breadcrumb' })
+    await userEvent.hover(await within(breadcrumb).findByRole('button', { name: 'First retry' }))
+    const subtree = screen.getByRole('list', { name: 'Where you are' })
+    expect(
+      within(subtree)
+        .getAllByRole('listitem')
+        .map((item) => item.firstElementChild?.textContent),
+    ).toStrictEqual([
+      '2 retry-limit.md',
+      'Why 5 retries',
+      '2.1 Wait between retries',
+      'Why the wait doubles+1 more',
+      '2.1.1 First retry+1 moreYou are here',
+    ])
+    expect(within(subtree).queryAllByRole('link')).toStrictEqual([])
   })
 
   it('opens a page from the name of its file with the number in the hash of the export', async () => {

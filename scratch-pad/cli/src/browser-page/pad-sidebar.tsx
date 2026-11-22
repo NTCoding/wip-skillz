@@ -1,8 +1,9 @@
 import { type ReactNode } from 'react'
-import { type PageSummary, type ViewedPage } from './api-responses'
+import { type PageSummary, type ReadMarks, type ViewedPage } from './api-responses'
 import { fileOfPage, type BrowserRoute, type PadAddresses } from './browser-route'
 import { Sidebar, SidebarLink, TableOfContents, type Navigate } from './design-system/design-system'
 import { parentsOf, subPagesOf, topLevelPages } from './page-tree'
+import { readMarkOf, sidebarMarkOf } from './read-marks'
 
 interface PadSidebarProps {
   readonly addresses: PadAddresses
@@ -15,6 +16,9 @@ interface PadSidebarProps {
   readonly collapsed: boolean
   readonly onCollapsedChange: (collapsed: boolean) => void
   readonly onNavigate: Navigate
+  readonly readMarks: ReadMarks
+  // The export doesn't have the Inbox or the Outbox, so its sidebar doesn't link to them.
+  readonly withInboxOutbox: boolean
 }
 
 export function sectionsOf(page: ViewedPage | undefined): ViewedPage['headings'] {
@@ -51,6 +55,7 @@ export function PadSidebar(props: PadSidebarProps) {
         href={addresses.pageHref(file)}
         title={title}
         current={file === currentFile}
+        mark={sidebarMarkOf(readMarkOf(props.readMarks, summary.page))}
         onNavigate={onNavigate}
         subPages={
           subPages.length === 0
@@ -97,6 +102,15 @@ export function PadSidebar(props: PadSidebarProps) {
             current={props.view === 'improvements'}
             onNavigate={onNavigate}
           />
+          {props.withInboxOutbox && (
+            <SidebarLink
+              href={addresses.inboxOutboxHref}
+              icon="inbox"
+              title="Inbox / Outbox"
+              current={props.view === 'inbox-outbox'}
+              onNavigate={onNavigate}
+            />
+          )}
         </>
       }
       heading="Pages"

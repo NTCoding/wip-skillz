@@ -7,7 +7,7 @@ const optionalText = z
 
 const waitingForNick = z.object({ decisions: z.number(), replies: z.number() })
 
-const heading = z.object({ level: z.number(), text: z.string(), id: z.string() })
+const heading = z.object({ level: z.number(), text: z.string(), id: z.string(), line: z.number() })
 
 const pageSummary = z.object({
   page: z.string(),
@@ -135,6 +135,25 @@ export const threadsResponse = z.object({ threads: z.array(thread) })
 
 export const threadResponse = z.object({ thread })
 
+const threadOfPad = thread.extend({ resolvedTime: optionalText })
+
+export const threadsOfPadResponse = z.object({ threads: z.array(threadOfPad) })
+
+// The hash of a section's text, which the browser posts back when Nick marks the section as read
+const sectionHash = z.object({ id: z.string(), hash: z.string() })
+
+const pageReadMark = z.object({
+  page: z.string(),
+  state: z.enum(['new', 'read']),
+  changedTime: z.string(),
+  sections: z.array(sectionHash),
+  changedSections: z.array(sectionHash.extend({ title: z.string() })),
+})
+
+export const readMarksResponse = z.object({ pages: z.array(pageReadMark) })
+
+export const markedPageResponse = z.object({ page: z.string() })
+
 const queuedItem = z.discriminatedUnion('kind', [
   z.object({
     kind: z.literal('comment'),
@@ -194,6 +213,7 @@ export const padChange = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('decision-log') }),
   z.object({ kind: z.literal('improvements') }),
   z.object({ kind: z.literal('outbox') }),
+  z.object({ kind: z.literal('read-marks') }),
   z.object({ kind: z.literal('progress-tracker') }),
 ])
 
@@ -206,6 +226,10 @@ export type PadChange = z.infer<typeof padChange>
 export type Answer = z.infer<typeof answer>
 export type ThreadType = z.infer<typeof threadType>
 export type Thread = z.infer<typeof thread>
+export type ThreadOfPad = z.infer<typeof threadOfPad>
+export type ReadMarks = z.infer<typeof readMarksResponse>
+export type PageReadMark = z.infer<typeof pageReadMark>
+export type SectionHash = z.infer<typeof sectionHash>
 export type NickInbox = z.infer<typeof nickInboxResponse>
 export type Outbox = z.infer<typeof outboxResponse>
 export type QueuedItem = z.infer<typeof queuedItem>

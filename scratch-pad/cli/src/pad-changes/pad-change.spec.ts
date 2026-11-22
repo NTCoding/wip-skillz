@@ -64,6 +64,12 @@ describe('changesOfEvents', () => {
     ).toStrictEqual([{ kind: 'outbox' }])
   })
 
+  it('returns one read marks change when Nick marks a page or a section as read or unread', () => {
+    expect(
+      changesOfEvents([event(1, 'page-read'), event(2, 'page-unread'), event(3, 'section-read')]),
+    ).toStrictEqual([{ kind: 'read-marks' }])
+  })
+
   it('returns one progress tracker change when the goal and the tasks change', () => {
     expect(
       changesOfEvents([

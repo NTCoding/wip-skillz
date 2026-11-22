@@ -125,8 +125,14 @@ function useClosePopup(lane: HTMLElement | null, onClosePopup: (() => void) | un
     if (lane === null || onClosePopup === undefined) {
       return undefined
     }
+    // Escape closes the full size view of a card first, rather than the card itself. An Escape whose
+    // default was prevented, like the one that closes the subtree in the top bar, doesn't close it.
     const closeOnEscape = (event: KeyboardEvent): void => {
-      if (event.key === 'Escape') {
+      if (
+        event.key === 'Escape' &&
+        !event.defaultPrevented &&
+        document.documentElement.dataset['fullSize'] !== 'open'
+      ) {
         onClosePopup()
       }
     }

@@ -6,6 +6,7 @@ import { type NewEvent, type ScratchPadEvent } from '../events/scratch-pad-event
 import { type Improvement, type NewImprovement } from '../improvements/improvements'
 import { type NewQueuedItem, type QueuedItem } from '../outbox/outbox'
 import { type ProgressTracker } from '../progress-tracker/progress-tracker'
+import { type ReadMarks, type SectionHash } from '../read-marks/read-marks'
 import { type Thread } from '../threads/thread'
 import { StoredAgentInbox } from './stored-agent-inbox'
 import { StoredDecisionAnswers } from './stored-decision-answers'
@@ -14,6 +15,7 @@ import { StoredEvents } from './stored-events'
 import { StoredImprovements } from './stored-improvements'
 import { StoredOutbox } from './stored-outbox'
 import { StoredProgressTracker } from './stored-progress-tracker'
+import { StoredReadMarks } from './stored-read-marks'
 import { StoredThreads } from './stored-threads'
 
 export class PadDb {
@@ -25,6 +27,7 @@ export class PadDb {
   private readonly outbox: StoredOutbox
   private readonly events: StoredEvents
   private readonly agentInbox: StoredAgentInbox
+  private readonly readMarks: StoredReadMarks
 
   constructor(db: DatabaseSync, padName: string) {
     this.progressTracker = new StoredProgressTracker(db, padName)
@@ -35,6 +38,7 @@ export class PadDb {
     this.outbox = new StoredOutbox(db, padName)
     this.events = new StoredEvents(db, padName)
     this.agentInbox = new StoredAgentInbox(db, padName)
+    this.readMarks = new StoredReadMarks(db, padName)
   }
 
   readProgressTracker(): ProgressTracker {
@@ -123,5 +127,21 @@ export class PadDb {
 
   writeLastPrintedEvents(lastPrinted: LastPrintedEvents): void {
     this.agentInbox.writeLastPrintedEvents(lastPrinted)
+  }
+
+  readReadMarks(): ReadMarks {
+    return this.readMarks.read()
+  }
+
+  markPageRead(page: string, sections: readonly SectionHash[]): void {
+    this.readMarks.markPageRead(page, sections)
+  }
+
+  markPageUnread(page: string): void {
+    this.readMarks.markPageUnread(page)
+  }
+
+  markSectionRead(page: string, section: SectionHash): void {
+    this.readMarks.markSectionRead(page, section)
   }
 }

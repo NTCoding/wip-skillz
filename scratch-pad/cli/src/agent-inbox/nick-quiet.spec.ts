@@ -58,4 +58,19 @@ describe('momentNickIsQuiet', () => {
 
     expect(momentNickIsQuiet(sent, 10_000)).toBe(Date.parse('2026-03-14T09:35:10.000Z'))
   })
+
+  it("ignores the read marks, because the agent doesn't see what Nick has read", () => {
+    const marked: ScratchPadEvent[] = [
+      ...events,
+      ...(['page-read', 'page-unread', 'section-read'] as const).map((kind, index) => ({
+        number: index + 3,
+        time: `2026-03-14T09:3${index + 2}:00.000Z`,
+        kind,
+        by: 'nick' as const,
+        item: undefined,
+      })),
+    ]
+
+    expect(momentNickIsQuiet(marked, 10_000)).toBe(Date.parse('2026-03-14T09:30:10.000Z'))
+  })
 })

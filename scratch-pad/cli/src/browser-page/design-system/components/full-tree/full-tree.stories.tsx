@@ -14,7 +14,14 @@ const nodes: FullTreeNode[] = [
   page('1 How the job runs', [
     section('When the job starts', [section('Every night'), section('After a failed export')]),
     section('What the job writes'),
-    page('1.1 Retry limit', [section('Why 5 retries'), section('Wait between retries')]),
+    page('1.1 Retry limit', [
+      section('Why 5 retries'),
+      section('Wait between retries'),
+      page('1.1.1 First retry', [
+        section('Why 30 seconds'),
+        page('1.1.1.1 Wait for the queue', [section('The longest wait')]),
+      ]),
+    ]),
   ]),
   page('2 Invoice template', [section('The tax number of the shop'), section('The logo')]),
   page('3 Shop storage', []),
@@ -43,5 +50,13 @@ export const OneBranchCollapsed: Story = {
     const canvas = within(canvasElement)
     await userEvent.click(canvas.getByRole('button', { name: /Full tree/ }))
     await userEvent.click(canvas.getByRole('button', { name: 'Collapse 1 How the job runs' }))
+  },
+}
+
+export const ALevel3NodeExpanded: Story = {
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(canvas.getByRole('button', { name: /Full tree/ }))
+    await userEvent.click(canvas.getByRole('button', { name: 'Expand 1.1.1 First retry' }))
   },
 }

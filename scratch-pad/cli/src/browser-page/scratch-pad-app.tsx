@@ -1,44 +1,48 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import {
-  type Answer,
   type DecisionLogEntry,
   type Improvements,
   type NickInbox,
   type Outbox as LoadedOutbox,
   type PadChange,
+  type PageReadMark,
   type PageSummary,
   type ProgressTracker,
+  type ReadMarks,
   type Thread,
+  type ThreadOfPad,
   type ViewedPage,
 } from './api-responses'
+import { breadcrumbOf } from './breadcrumb'
 import { scrollTargetOf, useBrowserNavigation, useScrollOnNavigation } from './browser-navigation'
 import { fileOfPage, type BrowserRoute, type PadAddresses } from './browser-route'
 import { useCurrentSection } from './current-section'
 import {
   AppFrame,
   FullTree,
+  Notice,
   PageList,
+  ReadingColumn,
   TopBar,
-  type ImprovementEdit,
+  type InboxEntry,
   type Navigate,
   type PreviewContent,
 } from './design-system/design-system'
+import { InboxOutboxView } from './inbox-outbox-view'
 import { useLoadedValue, type LoadedValue } from './loaded-value'
 import { MissingPageView } from './missing-page-view'
 import { nickInboxEntries } from './nick-inbox-entries'
+import { usePageActions } from './page-actions'
 import { PadSidebar, sectionsOf } from './pad-sidebar'
 import { PageOutline } from './page-outline'
-import { fullTreeNodes, pageListEntries, pageOfFileName, parentsOf } from './page-tree'
+import { fullTreeNodes, pageListEntries, pageOfFileName } from './page-tree'
 import { firstRevisions, pageRevisionOf, revisedAfterReconnect, revisedBy } from './pad-revisions'
 import { pagePreview } from './page-preview'
 import { type SavedSettings } from './saved-settings'
 import { PageWithThreads, type PageActions } from './page-with-threads'
-import { useOutboxEdits, type QueuedItemActions } from './queued-items'
-import {
-  type NewThread,
-  type ScratchPadReading,
-  type ScratchPadWriting,
-} from './scratch-pad-connection'
+import { useOutboxEdits } from './queued-items'
+import { readMarkOf } from './read-marks'
+import { type ScratchPadReading, type ScratchPadWriting } from './scratch-pad-connection'
 import { useSidebarState, type NarrowWindow } from './sidebar-state'
 import { TopBarActions } from './top-bar-actions'
 import { DecisionLogView, ImprovementsView, LoadingView, ProgressTrackerView } from './pad-views'
@@ -54,43 +58,11 @@ interface ScratchPadAppProps {
 
 const emptyNickInbox: NickInbox = { threads: [], decisions: [] }
 const emptyOutbox: LoadedOutbox = { items: [] }
+const noReadMarks: ReadMarks = { pages: [] }
+const noThreads = (): Promise<ThreadOfPad[]> => Promise.resolve([])
 
 function loadedOr<T>(loaded: LoadedValue<T>, fallback: T): T {
   return loaded.status === 'loaded' ? loaded.value : fallback
-}
-
-interface Breadcrumb {
-  readonly parents: readonly { readonly title: string; readonly href: string }[]
-  readonly current: string | undefined
-}
-
-function breadcrumbOf(
-  route: BrowserRoute,
-  viewedPage: ViewedPage | undefined,
-  pageList: readonly PageSummary[],
-  addresses: PadAddresses,
-): Breadcrumb {
-  if (route.kind === 'progress-tracker') {
-    return { parents: [], current: 'Progress tracker' }
-  }
-  if (route.kind === 'decision-log') {
-    return { parents: [], current: 'Decisions' }
-  }
-  if (route.kind === 'improvements') {
-    return { parents: [], current: 'Improvements' }
-  }
-  if (route.file === 'index.md') {
-    return { parents: [], current: undefined }
-  }
-  const page = `pages/${route.file}`
-  const summary = pageList.find((each) => each.page === page)
-  return {
-    parents: parentsOf(pageList, page).map((parent) => {
-      const file = fileOfPage(parent.page)
-      return { title: parent.title ?? file, href: addresses.pageHref(file) }
-    }),
-    current: viewedPage?.title ?? summary?.title ?? route.file,
-  }
 }
 
 interface PageContext {
@@ -112,6 +84,9 @@ interface RouteViewProps {
   readonly threads: readonly Thread[]
   readonly outbox: LoadedOutbox
   readonly inboxThreads: readonly Thread[]
+  readonly inboxEntries: readonly InboxEntry[]
+  readonly threadsOfPad: readonly ThreadOfPad[]
+  readonly readMark: PageReadMark | undefined
   readonly pageContext: PageContext
   readonly actions: PageActions | undefined
   readonly navigations: number
@@ -120,6 +95,24 @@ interface RouteViewProps {
 function isMissing(pages: LoadedValue<PageSummary[]>, file: string): boolean {
   return (
     pages.status === 'loaded' && !pages.value.some((summary) => summary.page === `pages/${file}`)
+  )
+}
+
+function InboxOutboxRoute(props: RouteViewProps) {
+  const { pageContext } = props
+  return props.actions === undefined ? (
+    <ReadingColumn>
+      <Notice tone="info">The export doesn’t include the Inbox and the Outbox.</Notice>
+    </ReadingColumn>
+  ) : (
+    <InboxOutboxView
+      addresses={pageContext.addresses}
+      pages={loadedOr(props.pages, [])}
+      inboxEntries={props.inboxEntries}
+      threads={props.threadsOfPad}
+      outbox={props.outbox.items}
+      onNavigate={pageContext.onNavigate}
+    />
   )
 }
 
@@ -152,6 +145,9 @@ function RouteView(props: RouteViewProps) {
       <LoadingView loaded={improvements} />
     )
   }
+  if (route.kind === 'inbox-outbox') {
+    return <InboxOutboxRoute {...props} />
+  }
   if (page.status === 'failed' && isMissing(props.pages, route.file)) {
     return (
       <MissingPageView
@@ -172,6 +168,7 @@ function RouteView(props: RouteViewProps) {
       context={pageContext}
       actions={actions}
       address={{ section: route.section, navigations: props.navigations }}
+      readMark={props.readMark}
       end={
         route.file === 'index.md' ? (
           <>
@@ -194,67 +191,15 @@ function RouteView(props: RouteViewProps) {
   )
 }
 
-function usePageActions(
-  writing: ScratchPadWriting | undefined,
-  changed: (change: PadChange) => void,
-  editingQueuedItem: QueuedItemActions['editingQueuedItem'],
-): PageActions | undefined {
-  return useMemo(() => {
-    if (writing === undefined) {
-      return undefined
-    }
-    return {
-      startThread: async (thread: NewThread) => {
-        const started = await writing.startThread(thread)
-        changed({ kind: 'thread', id: started.id })
-        return started
-      },
-      replyToThread: async (id: string, message: string) => {
-        const thread = await writing.replyToThread(id, message)
-        changed({ kind: 'thread', id })
-        return thread
-      },
-      resolveThread: async (id: string) => {
-        const thread = await writing.resolveThread(id)
-        changed({ kind: 'thread', id })
-        return thread
-      },
-      answerDecision: async (id: string, page: string, answer: Answer) => {
-        await writing.answerDecision(id, page, answer)
-        changed({ kind: 'decision', id })
-      },
-      editImprovement: async (number: number, edit: ImprovementEdit) => {
-        await writing.editImprovement(number, edit)
-        changed({ kind: 'improvements' })
-      },
-      deleteImprovement: async (number: number) => {
-        await writing.deleteImprovement(number)
-        changed({ kind: 'improvements' })
-      },
-      queueComment: async (thread: NewThread) => {
-        await writing.queueComment(thread)
-        changed({ kind: 'outbox' })
-      },
-      queueReply: async (id: string, message: string) => {
-        await writing.queueReply(id, message)
-        changed({ kind: 'outbox' })
-      },
-      editQueuedItem: async (number: number, message: string) => {
-        await writing.editQueuedItem(number, message)
-        changed({ kind: 'outbox' })
-      },
-      removeQueuedItem: async (number: number) => {
-        await writing.removeQueuedItem(number)
-        changed({ kind: 'outbox' })
-      },
-      sendOutbox: async () => {
-        const sent = await writing.sendOutbox()
-        sent.forEach((thread) => changed({ kind: 'thread', id: thread.id }))
-        changed({ kind: 'outbox' })
-      },
-      editingQueuedItem,
-    }
-  }, [writing, changed, editingQueuedItem])
+// The button after the name of the current page marks a new page as read and a read page as unread.
+function pageActionOf(actions: PageActions | undefined, mark: PageReadMark | undefined) {
+  if (actions === undefined || mark === undefined) {
+    return undefined
+  }
+  const file = fileOfPage(mark.page)
+  return mark.state === 'new'
+    ? { label: 'Mark as read', onClick: () => actions.markPageRead(file, mark.sections) }
+    : { label: 'Mark as unread', onClick: () => actions.markPageUnread(file) }
 }
 
 function tabTitleOf(pageTitle: string | undefined, padTitle: string): string {
@@ -294,6 +239,15 @@ export function ScratchPadApp(props: ScratchPadAppProps) {
   const outbox = loadedOr(useLoadedValue(pad, revisions.outbox, connection.outbox), emptyOutbox)
   const page = useLoadedValue(file, pageRevisionOf(revisions, file), connection.page)
   const threads = useLoadedValue(file, revisions.threads, connection.threads)
+  const readMarks = loadedOr(
+    useLoadedValue(pad, revisions.readMarks, connection.readMarks),
+    noReadMarks,
+  )
+  const threadsOfPad = useLoadedValue(
+    route.kind,
+    revisions.threads,
+    route.kind === 'inbox-outbox' ? connection.threadsOfPad : noThreads,
+  )
   const viewedPage = route.kind === 'page' ? loadedOr(page, undefined) : undefined
   const padTitle = loadedOr(tracker, undefined)?.title ?? pad
   const address = { section: route.kind === 'page' ? route.section : undefined, navigations }
@@ -328,8 +282,14 @@ export function ScratchPadApp(props: ScratchPadAppProps) {
       replace(addresses.pageHref(fileOfPage(pageOfFile), route.section))
     }
   }, [route, pageOfFile, replace, addresses])
-  const inboxEntries = nickInboxEntries(addresses, loadedOr(inbox, emptyNickInbox), pageList)
+  const inboxEntries = nickInboxEntries(
+    addresses,
+    loadedOr(inbox, emptyNickInbox),
+    pageList,
+    readMarks,
+  )
   const breadcrumb = breadcrumbOf(route, viewedPage, pageList, addresses)
+  const readMark = route.kind === 'page' ? readMarkOf(readMarks, `pages/${route.file}`) : undefined
 
   return (
     <AppFrame
@@ -341,6 +301,8 @@ export function ScratchPadApp(props: ScratchPadAppProps) {
           titleHref={addresses.pageHref('index.md')}
           parents={breadcrumb.parents}
           current={breadcrumb.current}
+          subtree={breadcrumb.subtree}
+          pageAction={pageActionOf(actions, readMark)}
           onNavigate={navigate}
           actions={
             <TopBarActions
@@ -366,6 +328,8 @@ export function ScratchPadApp(props: ScratchPadAppProps) {
           collapsed={collapsed}
           onCollapsedChange={changeCollapsed}
           onNavigate={navigate}
+          readMarks={readMarks}
+          withInboxOutbox={actions !== undefined}
         />
       }
     >
@@ -379,6 +343,9 @@ export function ScratchPadApp(props: ScratchPadAppProps) {
         threads={loadedOr(threads, [])}
         outbox={outbox}
         inboxThreads={loadedOr(inbox, emptyNickInbox).threads}
+        inboxEntries={inboxEntries}
+        threadsOfPad={loadedOr(threadsOfPad, [])}
+        readMark={readMark}
         pageContext={{ addresses, onNavigate: navigate, loadPreview }}
         actions={actions}
         navigations={navigations}

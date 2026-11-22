@@ -214,6 +214,15 @@
   --outbox-count-bg: #242424;
   --outbox-count-fg: #fff;
 
+  /* Read marks */
+  --mark-changed-ring: #e0a800;
+  --changed-section-bar: #ffc017;
+  --inbox-page-dot: #2b67c6;
+  --inbox-section-dot: #b5540b;
+  --filter-pressed-bg: #242424;
+  --filter-pressed-fg: #fff;
+  --filter-pressed-count: #b3b3b3;
+
   /* Buttons */
   --button-primary-bg: #1a8917;
   --button-primary-fg: #fff;
@@ -237,6 +246,7 @@
   --shadow-card-grammar: 0 0 0 1.5px var(--grammar-ink), 0 6px 22px rgb(0 0 0 / 10%);
   --shadow-card-improvement: 0 0 0 1.5px var(--improvement-ink), 0 6px 22px rgb(0 0 0 / 10%);
   --shadow-marker: inset 0 0 0 var(--hairline) var(--line);
+  --shadow-mark-changed: 0 0 0 var(--hairline) var(--mark-changed-ring);
 
   /* Layout */
   --sidebar-w: 264px;
@@ -273,6 +283,7 @@
   --inbox-w: 380px;
   --top-bar-count-size: 18px;
   --outbox-w: 300px;
+  --subtree-w: 380px;
   --field-min-h: 34px;
   --field-max-h: 160px;
   --field-details-min-h: 120px;

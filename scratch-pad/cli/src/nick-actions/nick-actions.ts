@@ -20,6 +20,7 @@ import {
   type QueuedItem,
 } from '../outbox/outbox'
 import { findPage } from '../pages/page-markdown'
+import { findSection, sectionTexts, type SectionHash } from '../read-marks/read-marks'
 import { pageBlocksOf } from '../rendered-page/page-blocks'
 import { ScratchPadError } from '../scratch-pad-error'
 import { type PadDb } from '../scratch-pad-folder/pad-db'
@@ -230,4 +231,52 @@ function sendQueuedItem(pad: PadDb, item: QueuedItem, time: string): Thread {
         { type: 'comment', page: item.page, anchor: item.anchor, text: item.text },
         time,
       )
+}
+
+function sectionsOfPage(folder: ScratchPadFolder, page: string) {
+  return sectionTexts(folder.readPageLines(page).join('\n'))
+}
+
+// Marking a page as read also marks each section as read with the hash that the browser showed
+// Nick. If the agent saves the page after the browser showed it, the hash of a changed section
+// will differ from the stored one and a new section won't have a stored hash, so both will show as
+// changed. A hash of a section that isn't on the page any more isn't stored.
+export function nickMarksPageRead(
+  folder: ScratchPadFolder,
+  requested: string,
+  shown: readonly SectionHash[],
+): void {
+  const time = new Date().toISOString()
+  const page = findPage(folder.pages(), requested, folder.name)
+  const onThePage = new Set(sectionsOfPage(folder, page).map((section) => section.id))
+  const sections = shown.filter((section) => onThePage.has(section.id))
+  folder.change((pad) => {
+    pad.markPageRead(page, sections)
+    pad.appendEvent({ time, kind: 'page-read', by: 'nick', item: undefined })
+  })
+}
+
+export function nickMarksPageUnread(folder: ScratchPadFolder, requested: string): void {
+  const time = new Date().toISOString()
+  const page = findPage(folder.pages(), requested, folder.name)
+  folder.change((pad) => {
+    pad.markPageUnread(page)
+    pad.appendEvent({ time, kind: 'page-unread', by: 'nick', item: undefined })
+  })
+}
+
+// The hash is the one that the browser showed Nick, so a text that the agent saved after that will
+// still show as changed.
+export function nickMarksSectionRead(
+  folder: ScratchPadFolder,
+  requested: string,
+  shown: SectionHash,
+): void {
+  const time = new Date().toISOString()
+  const page = findPage(folder.pages(), requested, folder.name)
+  findSection(sectionsOfPage(folder, page), shown.id, page)
+  folder.change((pad) => {
+    pad.markSectionRead(page, shown)
+    pad.appendEvent({ time, kind: 'section-read', by: 'nick', item: undefined })
+  })
 }

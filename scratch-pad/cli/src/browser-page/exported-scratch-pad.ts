@@ -39,6 +39,8 @@ export function exportedScratchPad(json: string): ScratchPadReading {
     decisionLog: () => Promise.resolve(data.decisionLog),
     improvements: () => Promise.resolve(data.improvements),
     outbox: () => Promise.resolve({ items: [] }),
+    readMarks: () => Promise.resolve({ pages: [] }),
+    threadsOfPad: () => Promise.resolve([]),
     onChange: () => () => undefined,
   }
 }

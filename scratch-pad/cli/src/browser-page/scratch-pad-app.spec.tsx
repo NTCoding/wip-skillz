@@ -218,7 +218,8 @@ describe('ScratchPadApp with live changes', () => {
       ],
     })
     act(() => fake.sendChange({ kind: 'decision', id: 'd-1' }))
-    expect((await screen.findByText(/Nick's answer/)).textContent).toBe("Nick's answer: proposal")
+    expect(await screen.findAllByRole('button', { name: 'Decision d-1' })).toHaveLength(2)
+    expect(screen.queryByRole('button', { name: 'Proposal' })).toBeNull()
   })
 
   it('reads the tracker and the log again when they change', async () => {

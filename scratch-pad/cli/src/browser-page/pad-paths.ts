@@ -3,6 +3,7 @@ export const indexFile = 'index.md'
 export const progressTrackerPath = 'progress-tracker'
 export const decisionLogPath = 'decisions'
 export const improvementsPath = 'improvements'
+export const inboxOutboxPath = 'inbox-outbox'
 
 export function padPath(pad: string): string {
   return `/${encodeURIComponent(pad)}/`
@@ -19,6 +20,10 @@ export function progressTrackerHref(pad: string): string {
 
 export function decisionLogHref(pad: string): string {
   return `${padPath(pad)}${decisionLogPath}`
+}
+
+export function inboxOutboxHref(pad: string): string {
+  return `${padPath(pad)}${inboxOutboxPath}`
 }
 
 export function fileOfPage(page: string): string {

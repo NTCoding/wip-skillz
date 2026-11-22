@@ -9,9 +9,13 @@ import {
 } from './browser-page-fixtures'
 import { nickInboxEntries } from './nick-inbox-entries'
 
+const noReadMarks = { pages: [] }
+
 describe('nickInboxEntries', () => {
   it('lists the open decisions first and then the replies with the page, the quote and the last message', () => {
-    expect(nickInboxEntries(exportPadAddresses, indexInbox, pageSummaries)).toStrictEqual([
+    expect(
+      nickInboxEntries(exportPadAddresses, indexInbox, pageSummaries, noReadMarks),
+    ).toStrictEqual([
       {
         key: 'd-1',
         href: `/${exportPad}/#d-1`,
@@ -47,6 +51,7 @@ describe('nickInboxEntries', () => {
       exportPadAddresses,
       { threads: [note], decisions: [] },
       pageSummaries,
+      noReadMarks,
     )
     expect([entry?.where, entry?.quote, entry?.last]).toStrictEqual([
       'retry-limit.md',
@@ -68,20 +73,92 @@ describe('nickInboxEntries', () => {
         score: 0.98,
       },
     }
-    const [entry] = nickInboxEntries(exportPadAddresses, { threads: [changed], decisions: [] }, [])
+    const [entry] = nickInboxEntries(
+      exportPadAddresses,
+      { threads: [changed], decisions: [] },
+      [],
+      noReadMarks,
+    )
     expect(entry?.quote).toBe('retries 8 times')
   })
 
   it('quotes the text that Nick selected when the thread is detached', () => {
     const detached: Thread = { ...retryQuestion, position: { kind: 'detached' } }
-    const [entry] = nickInboxEntries(exportPadAddresses, { threads: [detached], decisions: [] }, [])
+    const [entry] = nickInboxEntries(
+      exportPadAddresses,
+      { threads: [detached], decisions: [] },
+      [],
+      noReadMarks,
+    )
     expect(entry?.quote).toBe('retries 5 times')
   })
 
   it('leaves out a thread without any messages', () => {
     const empty = { ...retryQuestion, messages: [] }
     expect(
-      nickInboxEntries(exportPadAddresses, { threads: [empty], decisions: [] }, []),
+      nickInboxEntries(exportPadAddresses, { threads: [empty], decisions: [] }, [], noReadMarks),
     ).toStrictEqual([])
+  })
+
+  it('lists the new pages and then the changed sections with their places, the newest first, before the decisions', () => {
+    const entries = nickInboxEntries(
+      exportPadAddresses,
+      { threads: [], decisions: [] },
+      pageSummaries,
+      {
+        pages: [
+          {
+            page: 'pages/invoice-template.md',
+            state: 'read',
+            changedTime: '2026-11-20T21:30:00.000Z',
+            sections: [{ id: 'the-logo', hash: 'b2' }],
+            changedSections: [{ id: 'the-logo', title: 'The logo', hash: 'b2' }],
+          },
+          {
+            page: 'pages/first-retry.md',
+            state: 'new',
+            changedTime: '2026-11-20T21:10:00.000Z',
+            sections: [],
+            changedSections: [],
+          },
+          {
+            page: 'pages/wait-between-retries.md',
+            state: 'new',
+            changedTime: '2026-11-20T21:20:00.000Z',
+            sections: [],
+            changedSections: [],
+          },
+          {
+            page: 'pages/index.md',
+            state: 'read',
+            changedTime: '2026-11-20T21:00:00.000Z',
+            sections: [],
+            changedSections: [],
+          },
+        ],
+      },
+    )
+    expect(
+      entries.map((entry) => [entry.kind, entry.where, entry.quote, entry.shownTime]),
+    ).toStrictEqual([
+      [
+        'page',
+        'retry-limit.md › 2.1 Wait between retries',
+        'Each retry waits twice as long as the retry before it.',
+        '20 Nov, 21:20',
+      ],
+      [
+        'page',
+        'retry-limit.md › 2.1.1 First retry',
+        'The first retry waits 30 seconds.',
+        '20 Nov, 21:10',
+      ],
+      ['section', 'Invoice template › The logo', undefined, 'Changed 20 Nov, 21:30'],
+    ])
+    expect(entries.map((entry) => entry.href)).toStrictEqual([
+      `/${exportPad}/wait-between-retries.md`,
+      `/${exportPad}/first-retry.md`,
+      `/${exportPad}/invoice-template.md#the-logo`,
+    ])
   })
 })

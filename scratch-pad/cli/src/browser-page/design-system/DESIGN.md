@@ -239,20 +239,43 @@ Import the theme's CSS file in `design-system.ts` and then set `data-theme` on `
 
 The comments feature is made of these files:
 
-| File                    | What it does                                                                                                                                                                                                                             |
-| ----------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `selected-block.ts`     | Turns Nick's selection into the selected text and the lines of its block. It also adds the text before and after the selection.                                                                                                          |
-| `visible-text.ts`       | Builds a block's text in the same way as the server does. It puts a space between table cells and between list items. It leaves out a code block's bar and the text of every button.                                                     |
-| `thread-anchors.ts`     | Shows each card beside the block where the server found the thread's text. If the thread is detached, the card will be shown near the thread's old lines.                                                                                |
-| `text-highlights.tsx`   | Finds the selected text in a block and splits the text nodes into `Highlight` components                                                                                                                                                 |
-| `page-with-threads.tsx` | Shows the page with its cards in the margin. It also shows the draft of a new thread and the selection tools.                                                                                                                            |
-| `missing-page-view.tsx` | Shows the threads that are waiting for Nick on a page that the agent has deleted. Nick can still reply to those threads or resolve them there. It also shows the items in the outbox for that page, which Nick can edit or remove there. |
+| File                          | What it does                                                                                                                                                                                                                             |
+| ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `selected-block.ts`           | Turns Nick's selection into the selected text and the lines of its block. It also adds the text before and after the selection.                                                                                                          |
+| `visible-text.ts`             | Builds a block's text in the same way as the server does. It puts a space between table cells and between list items. It leaves out a code block's bar and the text of every button.                                                     |
+| `thread-anchors.ts`           | Shows each card beside the block where the server found the thread's text. If the thread is detached, the card will be shown near the thread's old lines.                                                                                |
+| `text-highlights.tsx`         | Finds the selected text in a block and splits the text nodes into `Highlight` components                                                                                                                                                 |
+| `page-with-threads.tsx`       | Shows the page with its cards in the margin. It also shows the draft of a new thread and the selection tools.                                                                                                                            |
+| `missing-page-view.tsx`       | Shows the threads that are waiting for Nick on a page that the agent has deleted. Nick can still reply to those threads or resolve them there. It also shows the items in the outbox for that page, which Nick can edit or remove there. |
+| `page-element-context.ts`     | Builds the context that `page-elements.tsx` needs to show a page. If the context doesn't have the action for a decision, the page is read only so Nick can't comment on a block or answer a decision.                                    |
+| `answered-decision-items.tsx` | Shows each decision that Nick has answered as a marker beside the heading of its question. A thread on the text of that decision is shown beside the same heading.                                                                       |
 
 The server builds a block's text from the Markdown in the same way as `visible-text.ts` does in the browser. The server's code for this is in `src/rendered-page/page-blocks.ts`. `visible-text.ts` and `page-blocks.ts` are both tested against `visible-text-fixtures.ts`. If you change how one of them builds the text, a test will fail until the other one builds the same text again.
 
 Nick comments on an `:::html` block with its comment button. The draft of that comment has an empty `selectedText` so the server stores the whole block's text as the selected text.
 
 A change to how the server finds a thread's text again belongs in `src/threads/thread-position.ts` rather than in the browser page. The server works out where each thread's text is now and returns that as the `position` of every thread from the API. `thread-anchors.ts` only turns that position into a block on the page.
+
+## How the read marks work
+
+The scratch pad remembers which pages and which sections Nick has read. A section starts at a heading of level 2 or 3 and ends before the next heading whose level is 3 or less. The read marks are Nick's own state. The agent never sees them and a click on "Mark as read" doesn't end `wait`.
+
+The server stores the marks in the tables `read_pages` and `read_sections` of pad.db. A section counts as changed when the hash of its text is different from the stored hash. The code for this is in `src/read-marks/read-marks.ts`.
+
+The read marks from the API contain the hash of each section that the browser shows. When Nick marks a page or a section as read, the browser will post those hashes and the server will store them rather than the hashes of the text on disk. So if the agent saves the page after the browser showed it, the changed sections will still show as changed.
+
+The read marks feature is made of these files:
+
+| File                        | What it does                                                                                                                                              |
+| --------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `read-marks.ts`             | Finds the read mark of a page and the dot of the page in the sidebar. It also builds the entries of the Inbox for the new pages and the changed sections. |
+| `changed-section-items.tsx` | Shows the line at the top of a new page and the card in the margin beside each changed section                                                            |
+| `item-places.ts`            | Builds the place of an item from the page and the section of the item, like "Invoice template › 1.1 Tax number › Shops outside the EU"                    |
+| `inbox-outbox-view.tsx`     | Shows every item of the Inbox and of the Outbox under the heading of its status. The buttons at the top filter the items by status.                       |
+
+Each block of a changed section has `data-changed-section`, which `ReadingColumn` draws as a bar on the left of the block.
+
+The export doesn't contain any read marks, because a reader can't mark anything as read in the file. The sidebar of the export doesn't link to the Inbox / Outbox view either.
 
 ## How the export uses the same page
 

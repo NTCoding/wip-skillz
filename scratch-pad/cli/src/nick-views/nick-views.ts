@@ -6,6 +6,12 @@ import { isUnderNumber, pageFileOf, parentNumberOf, type PageFile } from '../pag
 import { existingPage, findPage, pageTitle } from '../pages/page-markdown'
 import { type PageSummary, type WaitingForNick } from '../pages/page-text'
 import { type ProgressTracker } from '../progress-tracker/progress-tracker'
+import {
+  pageReadState,
+  sectionTexts,
+  type SectionHash,
+  type SectionText,
+} from '../read-marks/read-marks'
 import { type DecisionBlock } from '../rendered-page/decision-block'
 import { pageDescription } from '../rendered-page/page-description'
 import { type Heading } from '../rendered-page/page-headings'
@@ -77,6 +83,20 @@ type QueuedItemOnPage = (QueuedComment & { readonly position: ThreadPosition }) 
 
 interface Outbox {
   readonly items: readonly QueuedItemOnPage[]
+}
+
+interface PageReadMark {
+  readonly page: string
+  readonly state: 'new' | 'read'
+  // The time that the page's file was last written
+  readonly changedTime: string
+  // The hash of each section's text, which the browser posts back when Nick marks the page as read
+  readonly sections: readonly SectionHash[]
+  readonly changedSections: readonly SectionText[]
+}
+
+interface ThreadOfPad extends PositionedThread {
+  readonly resolvedTime: string | undefined
 }
 
 export function pageSummaries(folder: ScratchPadFolder): PageSummary[] {
@@ -185,6 +205,40 @@ export function outboxOf(folder: ScratchPadFolder): Outbox {
             },
       ),
   }
+}
+
+// Every page is listed, including a sub page that the sidebar doesn't show. The hash of each
+// section is the hash of the text that the browser shows, which the browser posts back when Nick
+// marks the page or the section as read.
+export function readMarksOf(folder: ScratchPadFolder): { readonly pages: PageReadMark[] } {
+  const marks = folder.read((pad) => pad.readReadMarks())
+  return {
+    pages: folder.pages().map((page) => {
+      const sections = sectionTexts(folder.readPageLines(page).join('\n'))
+      const state = pageReadState(page, sections, marks)
+      return {
+        page,
+        state: state.kind,
+        changedTime: folder.pageChangedTime(page),
+        sections: sections.map((section) => ({ id: section.id, hash: section.hash })),
+        changedSections: state.kind === 'new' ? [] : state.changedSections,
+      }
+    }),
+  }
+}
+
+// Every thread of the scratch pad, with the time that Nick last resolved it
+export function threadsOfPad(folder: ScratchPadFolder): ThreadOfPad[] {
+  const { threads, events } = folder.read((pad) => ({
+    threads: pad.readThreads(),
+    events: pad.readEvents(),
+  }))
+  return withPositions(folder, threads).map((thread) => ({
+    ...thread,
+    resolvedTime: events.findLast(
+      (event) => event.kind === 'thread-resolved' && event.item === thread.id,
+    )?.time,
+  }))
 }
 
 export function progressTrackerOf(folder: ScratchPadFolder): ProgressTracker {

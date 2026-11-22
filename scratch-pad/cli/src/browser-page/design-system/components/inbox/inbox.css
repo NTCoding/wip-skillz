@@ -55,6 +55,14 @@
   background: var(--inbox-decision-line);
 }
 
+.inbox__dot[data-kind='page'] {
+  background: var(--inbox-page-dot);
+}
+
+.inbox__dot[data-kind='section'] {
+  background: var(--inbox-section-dot);
+}
+
 .inbox__main {
   display: flex;
   flex-direction: column;
@@ -86,6 +94,11 @@
   line-height: var(--lh-sm);
 }
 
+.inbox__where[data-kind='page'] {
+  color: var(--text);
+  font-weight: var(--fw-medium);
+}
+
 .inbox__quote,
 .inbox__last {
   display: -webkit-box;
@@ -115,4 +128,15 @@
 
 .inbox__last {
   margin-top: var(--space-xs);
+}
+
+.inbox__quote[data-kind='page'] {
+  margin-top: var(--space-2xs);
+  padding-left: var(--space-0);
+  border-left: 0;
+  color: var(--text-2);
+  font-family: var(--font-ui);
+  font-size: var(--fs-sm);
+  font-style: normal;
+  line-height: var(--lh-sm);
 }

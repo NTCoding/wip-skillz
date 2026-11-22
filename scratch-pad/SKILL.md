@@ -206,7 +206,7 @@ link: http://127.0.0.1:4747/2026-11-21-invoice-export/#c-1
 
 ### Follow Nick's decision
 
-When Nick has decided, rewrite the text under the question so that it describes his choice. Leave the `:::decision` block where it is, because the block shows his choice on the page. The decision waits for you until you close it with `done` and one line about the change. This is an example of how you close a decision:
+When Nick has decided, rewrite the text under the question so that it describes his choice. Leave the `:::decision` block where it is, because the page shows his choice in the margin beside the question. The decision waits for you until you close it with `done` and one line about the change. This is an example of how you close a decision:
 
 ```text
 $ scratch-pad show --pad 2026-11-21-invoice-export d-1
