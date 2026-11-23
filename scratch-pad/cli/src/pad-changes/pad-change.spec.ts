@@ -81,6 +81,7 @@ describe('changesOfEvents', () => {
         event(5, 'task-done', 'task-1'),
         event(6, 'task-moved', 't-1'),
         event(7, 'task-assigned', 't-1'),
+        event(8, 'task-unassigned', 't-1'),
       ]),
     ).toStrictEqual([{ kind: 'progress-tracker' }])
   })

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { trackerItems, UnknownTaskError, type ProgressTracker } from './progress-tracker'
 import { trackerWithSubtasks, trackerWithTasks } from './progress-tracker-fixtures'
+import { assignTask } from './task-assignments'
 import {
   TaskAlreadyDoneError,
   TaskWithSubtasksError,
@@ -10,6 +11,8 @@ import {
   startSubtask,
   startTask,
 } from './task-progress'
+
+const migration = { do: 'Run the migration', why: "The agent can't reach staging" }
 
 const states = (tracker: ProgressTracker) => tracker.tasks.map((task) => task.state)
 
@@ -114,6 +117,23 @@ describe('finishTask', () => {
     const finish = finishTask(trackerWithTasks(['done', 'in-progress', 'to-do', 'to-do']), 2)
 
     expect(states(finish.tracker)).toStrictEqual(['done', 'done', 'in-progress', 'to-do'])
+  })
+
+  it('skips the tasks that are assigned to Nick when it starts the next task', () => {
+    const tracker = assignTask(trackerWithTasks(['in-progress', 'to-do', 'to-do']), 2, migration)
+    const finish = finishTask(tracker.tracker, 1)
+
+    expect([states(finish.tracker), finish.started?.number]).toStrictEqual([
+      ['done', 'to-do', 'in-progress'],
+      3,
+    ])
+  })
+
+  it('starts no task when every task that is to do is assigned to Nick', () => {
+    const tracker = assignTask(trackerWithTasks(['in-progress', 'to-do']), 2, migration)
+    const finish = finishTask(tracker.tracker, 1)
+
+    expect([states(finish.tracker), finish.started]).toStrictEqual([['done', 'to-do'], undefined])
   })
 
   it('starts the first subtask that is to do when the next task has subtasks', () => {

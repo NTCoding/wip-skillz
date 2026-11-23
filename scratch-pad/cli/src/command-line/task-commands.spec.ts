@@ -323,6 +323,36 @@ describe('the commands that assign a task or a subtask to Nick', () => {
     })
   })
 
+  it('task unassign removes the assignment so that the problem of the task with subtasks is fixed', async () => {
+    const environment = await environmentWithAssignedTask()
+    await output(['subtask', 'add', '2', 'Check the orders table'], environment)
+
+    expect(await output(['task', 'unassign', '2'], environment)).toBe(
+      `[t-2] task 2 isn't assigned to Nick any more: Migrate the orders\n${missingLinksText}\n`,
+    )
+    expect(await output(['check'], environment)).toBe("there aren't any problems in 1 page\n")
+  })
+
+  it('subtask unassign removes the assignment of the subtask', async () => {
+    const environment = await environmentWithAssignedTask()
+    await output(['subtask', 'add', '2', 'Check the orders table'], environment)
+    await output(['subtask', 'assign', '2.1', ...doAndWhy], environment)
+
+    expect(await output(['subtask', 'unassign', '2.1'], environment)).toBe(
+      `[t-3] subtask 2.1 isn't assigned to Nick any more: Check the orders table\n${missingLinksText}\n`,
+    )
+  })
+
+  it('task unassign prints an error when the task is not assigned to Nick', async () => {
+    const environment = await environmentWithAssignedTask()
+
+    expect(await runScratchPad(['task', 'unassign', '1'], environment)).toStrictEqual({
+      exitCode: 1,
+      stdout: '',
+      stderr: "Task 1 isn't assigned to Nick so there is nothing to remove.\n",
+    })
+  })
+
   it('check reports the assigned task with subtasks until one of its subtasks is assigned', async () => {
     const environment = await environmentWithAssignedTask()
     await output(['subtask', 'add', '2', 'Run the migration on staging'], environment)

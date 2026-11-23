@@ -54,6 +54,7 @@ const changesOfKind: Readonly<
   'task-added': () => progressTrackerChange,
   'task-described': () => progressTrackerChange,
   'task-assigned': () => progressTrackerChange,
+  'task-unassigned': () => progressTrackerChange,
   'task-started': () => progressTrackerChange,
   'task-done': () => progressTrackerChange,
   'task-moved': () => progressTrackerChange,

@@ -24,6 +24,7 @@ export const eventKinds = [
   'task-added',
   'task-described',
   'task-assigned',
+  'task-unassigned',
   'task-started',
   'task-done',
   'task-moved',

@@ -14,6 +14,8 @@ import {
   showTask,
   startSubtaskInTracker,
   startTaskInTracker,
+  unassignSubtaskInTracker,
+  unassignTaskInTracker,
 } from '../agent-commands/progress-tracker-commands'
 import { progressTrackerLink, textWithLink } from '../item-links/item-links'
 import { type ScratchPadFolder } from '../scratch-pad-folder/scratch-pad-folder'
@@ -93,6 +95,19 @@ export const taskCommands: ReadonlyArray<readonly [string, ScratchPadCommand]> =
         const number = taskNumber(input.words, 0, input.usage)
         const text = assignmentTextOf(input.words, input.options, input.usage)
         return assignTaskInTracker(folder, number, text, await linksOf(input, folder))
+      },
+    },
+  ],
+  [
+    'task unassign',
+    {
+      usage: 'task unassign <number>',
+      summary: 'remove the assignment to Nick from a task',
+      options: pad,
+      run: async (input: CommandInput) => {
+        const folder = input.folder()
+        const number = taskNumber(input.words, 0, input.usage)
+        return unassignTaskInTracker(folder, number, await linksOf(input, folder))
       },
     },
   ],
@@ -192,6 +207,19 @@ export const taskCommands: ReadonlyArray<readonly [string, ScratchPadCommand]> =
         const number = subtaskNumber(input.words, 0, input.usage)
         const text = assignmentTextOf(input.words, input.options, input.usage)
         return assignSubtaskInTracker(folder, number, text, await linksOf(input, folder))
+      },
+    },
+  ],
+  [
+    'subtask unassign',
+    {
+      usage: 'subtask unassign <number>',
+      summary: 'remove the assignment to Nick from a subtask',
+      options: pad,
+      run: async (input: CommandInput) => {
+        const folder = input.folder()
+        const number = subtaskNumber(input.words, 0, input.usage)
+        return unassignSubtaskInTracker(folder, number, await linksOf(input, folder))
       },
     },
   ],

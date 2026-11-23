@@ -110,6 +110,35 @@ export function assignSubtask(
   }
 }
 
+export class NotAssignedError extends ScratchPadError {
+  constructor(item: TrackerItem) {
+    super(`${itemNameFirst(item)} isn't assigned to Nick so there is nothing to remove.`)
+  }
+}
+
+// A task that was assigned before the agent split it into subtasks stays assigned. This is how the
+// agent removes that assignment when none of the subtasks are Nick's.
+export function unassignTask(tracker: ProgressTracker, number: number): ChangedItem<TrackerItem> {
+  return unassigned(tracker, findTask(tracker, number))
+}
+
+export function unassignSubtask(
+  tracker: ProgressTracker,
+  number: SubtaskNumber,
+): ChangedItem<TrackerItem> {
+  return unassigned(tracker, findSubtask(tracker, number))
+}
+
+function unassigned(tracker: ProgressTracker, item: TrackerItem): ChangedItem<TrackerItem> {
+  if (item.assignment === undefined) {
+    throw new NotAssignedError(item)
+  }
+  return {
+    tracker: withChanges(tracker, new Map([[item.id, { assignment: undefined }]])),
+    item: { ...item, assignment: undefined },
+  }
+}
+
 function assignmentOf(text: AssignmentText): Assignment {
   const what = text.do.trim()
   const why = text.why.trim()

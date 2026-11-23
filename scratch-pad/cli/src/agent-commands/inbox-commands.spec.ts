@@ -114,7 +114,7 @@ describe('readAgentInbox', () => {
         '[t-4] subtask 2.1 is done: Retry a failed export',
         `  link: ${exportJobAddress}progress-tracker#t-4`,
         '  Nick marked it as done in the browser.',
-        '  [t-5] subtask 2.2 has started: Log each retry',
+        '  [t-1] task 1 has started: Task about retry 1',
       ].join('\n'),
       'nothing new in 2026-03-14-export-job',
     ])

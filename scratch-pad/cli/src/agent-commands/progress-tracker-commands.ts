@@ -26,6 +26,8 @@ import {
 import {
   assignSubtask,
   assignTask,
+  unassignSubtask,
+  unassignTask,
   type AssignedItem,
   type AssignmentText,
 } from '../progress-tracker/task-assignments'
@@ -115,6 +117,22 @@ export function assignSubtaskInTracker(
   links: ItemLinks,
 ): string {
   return assigned(folder, links, (tracker) => assignSubtask(tracker, number, text))
+}
+
+export function unassignTaskInTracker(
+  folder: ScratchPadFolder,
+  number: number,
+  links: ItemLinks,
+): string {
+  return unassigned(folder, links, (tracker) => unassignTask(tracker, number))
+}
+
+export function unassignSubtaskInTracker(
+  folder: ScratchPadFolder,
+  number: SubtaskNumber,
+  links: ItemLinks,
+): string {
+  return unassigned(folder, links, (tracker) => unassignSubtask(tracker, number))
 }
 
 export function showTask(folder: ScratchPadFolder, number: number, links: ItemLinks): string {
@@ -210,6 +228,23 @@ function assigned(
     links,
     assignedTaskText(change.item, change.unassignedTask),
     taskLink(links, change.item.id),
+  )
+}
+
+function unassigned(
+  folder: ScratchPadFolder,
+  links: ItemLinks,
+  unassign: Change<ChangedItem<TrackerItem>>,
+): string {
+  const item = folder.change((pad) => {
+    const change = unassign(pad.readProgressTracker())
+    save(pad, change.tracker, 'task-unassigned', change.item.id)
+    return change.item
+  })
+  return textWithLink(
+    links,
+    taskLine(item, "isn't assigned to Nick any more"),
+    taskLink(links, item.id),
   )
 }
 

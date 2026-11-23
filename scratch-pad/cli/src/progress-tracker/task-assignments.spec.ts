@@ -6,8 +6,11 @@ import {
   AssignTaskWithSubtasksError,
   EmptyAssignmentDoError,
   EmptyAssignmentWhyError,
+  NotAssignedError,
   assignSubtask,
   assignTask,
+  unassignSubtask,
+  unassignTask,
 } from './task-assignments'
 
 const migration = {
@@ -140,5 +143,45 @@ describe('addSubtask to an assigned task', () => {
       assignment,
       ['2.1', '2.2'],
     ])
+  })
+})
+
+describe('unassignTask', () => {
+  it('removes the assignment of the task', () => {
+    const unassigned = unassignTask(assignedTaskWithSubtasks(), 2)
+
+    expect([unassigned.item.assignment, findTask(unassigned.tracker, 2).assignment]).toStrictEqual([
+      undefined,
+      undefined,
+    ])
+  })
+
+  it('throws NotAssignedError when the task is not assigned to Nick', () => {
+    const unassign = () => unassignTask(trackerWithTasks(['to-do']), 1)
+
+    expect(unassign).toThrow(NotAssignedError)
+    expect(unassign).toThrow("Task 1 isn't assigned to Nick so there is nothing to remove.")
+  })
+})
+
+describe('unassignSubtask', () => {
+  it('removes the assignment of the subtask', () => {
+    const assigned = assignSubtask(
+      trackerWithSubtasks(['to-do', 'to-do']),
+      { task: 2, subtask: 1 },
+      migration,
+    )
+    const unassigned = unassignSubtask(assigned.tracker, { task: 2, subtask: 1 })
+
+    expect(
+      findTask(unassigned.tracker, 2).subtasks.map((subtask) => subtask.assignment),
+    ).toStrictEqual([undefined, undefined])
+  })
+
+  it('throws NotAssignedError when the subtask is not assigned to Nick', () => {
+    const unassign = () =>
+      unassignSubtask(trackerWithSubtasks(['to-do', 'to-do']), { task: 2, subtask: 2 })
+
+    expect(unassign).toThrow("Subtask 2.2 isn't assigned to Nick so there is nothing to remove.")
   })
 })

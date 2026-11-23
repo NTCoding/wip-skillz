@@ -278,6 +278,8 @@ You can always add a subtask, even to a task that is assigned to Nick. In that c
 
 `status` and `check` will also report the task as a problem until you've assigned at least one of its subtasks. `status` prints the problem on a line that starts with `problem:`.
 
+If none of the subtasks are Nick's, run `task unassign <number>` to remove the assignment from the task. `subtask unassign <number>` removes the assignment from a subtask in the same way.
+
 ### Find out that Nick has done a task
 
 Nick marks a task that is assigned to him as done in the browser. The server then starts the next task in the same way as `task done` does. After that, `wait` and `inbox` will print the task among the decisions. If the server has started a task, the last line of the item will describe that task. This is an example:
