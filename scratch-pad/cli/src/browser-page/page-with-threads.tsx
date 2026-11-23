@@ -39,7 +39,7 @@ import { type PageAddress } from './current-section'
 import { type NewThread } from './scratch-pad-connection'
 import { type BlockSelection } from './selected-block'
 import { useSelectionTools } from './selection-tools-state'
-import { highlightedTexts, type TextHighlight } from './text-highlights'
+import { highlightedTexts, type SearchMatchOnPage, type TextHighlight } from './text-highlights'
 import { type ResolvedThreads } from './resolved-threads'
 import { withTaskChips } from './task-references'
 import { placeThreads, type PlacedThread } from './thread-anchors'
@@ -74,6 +74,8 @@ interface PageWithThreadsProps {
   readonly resolvedThreads: ResolvedThreads
   // The chips under the title for the tasks that the page is part of
   readonly taskChips?: ReactNode
+  // The match that Nick has opened from the search, which is highlighted on the page
+  readonly searchMatch?: SearchMatchOnPage | undefined
 }
 
 interface Draft {
@@ -360,7 +362,8 @@ export function PageWithThreads(props: PageWithThreadsProps) {
     toggle,
     problems: readMarks.problems,
   })
-  const highlighted = highlightedTexts(body, highlightsOf(placed, placedQueued, active, draft))
+  const highlights = highlightsOf(placed, placedQueued, active, draft)
+  const highlighted = highlightedTexts(body, highlights, props.searchMatch)
   return (
     <>
       <ReadingColumn

@@ -1,6 +1,7 @@
 import { type ReactNode } from 'react'
 import { type ThreadType } from './api-responses'
 import { Highlight } from './design-system/design-system'
+import { headingTags } from './page-elements'
 import { taskReferenceScheme } from './task-references'
 
 export interface TextHighlight {
@@ -23,8 +24,17 @@ interface CharacterPosition {
   readonly offset: number
 }
 
+// After Nick has opened a result of the search, the page highlights every copy of the query in the
+// text under the heading of the result. A result without a heading id is before the first heading.
+export interface SearchMatchOnPage {
+  readonly headingId: string | undefined
+  readonly query: string
+}
+
+const searchMatch = 'search match'
+
 interface MarkedSpan extends TextSpan {
-  readonly highlight: TextHighlight
+  readonly highlight: TextHighlight | typeof searchMatch
 }
 
 const whitespace = /\s/
@@ -76,6 +86,10 @@ export function occurrenceAfter(textBefore: string, selectedText: string): numbe
   return target === '' ? 0 : countFrom(0, 0)
 }
 
+function visibleText(positions: readonly CharacterPosition[]): string {
+  return positions.map((position) => position.node.data[position.offset]).join('')
+}
+
 export function selectedTextIn(
   block: Element,
   selectedText: string,
@@ -84,13 +98,15 @@ export function selectedTextIn(
   const target = withoutWhitespace(selectedText)
   const nodes = textNodesOf(block)
   const positions = visiblePositions(nodes)
-  const at = placeOf(
-    positions.map((position) => position.node.data[position.offset]).join(''),
-    target,
-    occurrence,
-  )
-  const first = positions[at]
-  const last = positions[at + target.length - 1]
+  const at = placeOf(visibleText(positions), target, occurrence)
+  return spansBetween(nodes, positions[at], positions[at + target.length - 1])
+}
+
+function spansBetween(
+  nodes: readonly Text[],
+  first: CharacterPosition | undefined,
+  last: CharacterPosition | undefined,
+): TextSpan[] | undefined {
   if (first === undefined || last === undefined) {
     return undefined
   }
@@ -115,20 +131,79 @@ function markedSpans(body: Element, highlight: TextHighlight): MarkedSpan[] {
   return (spans ?? []).map((span) => ({ ...span, highlight }))
 }
 
+// The query is matched in the same way as the server matches it, without upper or lower case. The
+// whitespace is left out, in the same way as for the selected text of a thread.
+function queryCopiesIn(block: Element, query: string): TextSpan[] {
+  const target = withoutWhitespace(query)
+  if (target === '') {
+    return []
+  }
+  const nodes = textNodesOf(block)
+  const positions = visiblePositions(nodes)
+  const pattern = new RegExp(target.replaceAll(/[$()*+.?[\\\]^{|}]/g, String.raw`\$&`), 'giu')
+  return [...visibleText(positions).matchAll(pattern)].flatMap((match) =>
+    spansOver(positions.slice(match.index, match.index + match[0].length)),
+  )
+}
+
+// Each text node that contains a part of the copy has one span, from the first character of the
+// copy in that node to the last one.
+function spansOver(covered: readonly CharacterPosition[]): TextSpan[] {
+  return [...new Set(covered.map((position) => position.node))].map((node) => {
+    const offsets = covered
+      .filter((position) => position.node === node)
+      .map((position) => position.offset)
+    return { node, start: Math.min(...offsets), end: Math.max(...offsets) + 1 }
+  })
+}
+
+// The blocks under a heading start with the heading itself and end before the next heading. Without
+// a heading id, the blocks are the ones before the first heading. A decision block is left out,
+// because the search skips the decisions.
+function blocksUnder(body: Element, headingId: string | undefined): Element[] {
+  const blocks = [...body.children]
+  const isHeading = (block: Element): boolean => headingTags.has(block.tagName)
+  const start =
+    headingId === undefined
+      ? -1
+      : blocks.findIndex((block) => isHeading(block) && block.id === headingId)
+  if (headingId !== undefined && start === -1) {
+    return []
+  }
+  const next = blocks.findIndex((block, index) => index > start && isHeading(block))
+  const end = next === -1 ? blocks.length : next
+  return blocks
+    .slice(Math.max(start, 0), end)
+    .filter((block) => !block.classList.contains('decision'))
+}
+
+function searchSpans(body: Element, match: SearchMatchOnPage | undefined): MarkedSpan[] {
+  return match === undefined
+    ? []
+    : blocksUnder(body, match.headingId)
+        .flatMap((block) => queryCopiesIn(block, match.query))
+        .map((span) => ({ ...span, highlight: searchMatch }))
+}
+
+// A search match is shown over the highlight of a thread. The highlight keeps the ids of the threads
+// so that their cards are still placed beside the text.
 function pieceOf(node: Text, spans: readonly MarkedSpan[], start: number, end: number): ReactNode {
   const text = node.data.slice(start, end)
-  const covering = spans
-    .filter((span) => span.start <= start && span.end >= end)
-    .map((span) => span.highlight)
-  const shown = covering.find((highlight) => highlight.active) ?? covering[0]
-  return shown === undefined ? (
-    text
-  ) : (
+  const covering = spans.filter((span) => span.start <= start && span.end >= end)
+  const threads = covering.flatMap((span) =>
+    span.highlight === searchMatch ? [] : [span.highlight],
+  )
+  const shown = threads.find((highlight) => highlight.active) ?? threads[0]
+  const searched = covering.length > threads.length
+  if (covering.length === 0) {
+    return text
+  }
+  return (
     <Highlight
       key={start}
-      threads={covering.map((highlight) => highlight.thread)}
-      kind={shown.kind}
-      active={covering.some((highlight) => highlight.active)}
+      threads={threads.map((highlight) => highlight.thread)}
+      kind={shown === undefined || searched ? 'search' : shown.kind}
+      active={threads.some((highlight) => highlight.active)}
     >
       {text}
     </Highlight>
@@ -151,8 +226,12 @@ function piecesOf(node: Text, spans: readonly MarkedSpan[]): readonly ReactNode[
 export function highlightedTexts(
   body: Element,
   highlights: readonly TextHighlight[],
+  match?: SearchMatchOnPage,
 ): ReadonlyMap<Node, readonly ReactNode[]> {
-  const spans = highlights.flatMap((highlight) => markedSpans(body, highlight))
+  const spans = [
+    ...highlights.flatMap((highlight) => markedSpans(body, highlight)),
+    ...searchSpans(body, match),
+  ]
   const nodes = [...new Set(spans.map((span) => span.node))]
   return new Map(
     nodes.map((node) => [

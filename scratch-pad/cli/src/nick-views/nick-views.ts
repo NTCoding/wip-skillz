@@ -4,6 +4,7 @@ import { nickInbox } from '../nick-inbox/nick-inbox'
 import { type QueuedComment, type QueuedReply } from '../outbox/outbox'
 import { isUnderNumber, pageFileOf, parentNumberOf, type PageFile } from '../pages/page-files'
 import { existingPage, findPage, pageTitle } from '../pages/page-markdown'
+import { searchResultsOf, type SearchResult } from '../pages/page-search'
 import { type PageSummary, type WaitingForNick } from '../pages/page-text'
 import { type ProgressTracker, type Subtask, type Task } from '../progress-tracker/progress-tracker'
 import {
@@ -390,6 +391,23 @@ export function improvementsOf(folder: ScratchPadFolder): ImprovementsTab {
           ],
     ),
   }
+}
+
+// The results are in the order of the pages in the sidebar, and in the order of the lines in each
+// page.
+export function searchPages(folder: ScratchPadFolder, query: string): SearchResult[] {
+  return searchResultsOf(
+    folder.pages().map((page) => {
+      const lines = folder.readPageLines(page)
+      return {
+        page,
+        title: pageTitle(lines),
+        markdown: lines.join('\n'),
+        headings: renderedPage(folder, page).headings,
+      }
+    }),
+    query,
+  )
 }
 
 // Renders Markdown that isn't on a page, like the details of an improvement or the description of a

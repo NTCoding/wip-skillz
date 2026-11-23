@@ -2,6 +2,10 @@ import { useEffect } from 'react'
 import { lookingElsewhere } from './desktop-notifications'
 import { answerCountOf, type InboxEntry } from './design-system/design-system'
 
+export function tabTitleOf(pageTitle: string | undefined, padTitle: string): string {
+  return pageTitle === undefined || pageTitle === padTitle ? padTitle : `${pageTitle} · ${padTitle}`
+}
+
 const blinkInterval = 15_000
 const waitingTitleDuration = 3_000
 

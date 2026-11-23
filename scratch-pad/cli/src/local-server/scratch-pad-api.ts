@@ -24,6 +24,7 @@ import {
   pageSummaries,
   progressTrackerOf,
   readMarksOf,
+  searchPages,
   threadsOfPad,
   threadsOfPage,
   viewPage,
@@ -153,6 +154,13 @@ function threadBody(folder: ScratchPadFolder, thread: Thread): { readonly thread
   return { thread: positioned }
 }
 
+// A request without a query is searched in the same way as an empty query, which doesn't find
+// anything.
+function searchResultsFor(folder: ScratchPadFolder, request: ApiRequest): ApiResponse {
+  const query = new URL(request.path, 'http://localhost').searchParams.get('query')
+  return json({ results: query === null ? [] : searchPages(folder, query) })
+}
+
 const padApi = String.raw`^/api/scratch-pads/([^/]+)`
 
 function padRoute(
@@ -185,6 +193,7 @@ const routes: readonly Route[] = [
   },
   padRoute('GET', '/pages', (folder) => json({ pages: pageSummaries(folder) })),
   padRoute('GET', '/pages/([^/]+)', (folder, _request, file) => json(viewPage(folder, file))),
+  padRoute('GET', '/search', searchResultsFor),
   padRoute('GET', '/pages/([^/]+)/threads', (folder, _request, file) =>
     json({ threads: threadsOfPage(folder, file) }),
   ),

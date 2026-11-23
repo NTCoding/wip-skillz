@@ -294,16 +294,34 @@ The new pages and the pages with changed sections are collapsed under "Updates t
 
 The export doesn't contain any read marks, because a reader can't mark anything as read in the file. The sidebar of the export doesn't link to the Inbox / Outbox view either.
 
+## How the search works
+
+The search lets Nick find a piece of content on any page of the scratch pad he has open, rather than only on the page he's reading. He opens a command palette with ⌘K or with the search button to the left of the Inbox. The palette only sends the query to the server once he has stopped typing for 1 second, because results that change on every key press are annoying.
+
+The server searches the raw Markdown of every page rather than the text that the page shows. That's why a match can be in a link's URL or in a code block too. It skips each `:::decision` block, because the search is only for the content of the pages. The results are listed in the same order as the pages in the sidebar. There's one result for each line that contains the query. Each result has the heading that the line is under, the id of that heading and a snippet of the line.
+
+When Nick opens a result, the page scrolls to the heading the match is under. Every match between that heading and the next one is highlighted in yellow until Nick clicks the page or presses Escape. If the match isn't in the text that the page shows (for example, it's in a link's URL), the page only scrolls to the heading.
+
+The code for the search is in these files:
+
+| File                          | What it does                                                                                                                                      |
+| ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `src/pages/page-search.ts`    | Searches the Markdown of every page for the lines that contain the query. It builds the snippet and works out where each match is in the snippet. |
+| `pad-search.tsx`              | Shows the search button and the palette. When Nick opens the palette again, the palette still shows his last query and the result he selected.    |
+| `text-highlights.tsx`         | Highlights the matches under the heading of the result that Nick has opened. It uses `Highlight` with `kind` set to `'search'`.                   |
+| `components/command-palette/` | Shows the search field and the results over the dimmed page. ↑ and ↓ move the selection. Escape or a click on the dimmed page closes the palette. |
+
 ## How the export uses the same page
 
-`scratch-pad export` writes one HTML file, which contains the same bundle that the server sends to the browser. It also contains the scratch pad's data in a `<script id="scratch-pad-export">` element. If that element is there, `start-browser-page.tsx` reads the element and starts the page in its read-only mode. The export differs from the page from the server in these 5 ways:
+`scratch-pad export` writes one HTML file, which contains the same bundle that the server sends to the browser. It also contains the scratch pad's data in a `<script id="scratch-pad-export">` element. If that element is there, `start-browser-page.tsx` reads the element and starts the page in its read-only mode. The export differs from the page from the server in these 6 ways:
 
-| The page from the server                         | The export                                      |
-| ------------------------------------------------ | ----------------------------------------------- |
-| `scratchPadConnection` sends requests to the API | `exportedScratchPad` reads the data in the file |
-| `servedAddresses`, like `/<pad>/retry-limit.md`  | `exportedAddresses`, like `#/retry-limit.md`    |
-| `writing` is the connection                      | `writing` is `undefined`                        |
-| `notifications` is `browserNotifications()`      | `notifications` is `undefined`                  |
-| The frame of an `:::html` block has a `src`      | The frame of an `:::html` block has a `srcdoc`  |
+| The page from the server                         | The export                                                         |
+| ------------------------------------------------ | ------------------------------------------------------------------ |
+| `scratchPadConnection` sends requests to the API | `exportedScratchPad` reads the data in the file                    |
+| `servedAddresses`, like `/<pad>/retry-limit.md`  | `exportedAddresses`, like `#/retry-limit.md`                       |
+| `writing` is the connection                      | `writing` is `undefined`                                           |
+| `notifications` is `browserNotifications()`      | `notifications` is `undefined`                                     |
+| `search` is `connection.search`                  | `search` is `undefined` so the page doesn't show the search button |
+| The frame of an `:::html` block has a `src`      | The frame of an `:::html` block has a `srcdoc`                     |
 
 If you add a control that changes something, like a reply box or a decision button, only show the control when `writing` isn't `undefined`, because that's how the read-only mode hides the existing controls. `exported-scratch-pad.spec.tsx` tests the page in its read-only mode.

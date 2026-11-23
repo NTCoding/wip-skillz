@@ -34,3 +34,7 @@
 .highlight[data-kind='improvement'][data-active='true'] {
   background: var(--highlight-improvement-active);
 }
+
+.highlight[data-kind='search'] {
+  background: var(--highlight-search);
+}
