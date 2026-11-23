@@ -1,18 +1,21 @@
 import { act, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { type NickInbox, type Thread } from './api-responses'
+import { type NickInbox, type ProgressTracker, type Thread } from './api-responses'
 import {
   exportPad,
   exportPadAddresses,
   fakeConnection,
   fakeNarrowWindow,
   indexInbox,
+  progressTracker,
   retryQuestion,
   type FakeConnection,
 } from './browser-page-fixtures'
 import { type DesktopNotifications } from './desktop-notifications'
 import { ScratchPadApp } from './scratch-pad-app'
+
+class StoppedServerError extends Error {}
 
 const uploadReply: Thread = {
   ...retryQuestion,
@@ -46,7 +49,7 @@ function fakeNotifications(permission: NotificationPermission) {
   return { state, notifications }
 }
 
-async function openPad(fake: FakeConnection, notifications: DesktopNotifications): Promise<void> {
+function renderPad(fake: FakeConnection, notifications: DesktopNotifications): void {
   window.history.replaceState(null, '', `/${exportPad}/`)
   render(
     <ScratchPadApp
@@ -59,13 +62,35 @@ async function openPad(fake: FakeConnection, notifications: DesktopNotifications
       notifications={notifications}
     />,
   )
-  await screen.findByRole('button', { name: 'Inbox: 2 items wait for you' })
+}
+
+async function openPad(fake: FakeConnection, notifications: DesktopNotifications): Promise<void> {
+  renderPad(fake, notifications)
+  // The subtask that is assigned to Nick waits for him too.
+  await screen.findByRole('button', { name: 'Inbox: 3 items wait for you' })
 }
 
 async function inboxChanges(fake: FakeConnection, inbox: NickInbox, count: number): Promise<void> {
   vi.spyOn(fake.connection, 'nickInbox').mockResolvedValue(inbox)
   act(() => fake.sendChange({ kind: 'thread', id: 'c-2' }))
   await screen.findByRole('button', { name: `Inbox: ${count} items wait for you` })
+}
+
+// Task 3 "Check the retry limit" is assigned to Nick too.
+const withAssignedTask: ProgressTracker = {
+  ...progressTracker,
+  tasks: progressTracker.tasks.map((task) =>
+    task.id === 't-3'
+      ? {
+          ...task,
+          assignment: {
+            assignee: 'user',
+            do: 'Ask Jo for the limit',
+            why: 'Jo only talks to Nick',
+          },
+        }
+      : task,
+  ),
 }
 
 beforeEach(() => {
@@ -77,10 +102,52 @@ describe('the desktop notifications of the Inbox', () => {
     const fake = fakeConnection()
     const { notifications } = fakeNotifications('granted')
     await openPad(fake, notifications)
-    await inboxChanges(fake, { ...indexInbox, threads: [retryQuestion, uploadReply] }, 3)
+    await inboxChanges(fake, { ...indexInbox, threads: [retryQuestion, uploadReply] }, 4)
     await waitFor(() =>
       expect(notifications.show.mock.calls).toStrictEqual([
         ['Invoice export', 'The agent replied: Yes. It uses the same limit.'],
+      ]),
+    )
+  })
+
+  it('shows a notification for a task that the agent assigns to Nick after the page has opened', async () => {
+    const fake = fakeConnection()
+    const { notifications } = fakeNotifications('granted')
+    await openPad(fake, notifications)
+    vi.spyOn(fake.connection, 'progressTracker').mockResolvedValue(withAssignedTask)
+    act(() => fake.sendChange({ kind: 'progress-tracker' }))
+    await screen.findByRole('button', { name: 'Inbox: 4 items wait for you' })
+    await waitFor(() =>
+      expect(notifications.show.mock.calls).toStrictEqual([
+        ['Invoice export', 'Assigned to you: 3 Check the retry limit'],
+      ]),
+    )
+  })
+
+  it("doesn't show a notification for the tasks that were assigned before the progress tracker was first loaded", async () => {
+    const fake = fakeConnection()
+    const { notifications } = fakeNotifications('granted')
+    const loaded = Promise.withResolvers<ProgressTracker>()
+    vi.spyOn(fake.connection, 'progressTracker').mockReturnValue(loaded.promise)
+    renderPad(fake, notifications)
+    await screen.findByRole('button', { name: 'Inbox: 2 items wait for you' })
+    act(() => loaded.resolve(withAssignedTask))
+    await screen.findByRole('button', { name: 'Inbox: 4 items wait for you' })
+    expect(notifications.show).not.toHaveBeenCalled()
+  })
+
+  it('shows a notification for a reply when the progress tracker can’t be loaded', async () => {
+    const fake = fakeConnection()
+    const { notifications } = fakeNotifications('granted')
+    vi.spyOn(fake.connection, 'progressTracker').mockRejectedValue(
+      new StoppedServerError('The server has stopped.'),
+    )
+    renderPad(fake, notifications)
+    await screen.findByRole('button', { name: 'Inbox: 2 items wait for you' })
+    await inboxChanges(fake, { ...indexInbox, threads: [retryQuestion, uploadReply] }, 3)
+    await waitFor(() =>
+      expect(notifications.show.mock.calls).toStrictEqual([
+        [exportPad, 'The agent replied: Yes. It uses the same limit.'],
       ]),
     )
   })
@@ -89,7 +156,7 @@ describe('the desktop notifications of the Inbox', () => {
     const fake = fakeConnection()
     const { notifications } = fakeNotifications('granted')
     await openPad(fake, notifications)
-    await inboxChanges(fake, { ...indexInbox, threads: [uploadReply] }, 2)
+    await inboxChanges(fake, { ...indexInbox, threads: [uploadReply] }, 3)
     await waitFor(() =>
       expect(notifications.show.mock.calls).toStrictEqual([
         ['Invoice export', 'The agent replied: Yes. It uses the same limit.'],
@@ -112,7 +179,7 @@ describe('the desktop notifications of the Inbox', () => {
         },
       ],
     }
-    await inboxChanges(fake, { ...indexInbox, threads: [withSecondMessage] }, 2)
+    await inboxChanges(fake, { ...indexInbox, threads: [withSecondMessage] }, 3)
     await waitFor(() =>
       expect(notifications.show.mock.calls).toStrictEqual([
         ['Invoice export', 'The agent replied: The upload retries 8 times too.'],
@@ -172,7 +239,7 @@ describe('the desktop notifications of the Inbox', () => {
         threads: [retryQuestion, uploadReply, withoutMessages],
         decisions: [...indexInbox.decisions, taxNumberDecision],
       },
-      4,
+      5,
     )
     await waitFor(() =>
       expect(notifications.show.mock.calls).toStrictEqual([
@@ -186,7 +253,7 @@ describe('the desktop notifications of the Inbox', () => {
     const { state, notifications } = fakeNotifications('granted')
     await openPad(fake, notifications)
     state.lookingElsewhere = false
-    await inboxChanges(fake, { ...indexInbox, threads: [retryQuestion, uploadReply] }, 3)
+    await inboxChanges(fake, { ...indexInbox, threads: [retryQuestion, uploadReply] }, 4)
     state.lookingElsewhere = true
     await inboxChanges(
       fake,
@@ -194,7 +261,7 @@ describe('the desktop notifications of the Inbox', () => {
         threads: [retryQuestion, uploadReply],
         decisions: [...indexInbox.decisions, taxNumberDecision],
       },
-      4,
+      5,
     )
     await waitFor(() =>
       expect(notifications.show.mock.calls).toStrictEqual([
@@ -209,7 +276,7 @@ describe('the button for the desktop notifications', () => {
     const fake = fakeConnection()
     const { notifications } = fakeNotifications('default')
     await openPad(fake, notifications)
-    await inboxChanges(fake, { ...indexInbox, threads: [retryQuestion, uploadReply] }, 3)
+    await inboxChanges(fake, { ...indexInbox, threads: [retryQuestion, uploadReply] }, 4)
     await userEvent.click(screen.getByRole('button', { name: 'Turn on desktop notifications' }))
     await screen.findByRole('button', { name: 'Desktop notifications are on' })
     await inboxChanges(
@@ -218,7 +285,7 @@ describe('the button for the desktop notifications', () => {
         threads: [retryQuestion, uploadReply],
         decisions: [...indexInbox.decisions, taxNumberDecision],
       },
-      4,
+      5,
     )
     expect(notifications.askPermission).toHaveBeenCalledWith()
     await waitFor(() =>

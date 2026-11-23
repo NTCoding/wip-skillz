@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it } from 'vitest'
 import {
   addSubtaskToTracker,
   addTaskToTracker,
+  assignSubtaskInTracker,
   describeSubtaskInTracker,
   describeTaskInTracker,
 } from '../agent-commands/progress-tracker-commands'
@@ -33,6 +34,7 @@ describe('progressTrackerOf', () => {
           state: 'to-do',
           html: undefined,
           links: [],
+          assignment: undefined,
           subtasks: [],
         },
       ],
@@ -42,7 +44,7 @@ describe('progressTrackerOf', () => {
   it('returns the description of a subtask as HTML under its task', () => {
     const folder = exportJobScratchPad(temporaryHome())
     addTaskToTracker(folder, 'Export the invoices')
-    addSubtaskToTracker(folder, 1, 'Retry a failed export')
+    addSubtaskToTracker(folder, 1, 'Retry a failed export', itemLinks(folder.name, undefined))
     describeSubtaskInTracker(
       folder,
       { task: 1, subtask: 1 },
@@ -87,5 +89,24 @@ describe('progressTrackerOf', () => {
         line: 1,
       },
     ])
+  })
+
+  it('returns the assignment of a subtask to Nick', () => {
+    const folder = exportJobScratchPad(temporaryHome())
+    const links = itemLinks(folder.name, undefined)
+    addTaskToTracker(folder, 'Export the invoices')
+    addSubtaskToTracker(folder, 1, 'Retry a failed export', links)
+    assignSubtaskInTracker(
+      folder,
+      { task: 1, subtask: 1 },
+      { do: 'Restart the job', why: "The agent can't reach the server" },
+      links,
+    )
+
+    expect(progressTrackerOf(folder).tasks[0]?.subtasks[0]?.assignment).toStrictEqual({
+      assignee: 'user',
+      do: 'Restart the job',
+      why: "The agent can't reach the server",
+    })
   })
 })

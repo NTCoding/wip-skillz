@@ -1,6 +1,8 @@
 import {
   addSubtaskToTracker,
   addTaskToTracker,
+  assignSubtaskInTracker,
+  assignTaskInTracker,
   describeSubtaskInTracker,
   describeTaskInTracker,
   finishSubtaskInTracker,
@@ -17,6 +19,7 @@ import { progressTrackerLink, textWithLink } from '../item-links/item-links'
 import { type ScratchPadFolder } from '../scratch-pad-folder/scratch-pad-folder'
 import { linksOf, pad, type CommandInput, type ScratchPadCommand } from './command-input'
 import {
+  assignmentTextOf,
   parentTaskNumber,
   placementOf,
   restOfWords,
@@ -37,6 +40,8 @@ export async function withTrackerLink(
 }
 
 const moveOptions = ['pad', 'before', 'after'] as const
+
+const assignOptions = ['pad', 'do', 'why'] as const
 
 export const taskCommands: ReadonlyArray<readonly [string, ScratchPadCommand]> = [
   [
@@ -77,10 +82,26 @@ export const taskCommands: ReadonlyArray<readonly [string, ScratchPadCommand]> =
     },
   ],
   [
+    'task assign',
+    {
+      usage: 'task assign <number> --do <text> --why <text>',
+      summary:
+        "assign a task that has no subtasks to Nick (--do is what he has to do and --why is why the agent can't do it)",
+      options: assignOptions,
+      run: async (input: CommandInput) => {
+        const folder = input.folder()
+        const number = taskNumber(input.words, 0, input.usage)
+        const text = assignmentTextOf(input.words, input.options, input.usage)
+        return assignTaskInTracker(folder, number, text, await linksOf(input, folder))
+      },
+    },
+  ],
+  [
     'task show',
     {
       usage: 'task show <number>',
-      summary: 'print a task with its state, its subtasks and its description',
+      summary:
+        'print a task with its state, its assignment to Nick, its subtasks and its description',
       options: pad,
       run: async (input: CommandInput) => {
         const folder = input.folder()
@@ -136,14 +157,12 @@ export const taskCommands: ReadonlyArray<readonly [string, ScratchPadCommand]> =
       summary: 'add a subtask to the end of the subtasks of a task',
       options: pad,
       wordsBeforeText: 1,
-      run: (input: CommandInput) =>
-        withTrackerLink(input, (folder) =>
-          addSubtaskToTracker(
-            folder,
-            parentTaskNumber(input.words, 0, input.usage),
-            restOfWords(input.words, 1, 'title', input.usage),
-          ),
-        ),
+      run: async (input: CommandInput) => {
+        const folder = input.folder()
+        const number = parentTaskNumber(input.words, 0, input.usage)
+        const title = restOfWords(input.words, 1, 'title', input.usage)
+        return addSubtaskToTracker(folder, number, title, await linksOf(input, folder))
+      },
     },
   ],
   [
@@ -162,10 +181,25 @@ export const taskCommands: ReadonlyArray<readonly [string, ScratchPadCommand]> =
     },
   ],
   [
+    'subtask assign',
+    {
+      usage: 'subtask assign <number> --do <text> --why <text>',
+      summary:
+        "assign a subtask to Nick (--do is what he has to do and --why is why the agent can't do it)",
+      options: assignOptions,
+      run: async (input: CommandInput) => {
+        const folder = input.folder()
+        const number = subtaskNumber(input.words, 0, input.usage)
+        const text = assignmentTextOf(input.words, input.options, input.usage)
+        return assignSubtaskInTracker(folder, number, text, await linksOf(input, folder))
+      },
+    },
+  ],
+  [
     'subtask show',
     {
       usage: 'subtask show <number>',
-      summary: 'print a subtask with its state and its description',
+      summary: 'print a subtask with its state, its assignment to Nick and its description',
       options: pad,
       run: async (input: CommandInput) => {
         const folder = input.folder()

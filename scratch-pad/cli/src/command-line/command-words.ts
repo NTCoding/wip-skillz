@@ -2,6 +2,7 @@ import { parseArgs } from 'node:util'
 import { mainAgentTypes } from '../agent-inbox/agent-inbox'
 import { itemTypes, type ItemType } from '../items/item-id'
 import { type SubtaskNumber } from '../progress-tracker/progress-tracker'
+import { type AssignmentText } from '../progress-tracker/task-assignments'
 import { type Placement } from '../progress-tracker/task-moves'
 import { ScratchPadError } from '../scratch-pad-error'
 
@@ -15,6 +16,8 @@ export const optionNames = [
   'out',
   'before',
   'after',
+  'do',
+  'why',
 ] as const
 export type OptionName = (typeof optionNames)[number]
 
@@ -30,6 +33,8 @@ const parserOptions = {
   out: { type: 'string' },
   before: { type: 'string' },
   after: { type: 'string' },
+  do: { type: 'string' },
+  why: { type: 'string' },
   help: { type: 'boolean' },
 } as const
 
@@ -47,6 +52,8 @@ export interface CommandOptions {
   readonly out: string | undefined
   readonly before: string | undefined
   readonly after: string | undefined
+  readonly do: string | undefined
+  readonly why: string | undefined
 }
 
 export interface CommandWords {
@@ -67,6 +74,13 @@ export class UnknownOptionError extends ScratchPadError {
 export class OptionValueError extends ScratchPadError {
   constructor(name: string, expected: string) {
     super(`--${name} ${expected}.`)
+  }
+}
+
+// A second value of an option would replace the first one without anybody noticing.
+export class RepeatedOptionError extends ScratchPadError {
+  constructor(name: string) {
+    super(`--${name} is given more than once. Pass each option only once.`)
   }
 }
 
@@ -108,6 +122,14 @@ export class PlacementError extends ScratchPadError {
   }
 }
 
+class UnquotedAssignmentTextError extends ScratchPadError {
+  constructor(words: readonly string[], usage: string) {
+    super(
+      `"${words.join(' ')}" isn't the number or the text of an option. Put the text of --do and --why in quotes, like --do "Run the migration on staging". Usage: scratch-pad ${usage}`,
+    )
+  }
+}
+
 export class InvalidImprovementNumberError extends ScratchPadError {
   constructor(text: string, usage: string) {
     super(`"${text}" isn't an improvement number. Usage: scratch-pad ${usage}`)
@@ -134,15 +156,21 @@ export class InvalidSecondsError extends ScratchPadError {
 
 export function parseCommandWords(argv: readonly string[], startsText: StartsText): CommandWords {
   const textIndex = indexOfText(argv, startsText)
-  const { values, positionals } = parseArgs({
+  const { values, positionals, tokens } = parseArgs({
     args: argv.slice(0, textIndex),
     strict: false,
     allowPositionals: true,
+    tokens: true,
     options: parserOptions,
   })
   const unknown = Object.keys(values).find((name) => !knownOptions.includes(name))
   if (unknown !== undefined) {
     throw new UnknownOptionError(unknown)
+  }
+  const givenNames = tokens.flatMap((token) => (token.kind === 'option' ? [token.name] : []))
+  const repeated = givenNames.find((name, position) => givenNames.indexOf(name) !== position)
+  if (repeated !== undefined) {
+    throw new RepeatedOptionError(repeated)
   }
   return {
     words: [...positionals, ...argv.slice(textIndex)],
@@ -156,6 +184,8 @@ export function parseCommandWords(argv: readonly string[], startsText: StartsTex
       out: textOption(values, 'out'),
       before: textOption(values, 'before'),
       after: textOption(values, 'after'),
+      do: textOption(values, 'do'),
+      why: textOption(values, 'why'),
     },
     givenOptions: optionNames.filter((name) => values[name] !== undefined),
     help: flagOption(values, 'help'),
@@ -233,6 +263,31 @@ export function placementOf<N>(
   throw new PlacementError(usage)
 }
 
+// What Nick has to do and why the agent can't do the task. Both --do and --why have to be given.
+// The number is the only word of the command. An option only takes the word after it as its text,
+// so any other word is usually the rest of a --do or --why text that isn't in quotes.
+export function assignmentTextOf(
+  words: readonly string[],
+  options: CommandOptions,
+  usage: string,
+): AssignmentText {
+  const extraWords = words.slice(1)
+  if (extraWords.length > 0) {
+    throw new UnquotedAssignmentTextError(extraWords, usage)
+  }
+  return {
+    do: requiredOption(options.do, 'do', usage),
+    why: requiredOption(options.why, 'why', usage),
+  }
+}
+
+function requiredOption(value: string | undefined, name: OptionName, usage: string): string {
+  if (value === undefined) {
+    throw new MissingArgumentError(`--${name} option`, usage)
+  }
+  return value
+}
+
 export function taskNumberFrom(text: string, usage: string): number {
   return positiveNumber(text, () => new InvalidTaskNumberError(text, usage))
 }
@@ -306,10 +361,15 @@ function indexOfText(argv: readonly string[], startsText: StartsText): number {
   return first.kind === 'option-terminator' ? first.index + 1 : first.index
 }
 
+// An option takes the word after it as its value, even if that word is another option. So
+// --do --why "..." would give --do the value "--why".
 function textOption(values: OptionValues, name: string): string | undefined {
   const value = values[name]
   if (typeof value === 'boolean') {
     throw new OptionValueError(name, 'needs a value')
+  }
+  if (value !== undefined && knownOptions.some((option) => value === `--${option}`)) {
+    throw new OptionValueError(name, `needs a value, but the word after it is the option ${value}`)
   }
   return value
 }

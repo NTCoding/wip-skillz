@@ -23,6 +23,7 @@ export const eventKinds = [
   'goal-set',
   'task-added',
   'task-described',
+  'task-assigned',
   'task-started',
   'task-done',
   'task-moved',

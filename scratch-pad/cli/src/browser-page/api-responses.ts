@@ -51,6 +51,10 @@ export const viewedPageResponse = z.object({
   decisions: z.array(decisionOnPage),
 })
 
+// The assignment of a task or a subtask has what Nick has to do and why the agent can't do the
+// task. The only assignee is user, who is Nick.
+const assignment = z.object({ assignee: z.enum(['user']), do: z.string(), why: z.string() })
+
 const subtask = z.object({
   id: z.string(),
   number: z.string(),
@@ -58,6 +62,7 @@ const subtask = z.object({
   state: z.enum(['to-do', 'in-progress', 'done']),
   html: optionalText,
   links: z.array(pageLink),
+  assignment: assignment.nullable().transform((value) => value ?? undefined),
 })
 
 const task = subtask.extend({ number: z.number(), subtasks: z.array(subtask) })
@@ -203,6 +208,8 @@ export const nickInboxResponse = z.object({
 })
 
 export const decisionAnswerResponse = z.object({ decision: z.object({ id: z.string() }) })
+
+export const taskDoneResponse = z.object({ task: z.object({ id: z.string() }) })
 
 export const improvementEditResponse = z.object({
   improvement: z.object({ number: z.number() }),

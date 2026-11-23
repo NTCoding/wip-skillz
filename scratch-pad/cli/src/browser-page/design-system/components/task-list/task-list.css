@@ -2,6 +2,7 @@
   container-type: inline-size;
   margin: var(--space-0);
   padding: var(--space-0);
+  overflow: hidden;
   border: var(--hairline) solid var(--line);
   border-radius: var(--r-md);
   list-style: none;
@@ -10,12 +11,16 @@
   line-height: var(--lh-md);
 }
 
-.task-list__item {
+/* The padding of a list item in the reading column would move the rows and the background of an
+   open row to the right. */
+.task-list__item,
+.task-list__subtask {
   margin: var(--space-0);
+  padding: var(--space-0);
 }
 
 .task-list__item + .task-list__item,
-.task-list__subtasks > .task-list__task {
+.task-list__subtasks > .task-list__subtask {
   border-top: var(--hairline) solid var(--line-soft);
 }
 
@@ -24,24 +29,67 @@
   grid-template-columns: var(--tree-chevron-size) var(--space-7xl) minmax(0, 1fr) auto;
   align-items: baseline;
   gap: var(--space-xl);
+  width: 100%;
   margin: var(--space-0);
   padding: var(--cell-padding-y) var(--cell-padding-x);
   font-size: inherit;
   line-height: inherit;
 }
 
-/* The number of a subtask starts under the title of its task. */
+/* A list with tasks that are assigned to Nick has a column for the mark on the right of every row
+   so that the states line up whether a row is assigned or not. A row without a mark leaves that
+   column empty. */
+.task-list[data-marks='true'] .task-list__task {
+  grid-template-columns:
+    var(--tree-chevron-size) var(--space-7xl) minmax(0, 1fr) auto
+    var(--icon-size);
+}
+
+/* The number of a subtask starts under the title of its task. The chevron of an assigned subtask is
+   under the number of its task. */
 .task-list__task--subtask {
-  grid-template-columns: var(--space-7xl) minmax(0, 1fr) auto;
-  padding-left: calc(
-    var(--cell-padding-x) + var(--tree-chevron-size) + var(--space-7xl) + var(--space-xl) * 2
-  );
+  padding-left: calc(var(--cell-padding-x) + var(--space-7xl) + var(--space-xl));
 }
 
 .task-list__subtasks {
   margin: var(--space-0);
   padding: var(--space-0);
   list-style: none;
+}
+
+/* The row of a task that is assigned to Nick is a button that opens its details. */
+button.task-list__task {
+  border: 0;
+  background: none;
+  color: inherit;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+button.task-list__task:hover {
+  background: var(--surface-soft);
+}
+
+button.task-list__task:focus-visible {
+  outline-offset: calc(var(--focus-ring-w) * -1);
+}
+
+button.task-list__task:hover .task-list__chevron .icon {
+  color: var(--text);
+}
+
+button.task-list__task[aria-expanded='true'] .task-list__chevron .icon {
+  transform: rotate(90deg);
+}
+
+/* An assigned task whose details are open has the background of a raised row. */
+:is(.task-list__item, .task-list__subtask)[data-open='true'] {
+  background: var(--surface-soft);
+}
+
+[data-open='true'] > button.task-list__task:hover {
+  background: var(--tint);
 }
 
 .task-list__chevron {
@@ -81,19 +129,146 @@ button.task-list__chevron:hover {
   display: flex;
 }
 
-/* In a narrow list, the state is shown under the title so that the title keeps the width of the row. */
+/* The mark of a row that is assigned to Nick has the colour of Nick's avatar. */
+.task-list__mark {
+  align-self: center;
+  display: grid;
+  place-items: center;
+  width: var(--icon-size);
+  height: var(--icon-size);
+}
+
+.task-list__assigned {
+  display: block;
+  width: var(--icon-size);
+  height: var(--icon-size);
+}
+
+.task-list__assigned-disc {
+  fill: var(--avatar-nick-bg);
+}
+
+.task-list__assigned-person {
+  fill: none;
+  stroke: var(--avatar-nick-fg);
+  stroke-width: 1.3;
+  stroke-linecap: round;
+}
+
+/* The small dot on a task shows that some of its subtasks are assigned to Nick. */
+.task-list__assigned-dot {
+  display: block;
+  width: var(--space-md);
+  height: var(--space-md);
+  border-radius: var(--r-round);
+  background: var(--avatar-nick-bg);
+}
+
+/* The mark is grey on a task that is done, because Nick doesn't have anything left to do for that
+   task. */
+.task-list__task[data-state='done'] .task-list__assigned-disc {
+  fill: var(--text-2);
+}
+
+.task-list__task[data-state='done'] .task-list__assigned-dot {
+  background: var(--text-2);
+}
+
+/* The details line up with the title of their row. */
+.task-list__details {
+  padding: var(--space-0) calc(var(--cell-padding-x) + var(--icon-size) + var(--space-xl))
+    var(--space-5xl)
+    calc(var(--cell-padding-x) + var(--tree-chevron-size) + var(--space-7xl) + var(--space-xl) * 2);
+  font-size: var(--fs-ui);
+  line-height: var(--lh-ui);
+}
+
+.task-list__subtask > .task-list__details {
+  padding-left: calc(
+    var(--cell-padding-x) + var(--space-7xl) * 2 + var(--tree-chevron-size) + var(--space-xl) * 3
+  );
+}
+
+.task-list__part {
+  margin: var(--space-0);
+}
+
+.task-list__part + .task-list__part {
+  margin-top: var(--space-3xl);
+}
+
+.task-list__label {
+  margin: var(--space-0) var(--space-0) var(--space-xs);
+  color: var(--text-2);
+  font-size: var(--fs-xs);
+  line-height: var(--lh-xs);
+  font-weight: var(--fw-medium);
+}
+
+/* A line break that the agent wrote in the text is kept. */
+.task-list__text {
+  margin: var(--space-0);
+  font-size: inherit;
+  line-height: inherit;
+  white-space: pre-line;
+  text-wrap: pretty;
+}
+
+.task-list__text + .task-list__text {
+  margin-top: var(--space-md);
+}
+
+.task-list__description-link {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2xs);
+  border-radius: var(--r-sm);
+  color: var(--accent-strong);
+  font-size: var(--fs-sm);
+  line-height: var(--lh-sm);
+  font-weight: var(--fw-medium);
+  text-decoration: none;
+}
+
+.task-list__description-link:hover {
+  text-decoration: underline;
+}
+
+/* In a narrow list, the state is shown under the title so that the title keeps the width of the
+   row. The mark stays on the right of the title. */
 @container (width < 480px) {
   .task-list__task {
     grid-template-columns: var(--tree-chevron-size) auto minmax(0, 1fr);
     row-gap: var(--space-xs);
   }
 
+  .task-list[data-marks='true'] .task-list__task {
+    grid-template-columns: var(--tree-chevron-size) auto minmax(0, 1fr) var(--icon-size);
+  }
+
   .task-list__task--subtask {
-    grid-template-columns: auto minmax(0, 1fr);
-    padding-left: calc(var(--cell-padding-x) + var(--tree-chevron-size) + var(--space-xl));
+    padding-left: var(--cell-padding-x);
   }
 
   .task-list__state {
-    grid-column: -2;
+    grid-row: 2;
+    grid-column: 3;
+  }
+
+  .task-list__mark {
+    grid-row: 1;
+    grid-column: 4;
+  }
+
+  /* In a row without a mark, the title takes the column of the mark so that a long word in the
+     title fits on one line. */
+  .task-list__task:not(:has(> .task-list__mark)) > .task-list__title {
+    grid-column: 3 / -1;
+  }
+
+  .task-list__details,
+  .task-list__subtask > .task-list__details {
+    padding-right: var(--cell-padding-x);
+    padding-left: calc(var(--cell-padding-x) + var(--tree-chevron-size) + var(--space-xl));
   }
 }

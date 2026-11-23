@@ -73,6 +73,8 @@ In a window that's narrower than 900px, an open sidebar would squeeze the text t
 
 `narrowAppFrameQuery` in `app-frame.tsx` is `(width < 900px)`. The same width is written out in `app-frame.css`, because a media query can't read a custom property. `app-frame.spec.tsx` will fail if the 2 widths differ.
 
+Below 600px, there isn't enough space on the left of the Inbox button for the panel of the Inbox. That's why the panels of the Inbox and the Outbox are placed at the right edge of the window instead. A panel is never wider than the space between the sidebar rail and that edge. The CSS for this is in `top-bar-panel.css`.
+
 The reading column is the area beside the sidebar. Its layout depends on its own width rather than on the width of the window:
 
 - Below 1040px, the text is centred and the margin with the comments is hidden. Each thread is shown as a marker beside the text instead. If Nick clicks a marker, the card of the thread will open below the text that the thread is about.
@@ -290,7 +292,15 @@ Each block of a changed section has `data-changed-section`, which `ReadingColumn
 
 The Inbox shows the replies and the decisions under "Needs your answer". They're sorted together by their time with the newest first. The time of a decision is the time that its page file was last written when the server first found the decision. The row of a decision shows the first paragraph of its context and the links of the context, which Nick can follow from the Inbox.
 
-The new pages and the pages with changed sections are collapsed under "Updates to pages", below them. When Nick opens the updates, the focus will stay on their button. The count on the Inbox button only includes the replies and the decisions. If there are only updates to pages, the button will show a red dot without a number.
+The tasks and the subtasks that the agent has assigned to Nick are listed under "Needs your answer" too. They're listed below the replies and the decisions in the order of the progress tracker. Only the tasks that aren't done yet are listed. The row of a task links to its row on the progress tracker, like `progress-tracker#t-5`, which is opened by the link.
+
+Nick marks a task as done with the button on its row in the Inbox. A task with subtasks doesn't have that button, because its state follows the states of its subtasks. When Nick marks a task as done, the server will record a `task-done` event by Nick. If the server starts the next task, it will record a `task-started` event by Nick straight after. The agent's `inbox` and `wait` print the task once, together with the decisions and the task that was started.
+
+The button isn't disabled while the server marks the task as done. It ignores a press instead, because the browser moves the focus away from a disabled button and the Inbox would close. If the server can't mark the task as done, the problem will be shown under the button and the Inbox will stay open. The problem is read out from an announcer outside the menu, because a menu can only contain its items. Once the task is done, the focus will move to the next item of the menu, or to the panel of the Inbox if there aren't any other items.
+
+The row of an assigned task on the progress tracker is the anchor of the task. That's why the heading of its description below the list has the anchor `t-5-description` instead.
+
+The new pages and the pages with changed sections are collapsed under "Updates to pages", below them. When Nick opens the updates, the focus will stay on their button. The count on the Inbox button only includes the items under "Needs your answer". If there are only updates to pages, the button will show a red dot without a number.
 
 The export doesn't contain any read marks, because a reader can't mark anything as read in the file. The sidebar of the export doesn't link to the Inbox / Outbox view either.
 

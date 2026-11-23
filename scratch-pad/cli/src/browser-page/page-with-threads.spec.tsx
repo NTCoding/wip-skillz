@@ -388,7 +388,8 @@ describe('the markers of a narrow page', () => {
 describe('Nick’s Inbox in the top bar', () => {
   it('counts the items that wait for Nick and goes to the card of the item that Nick chooses', async () => {
     await renderIndex()
-    const inbox = screen.getByRole('button', { name: 'Inbox: 2 items wait for you' })
+    // The subtask that is assigned to Nick waits for him too.
+    const inbox = screen.getByRole('button', { name: 'Inbox: 3 items wait for you' })
     await userEvent.click(inbox)
     await userEvent.click(screen.getByRole('menuitem', { name: /The agent replied/ }))
     expect(window.location.hash).toBe('#c-1')

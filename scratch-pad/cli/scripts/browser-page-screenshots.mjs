@@ -309,6 +309,17 @@ async function widthShots(page) {
     }
   })
   await shoot(page, '11-sidebar-short-window')
+  // On a phone, the Inbox is shown between the sidebar rail and the right edge of the window.
+  await page.setViewport({ width: 375, height: 812 })
+  await openPad(page)
+  await page.click('button[aria-haspopup="menu"]')
+  await page.waitForSelector('[role="menu"]')
+  checks.inboxAt375 = await page.evaluate(() => {
+    const panel = document.querySelector('.top-bar-panel__panel').getBoundingClientRect()
+    const rail = document.querySelector('.app-frame__sidebar').getBoundingClientRect()
+    return { besideRail: panel.left >= rail.right, insideWindow: panel.right <= window.innerWidth }
+  })
+  await shoot(page, '11-inbox-375')
   await page.setViewport({ width: 1440, height: 900 })
   await openPad(page)
   await page.click('button[aria-label="Collapse the sidebar"]')

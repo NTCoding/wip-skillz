@@ -53,6 +53,7 @@ describe('addTask', () => {
       title: 'Write the invoice template',
       state: 'to-do',
       description: undefined,
+      assignment: undefined,
       subtasks: [],
     })
   })
@@ -85,6 +86,7 @@ describe('addSubtask', () => {
       title: 'Alert the team',
       state: 'to-do',
       description: undefined,
+      assignment: undefined,
     })
   })
 

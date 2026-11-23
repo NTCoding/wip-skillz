@@ -105,6 +105,7 @@ describe('finishTask', () => {
       title: 'Task about retry 2',
       state: 'done',
       description: undefined,
+      assignment: undefined,
       subtasks: [],
     })
   })

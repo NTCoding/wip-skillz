@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
@@ -13,6 +14,9 @@ function Exports({ controls }: { readonly controls: TopBarPanelControls }) {
       </button>
       <button type="button" onClick={controls.closeAndFocusButton}>
         Back to the button
+      </button>
+      <button type="button" onClick={controls.focusPanel}>
+        Focus the panel
       </button>
       <ul id={controls.popupId} role="menu" aria-label="Running exports">
         <li role="menuitem">Paid invoices</li>
@@ -170,9 +174,37 @@ describe('TopBarPanel', () => {
     expect(document.activeElement).toBe(button)
   })
 
+  it('keeps the panel open and focuses the panel when the content calls focusPanel', async () => {
+    await userEvent.click(renderPanel())
+    await userEvent.click(screen.getByRole('button', { name: 'Focus the panel' }))
+    expect(document.activeElement).toBe(panel())
+  })
+
   it('closes the panel when the focus leaves the button and the panel', async () => {
     await userEvent.click(renderPanel())
     await userEvent.click(screen.getByRole('button', { name: 'Elsewhere' }))
     expect(panel()).toBeNull()
+  })
+})
+
+// jsdom doesn't lay out the page, so this test reads the CSS. The Inbox at 375px is checked in Chrome
+// by scripts/browser-page-screenshots.mjs.
+describe('TopBarPanel in a window that is narrower than 600px', () => {
+  it('places the panel at the right edge of the window and keeps it clear of the sidebar rail', () => {
+    const css = readFileSync(
+      'src/browser-page/design-system/components/top-bar-panel/top-bar-panel.css',
+      'utf8',
+    )
+    const narrowRules = css.slice(css.indexOf('@media (width < 600px) {'))
+    expect(narrowRules).toContain(
+      [
+        '  .top-bar-panel__panel {',
+        '    position: fixed;',
+        '    top: calc((var(--top-bar-h) + var(--control-h)) / 2 + var(--space-md));',
+        '    right: var(--space-md);',
+        '    max-width: calc(100% - var(--sidebar-rail-w) - var(--space-md) * 2);',
+        '  }',
+      ].join('\n'),
+    )
   })
 })

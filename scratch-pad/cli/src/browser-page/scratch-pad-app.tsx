@@ -303,7 +303,7 @@ export function ScratchPadApp(props: ScratchPadAppProps) {
   const threadsOfPad = useThreadsOfPad(connection, route, outbox, revisions.threads)
   const viewedPage = route.kind === 'page' ? loadedOr(page, undefined) : undefined
   const padTitle = loadedOr(tracker, undefined)?.title ?? pad
-  useInboxNotifications(props.notifications, padTitle, inbox)
+  useInboxNotifications(props.notifications, padTitle, inbox, tracker)
   const address = { section: route.kind === 'page' ? route.section : undefined, navigations }
   const resolvedThreads = useResolvedThreads(loadedOr(threads, []))
   const currentSection = useCurrentSection(
@@ -341,6 +341,7 @@ export function ScratchPadApp(props: ScratchPadAppProps) {
     loadedOr(inbox, emptyNickInbox),
     pageList,
     readMarks,
+    loadedOr(tracker, undefined),
   )
   useBlinkingTabTitle(tabTitleOf(viewedPage?.title, padTitle), padTitle, inboxEntries)
   const queuedEntries = outboxEntries(addresses, outbox.items, pageList, threadsOfPad)

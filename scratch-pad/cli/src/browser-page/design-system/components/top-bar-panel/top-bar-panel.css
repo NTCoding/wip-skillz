@@ -61,3 +61,17 @@
   background: var(--surface-raised);
   box-shadow: var(--shadow-lg);
 }
+
+/* A window that's narrower than 600px doesn't have enough space on the left of the button for the
+   panel. The panel would be hidden under the sidebar rail. That's why the panel is placed at the
+   right edge of the window instead, but the panel is never wider than the space between the rail
+   and that edge. The top of the panel is the same as in a wide window, which is the bottom of the
+   button plus the gap. */
+@media (width < 600px) {
+  .top-bar-panel__panel {
+    position: fixed;
+    top: calc((var(--top-bar-h) + var(--control-h)) / 2 + var(--space-md));
+    right: var(--space-md);
+    max-width: calc(100% - var(--sidebar-rail-w) - var(--space-md) * 2);
+  }
+}

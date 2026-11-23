@@ -6,40 +6,42 @@ This file describes the details that aren't in [SKILL.md](SKILL.md), such as the
 
 Every command prints a few short lines. If a command fails, it will exit with a code that isn't zero. Before it exits, it will print a message to the error stream so that you know how to fix the problem.
 
-| Command                                   | What it does                                                                                                                                                          |
-| ----------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `new <topic>`                             | Creates a scratch pad with an index page and a progress tracker                                                                                                       |
-| `start [--port <port>]`                   | Starts the server in the background and prints the address. It never starts a second server, but it restarts a server that's running another version.                 |
-| `stop`                                    | Stops the server, which is shared by every scratch pad. It doesn't take `--pad`.                                                                                      |
-| `serve [--port <port>]`                   | Runs the server in the foreground. `start` runs this command in the background.                                                                                       |
-| `status`                                  | Prints the current task and what's waiting for the agent and for Nick. It will also print the scratch pad's address if the server is running.                         |
-| `inbox [--type <types>]`                  | Prints the new items that are waiting for the agent. `--all` also prints the items that were printed before.                                                          |
-| `wait`                                    | Waits until Nick has been quiet for 10 seconds and then prints the new items in the same way as `inbox`                                                               |
-| `show <id>`                               | Prints one whole thread or decision                                                                                                                                   |
-| `reply <id> <text>`                       | Adds your reply to a thread, which then waits for Nick                                                                                                                |
-| `done <id> <outcome>`                     | Closes a note or a decision with one line about what you changed                                                                                                      |
-| `pages`                                   | Lists the pages with their titles and their open threads, in the order of their numbers                                                                               |
-| `outline <page>`                          | Prints the headings of a page with their line numbers                                                                                                                 |
-| `check [page...]`                         | Prints each problem in the given pages or in every page. A broken link is one example of a problem.                                                                   |
-| `goal <text>`                             | Sets the progress tracker's goal                                                                                                                                      |
-| `tasks`                                   | Lists the tasks and the subtasks with their ids and their states                                                                                                      |
-| `task add <title>`                        | Adds a task to the end of the progress tracker                                                                                                                        |
-| `task describe <number>`                  | Replaces the description of a task. It reads the Markdown description from standard input.                                                                            |
-| `task show <number>`                      | Prints a task with its state, its subtasks and its description. You can edit the description and write it back with `task describe`.                                  |
-| `task start <number>`                     | Starts a task. A task with subtasks can't be started, because its state is worked out from the states of its subtasks.                                                |
-| `task done <number>`                      | Finishes a task and starts the next task that's still to do. A task with subtasks can't be finished, because its state is worked out from the states of its subtasks. |
-| `task move <number> --before <number>`    | Moves a task and its subtasks before another task, then numbers every task again from the top. `--after <number>` moves the task after the other task instead.        |
-| `subtask add <task number> <title>`       | Adds a subtask after the last subtask of a task, like 2.1 under task 2. A subtask can't have subtasks.                                                                |
-| `subtask describe <number>`               | Replaces the description of a subtask, like 2.1. It reads the Markdown description from standard input.                                                               |
-| `subtask show <number>`                   | Prints a subtask with its state and its description. You can edit the description and write it back with `subtask describe`.                                          |
-| `subtask start <number>`                  | Starts a subtask                                                                                                                                                      |
-| `subtask done <number>`                   | Finishes a subtask and starts the next subtask that's still to do in the same task. After the last subtask, it starts the next task that's still to do.               |
-| `subtask move <number> --before <number>` | Moves a subtask before another subtask of the same task, then numbers the subtasks again. `--after <number>` moves the subtask after the other subtask instead.       |
-| `decide <text>`                           | Adds a decision from the chat to the log of decisions                                                                                                                 |
-| `improve <title>`                         | Logs an improvement to the harness, the skill, the tool or the UX. It reads the Markdown details from standard input.                                                 |
-| `improvement edit <number> <title>`       | Replaces the title and the details of an improvement. It reads the new Markdown details from standard input.                                                          |
-| `improvement delete <number>`             | Deletes an improvement                                                                                                                                                |
-| `export [--out <file>]`                   | Writes one HTML file that a reader can open without the server. The default file is `export.html` in the scratch pad.                                                 |
+| Command                                            | What it does                                                                                                                                                                                                                                                               |
+| -------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `new <topic>`                                      | Creates a scratch pad with an index page and a progress tracker                                                                                                                                                                                                            |
+| `start [--port <port>]`                            | Starts the server in the background and prints the address. It never starts a second server, but it restarts a server that's running another version.                                                                                                                      |
+| `stop`                                             | Stops the server, which is shared by every scratch pad. It doesn't take `--pad`.                                                                                                                                                                                           |
+| `serve [--port <port>]`                            | Runs the server in the foreground. `start` runs this command in the background.                                                                                                                                                                                            |
+| `status`                                           | Prints the current task and what's waiting for the agent and for Nick. It will also print the scratch pad's address if the server is running.                                                                                                                              |
+| `inbox [--type <types>]`                           | Prints the new items that are waiting for the agent. `--all` also prints the items that were printed before.                                                                                                                                                               |
+| `wait`                                             | Waits until Nick has been quiet for 10 seconds and then prints the new items in the same way as `inbox`                                                                                                                                                                    |
+| `show <id>`                                        | Prints one whole thread or decision                                                                                                                                                                                                                                        |
+| `reply <id> <text>`                                | Adds your reply to a thread, which then waits for Nick                                                                                                                                                                                                                     |
+| `done <id> <outcome>`                              | Closes a note or a decision with one line about what you changed                                                                                                                                                                                                           |
+| `pages`                                            | Lists the pages with their titles and their open threads, in the order of their numbers                                                                                                                                                                                    |
+| `outline <page>`                                   | Prints the headings of a page with their line numbers                                                                                                                                                                                                                      |
+| `check [page...]`                                  | Prints each problem in the given pages or in every page. A broken link is one example of a problem.                                                                                                                                                                        |
+| `goal <text>`                                      | Sets the progress tracker's goal                                                                                                                                                                                                                                           |
+| `tasks`                                            | Lists the tasks and the subtasks with their ids and their states                                                                                                                                                                                                           |
+| `task add <title>`                                 | Adds a task to the end of the progress tracker                                                                                                                                                                                                                             |
+| `task describe <number>`                           | Replaces the description of a task. It reads the Markdown description from standard input.                                                                                                                                                                                 |
+| `task assign <number> --do <text> --why <text>`    | Assigns a task without any subtasks to Nick. `--do` is what Nick has to do and `--why` is why you can't do the work yourself.                                                                                                                                              |
+| `task show <number>`                               | Prints the state and the description of a task. When the task has subtasks, the command will list them too. When the task is assigned to Nick, the command will also print what he has to do and why. You can edit the description and write it back with `task describe`. |
+| `task start <number>`                              | Starts a task. A task with subtasks can't be started, because its state is worked out from the states of its subtasks.                                                                                                                                                     |
+| `task done <number>`                               | Finishes a task and starts the next task that's still to do. A task with subtasks can't be finished, because its state is worked out from the states of its subtasks.                                                                                                      |
+| `task move <number> --before <number>`             | Moves a task and its subtasks before another task, then numbers every task again from the top. `--after <number>` moves the task after the other task instead.                                                                                                             |
+| `subtask add <task number> <title>`                | Adds a subtask after the last subtask of a task, like 2.1 under task 2. A subtask can't have subtasks.                                                                                                                                                                     |
+| `subtask describe <number>`                        | Replaces the description of a subtask, like 2.1. It reads the Markdown description from standard input.                                                                                                                                                                    |
+| `subtask assign <number> --do <text> --why <text>` | Assigns a subtask to Nick, like 2.1. `--do` is what Nick has to do and `--why` is why you can't do the work yourself.                                                                                                                                                      |
+| `subtask show <number>`                            | Prints the state and the description of a subtask. When the subtask is assigned to Nick, the command will also print what he has to do and why. You can edit the description and write it back with `subtask describe`.                                                    |
+| `subtask start <number>`                           | Starts a subtask                                                                                                                                                                                                                                                           |
+| `subtask done <number>`                            | Finishes a subtask and starts the next subtask that's still to do in the same task. After the last subtask, it starts the next task that's still to do.                                                                                                                    |
+| `subtask move <number> --before <number>`          | Moves a subtask before another subtask of the same task, then numbers the subtasks again. `--after <number>` moves the subtask after the other subtask instead.                                                                                                            |
+| `decide <text>`                                    | Adds a decision from the chat to the log of decisions                                                                                                                                                                                                                      |
+| `improve <title>`                                  | Logs an improvement to the harness, the skill, the tool or the UX. It reads the Markdown details from standard input.                                                                                                                                                      |
+| `improvement edit <number> <title>`                | Replaces the title and the details of an improvement. It reads the new Markdown details from standard input.                                                                                                                                                               |
+| `improvement delete <number>`                      | Deletes an improvement                                                                                                                                                                                                                                                     |
+| `export [--out <file>]`                            | Writes one HTML file that a reader can open without the server. The default file is `export.html` in the scratch pad.                                                                                                                                                      |
 
 You can pass a page to a command with or without its number. So `1.1-retry-limit.md`, `retry-limit.md` and `retry-limit` are the same page for every command. But the tool's own output always shows the full file name, like `pages/1.1-retry-limit.md:3` for line 3 of that page.
 
@@ -75,19 +77,19 @@ Run `wait` in the background before you end your turn.
 
 When a command's output includes something that Nick can open in the browser, the command will also print the address of that thing. The address of a decision or a thread ends with its id after a `#`, like `http://127.0.0.1:4747/2026-11-21-invoice-export/how-the-job-runs.md#d-1`. This table lists where each command prints the links:
 
-| Command                                                                              | Where the link is                                                                                              |
-| ------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------- |
-| `status`                                                                             | The scratch pad's address on the second line and a `link:` line to the progress tracker under the current task |
-| `inbox`, `wait` and `show`                                                           | A `link:` line under the first line of an item                                                                 |
-| `reply` and `done`                                                                   | A `link:` line to the thread or the decision                                                                   |
-| `pages`                                                                              | The address of each page at the end of its line                                                                |
-| `outline`                                                                            | The address of each heading at the end of its line                                                             |
-| `new`                                                                                | A `link:` line to the scratch pad                                                                              |
-| `goal`, `tasks` and the commands that add, start, finish or move a task or a subtask | A `link:` line to the progress tracker                                                                         |
-| `task describe`, `task show`, `subtask describe` and `subtask show`                  | A `link:` line to the task or the subtask on the progress tracker, like `progress-tracker#t-4`                 |
-| `decide`                                                                             | A `link:` line to the log of decisions                                                                         |
-| `improve` and `improvement edit`                                                     | A `link:` line to the improvement on the Improvements tab                                                      |
-| `improvement delete`                                                                 | A `link:` line to the Improvements tab                                                                         |
+| Command                                                                                              | Where the link is                                                                                              |
+| ---------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| `status`                                                                                             | The scratch pad's address on the second line and a `link:` line to the progress tracker under the current task |
+| `inbox`, `wait` and `show`                                                                           | A `link:` line under the first line of an item                                                                 |
+| `reply` and `done`                                                                                   | A `link:` line to the thread or the decision                                                                   |
+| `pages`                                                                                              | The address of each page at the end of its line                                                                |
+| `outline`                                                                                            | The address of each heading at the end of its line                                                             |
+| `new`                                                                                                | A `link:` line to the scratch pad                                                                              |
+| `goal`, `tasks` and the commands that add, start, finish or move a task or a subtask                 | A `link:` line to the progress tracker                                                                         |
+| `task describe`, `task assign`, `task show`, `subtask describe`, `subtask assign` and `subtask show` | A `link:` line to the task or the subtask on the progress tracker, like `progress-tracker#t-4`                 |
+| `decide`                                                                                             | A `link:` line to the log of decisions                                                                         |
+| `improve` and `improvement edit`                                                                     | A `link:` line to the improvement on the Improvements tab                                                      |
+| `improvement delete`                                                                                 | A `link:` line to the Improvements tab                                                                         |
 
 An address only works while the server is running. If the server isn't running, the command will print this line instead of the links:
 
@@ -216,6 +218,93 @@ Refer to a task by its id on a page or in the description of a task or a subtask
 | ------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `<task:t-4>` | The current number and title of the task or the subtask, like "2.1 Retry a failed export", as a link to the task on the progress tracker                                                                                                                             |
 | `<task:t-9>` | If t-9 isn't on the progress tracker, the text `task:t-9` is shown without a link. If the reference is on a page or in a description, `check` reports it as a problem. The problem starts with where the reference is, like `the description of subtask 2.1 [t-5]:2` |
+
+## The tasks that are assigned to Nick
+
+[Assign a task to Nick](SKILL.md#assign-a-task-to-nick) in SKILL.md describes when you assign a task to Nick. This section describes what the commands print.
+
+### The assign commands
+
+Put the text of `--do` and `--why` in quotes, because an option only takes the next word as its text. If a word is left over, `task assign` and `subtask assign` will print an error and won't assign anything. This is an example:
+
+```text
+$ scratch-pad task assign --pad 2026-11-21-invoice-export 3 --do "Run the export job on staging for one shop and open the file that it writes." --why "The agent can't log in to staging."
+[t-2] task 3 is assigned to Nick: Ship the export job
+link: http://127.0.0.1:4747/2026-11-21-invoice-export/progress-tracker#t-2
+```
+
+`tasks` adds "· assigned to Nick" to the row of each task and each subtask that is assigned to Nick. `task show` and `subtask show` print what Nick has to do and why:
+
+```text
+$ scratch-pad task show --pad 2026-11-21-invoice-export 3
+[t-2] task 3 is to do: Ship the export job
+link: http://127.0.0.1:4747/2026-11-21-invoice-export/progress-tracker#t-2
+assigned to Nick:
+  do:  Run the export job on staging for one shop and open the file that it writes.
+  why: The agent can't log in to staging.
+there isn't any description yet (write one with task describe)
+```
+
+The "waiting for Nick" line of `status` counts each task and each subtask that is assigned to Nick and isn't done yet.
+
+### An assigned task with subtasks
+
+A task with subtasks can't be assigned, because its state is worked out from the states of its subtasks. `task assign` lists the subtasks of the task instead.
+
+You can still add a subtask to a task that is assigned to Nick. The task stays assigned so that it doesn't disappear from Nick's Inbox. `subtask add` then asks which subtasks Nick has to do. It also prints the `--do` and `--why` of the task so that you can reuse them when you assign those subtasks:
+
+```text
+$ scratch-pad subtask add --pad 2026-11-21-invoice-export 3 Open the file of one shop
+[t-7] subtask 3.1 added: Open the file of one shop
+link: http://127.0.0.1:4747/2026-11-21-invoice-export/progress-tracker
+Task 3 is assigned to Nick and now has subtasks.
+Which subtasks does Nick have to do?
+Run "subtask assign <number> --do ... --why ..." for each one.
+The current assignment of task 3, which you can reuse:
+  do:  Run the export job on staging for one shop and open the file that it writes.
+  why: The agent can't log in to staging.
+```
+
+`status` and `check` report the task as a problem until you assign one of its subtasks. `status` prints the problem on a `problem:` line under the link to the progress tracker:
+
+```text
+$ scratch-pad status --pad 2026-11-21-invoice-export
+2026-11-21-invoice-export · /Users/nick/scratchpads/2026-11-21-invoice-export
+in the browser: http://127.0.0.1:4747/2026-11-21-invoice-export/
+[t-6] subtask 2.2: Log each retry · task 2 of 4: Build the export job
+link: http://127.0.0.1:4747/2026-11-21-invoice-export/progress-tracker
+problem: task 3 [t-2] is assigned to Nick but has subtasks. Run subtask assign for each subtask that Nick has to do
+waiting for the agent: nothing
+waiting for Nick: 1 task
+
+$ scratch-pad check --pad 2026-11-21-invoice-export
+the progress tracker  task 3 [t-2] is assigned to Nick but has subtasks. Run subtask assign for each subtask that Nick has to do
+1 problem in 4 pages
+
+$ scratch-pad subtask assign --pad 2026-11-21-invoice-export 3.1 --do "Open the file that the export job writes on staging." --why "The agent can't log in to staging."
+[t-7] subtask 3.1 is assigned to Nick: Open the file of one shop
+[t-2] task 3 isn't assigned to Nick any more, because subtask 3.1 is assigned to him now: Ship the export job
+link: http://127.0.0.1:4747/2026-11-21-invoice-export/progress-tracker#t-7
+```
+
+If the current task or the task of the current subtask is assigned to Nick, `status` will add a part like "· subtask 3.1 is assigned to Nick" to the end of the line of the current task. Once subtask 3.1 has started, the line will look like this:
+
+```text
+[t-7] subtask 3.1: Open the file of one shop · task 3 of 4: Ship the export job · subtask 3.1 is assigned to Nick
+```
+
+### A task that Nick has done
+
+Nick marks a task or a subtask as done in the browser. The server finishes the task in the same way as `task done` or `subtask done`. Then `inbox` and `wait` print the task once, among the decisions. If the server has started the next task, the last line will describe that task in the same way as the last line of `subtask done`:
+
+```text
+[t-7] subtask 3.1 is done: Open the file of one shop
+  link: http://127.0.0.1:4747/2026-11-21-invoice-export/progress-tracker#t-7
+  Nick marked it as done in the browser.
+  [t-8] subtask 3.2 has started: Check the totals in the file
+```
+
+Until `inbox` or `wait` has printed the task, `status` counts the task on its "waiting for the agent" line, like `waiting for the agent: 1 task`.
 
 ## The named blocks
 

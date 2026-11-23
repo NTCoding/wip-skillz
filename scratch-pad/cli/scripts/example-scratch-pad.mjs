@@ -473,9 +473,54 @@ The template that shows the numbers is built in <task:t-2>.
   },
   {
     feature:
-      'The title of the tab, which switches to "(3) Waiting for you · Invoice export" for 3 seconds every 15 seconds while Nick looks at another tab or another app. The count is the count on the Inbox button.',
-    // The decisions and the reply that the examples above add already wait for Nick. That's why
-    // this example doesn't need to add anything.
+      'Subtask 5.3 "Alert the team after the last retry" and task 2 "Agree the retry limit with Jo" are assigned to Nick. Each row shows the dark mark on the progress tracker and task 5 shows a small dot. A click on the row of 5.3 shows what Nick has to do, why the agent can\'t do it and a link to its description. Both are in the Inbox below the decisions, where Nick can mark them as done.',
+    add: async (demo) => {
+      demo.agent(
+        'subtask',
+        'assign',
+        '5.3',
+        '--do',
+        'Ask the support team which channel they read at night.\nThe alert will be sent to that channel after the last retry of a shop.\n\nWrite the name of the channel in a comment on the retry limit.',
+        '--why',
+        "The agent can't talk to the support team. The channel isn't written down anywhere in the code either.",
+      )
+      demo.agent('subtask', 'describe', '5.3', {
+        input: `- The alert is sent once per shop, after the last of its retries, which are explained in [the retry limit](retry-limit.md).
+`,
+      })
+      demo.agent(
+        'task',
+        'assign',
+        '2',
+        '--do',
+        'Agree the retry limit with Jo before the job goes live.',
+        '--why',
+        'Jo only talks to Nick about the limits of the shops.',
+      )
+    },
+  },
+  {
+    feature:
+      'Task 6 "Run the export on staging" was assigned to Nick before the agent added its subtask 6.1. Until the agent assigns 6.1, the commands status and check report task 6 as a problem. The command task show 6 prints the assignment of task 6, which the agent can reuse for 6.1. Run the tool with SCRATCH_PADS_HOME set to the folder that pnpm try prints to see the output.',
+    add: async (demo) => {
+      demo.agent('task', 'add', 'Run the export on staging')
+      demo.agent(
+        'task',
+        'assign',
+        '6',
+        '--do',
+        'Run the export job on staging for one shop and open the file that it writes.',
+        '--why',
+        "The agent can't log in to staging.",
+      )
+      demo.agent('subtask', 'add', '6', 'Open the file of one shop')
+    },
+  },
+  {
+    feature:
+      'The title of the tab, which switches to "(6) Waiting for you · Invoice export" for 3 seconds every 15 seconds while Nick looks at another tab or another app. The count is the count on the Inbox button.',
+    // Every item that the examples above add to the Inbox already waits for Nick. That's why this
+    // example doesn't need to add anything.
     add: async () => {},
   },
 ]

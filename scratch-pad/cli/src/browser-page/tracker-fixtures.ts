@@ -4,9 +4,9 @@ function pageLink(href: string, page: string, headingId?: string) {
   return { kind: 'page' as const, href, page, headingId }
 }
 
-// Task 2 has 2 subtasks. The description of task 1 links to the first retry, which is page 2.1.1.
-// The description of task 3 links to the retry limit, which is page 2 above the first retry. The
-// description of subtask 2.1 links to the invoice template.
+// Task 2 has 2 subtasks. Subtask 2.2 is assigned to Nick. The description of task 1 links to the
+// first retry, which is page 2.1.1. The description of task 3 links to the retry limit, which is
+// page 2 above the first retry. The description of subtask 2.1 links to the invoice template.
 export const progressTracker: ProgressTracker = {
   title: 'Invoice export',
   goal: 'Ship the invoice export job.',
@@ -18,6 +18,7 @@ export const progressTracker: ProgressTracker = {
       state: 'done',
       html: '<ul>\n<li>The first retry waits 30 seconds, which is explained in <a href="first-retry.md">the first retry</a>.</li>\n</ul>\n',
       links: [pageLink('first-retry.md', 'pages/first-retry.md')],
+      assignment: undefined,
       subtasks: [],
     },
     {
@@ -27,6 +28,7 @@ export const progressTracker: ProgressTracker = {
       state: 'in-progress',
       html: undefined,
       links: [],
+      assignment: undefined,
       subtasks: [
         {
           id: 't-4',
@@ -35,6 +37,7 @@ export const progressTracker: ProgressTracker = {
           state: 'done',
           html: '<p>The tax number is on <a href="invoice-template.md">the invoice template</a>.</p>\n',
           links: [pageLink('invoice-template.md', 'pages/invoice-template.md')],
+          assignment: undefined,
         },
         {
           id: 't-5',
@@ -43,6 +46,11 @@ export const progressTracker: ProgressTracker = {
           state: 'in-progress',
           html: undefined,
           links: [],
+          assignment: {
+            assignee: 'user',
+            do: 'Ask the bank for the IBAN of the shop',
+            why: "The agent can't call the bank",
+          },
         },
       ],
     },
@@ -56,6 +64,7 @@ export const progressTracker: ProgressTracker = {
         pageLink('retry-limit.md', 'pages/retry-limit.md'),
         pageLink('invoice-template.md#the-logo', 'pages/invoice-template.md', 'the-logo'),
       ],
+      assignment: undefined,
       subtasks: [],
     },
   ],

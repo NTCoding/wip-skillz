@@ -1,19 +1,63 @@
-import { type ReactNode } from 'react'
+import { type ReactNode, type Ref } from 'react'
 import './button.css'
+
+// A button in a menu is one of the items of the menu. The menu moves the focus between its items
+// through the ref. Only the current item of the menu has a tabIndex of 0.
+interface MenuItemProps {
+  readonly ref: Ref<HTMLButtonElement>
+  readonly tabIndex: number
+}
 
 interface ButtonProps {
   readonly children: ReactNode
   readonly onClick: () => void
   readonly variant?: 'primary' | 'quiet'
+  // A small button is shown inside an item of a list, like the button that marks a task as done in
+  // the Inbox.
+  readonly size?: 'regular' | 'small'
   readonly disabled?: boolean
+  // A pending button ignores a press until its request has finished. It isn't disabled, because the
+  // browser moves the focus away from a button that is disabled. That would close a panel that the
+  // button is in before the panel could show the problem of the request.
+  readonly pending?: boolean
+  // The name that a screen reader reads out instead of the text of the button, like
+  // "Mark as done: 4.2 Run the first export" for a button with the text "Mark as done"
+  readonly label?: string | undefined
+  // The id of the text that describes the button, like the problem of its last request
+  readonly describedBy?: string | undefined
+  readonly menuItem?: MenuItemProps
 }
 
-export function Button({ children, onClick, variant = 'quiet', disabled = false }: ButtonProps) {
+function classNameOf(variant: 'primary' | 'quiet', size: 'regular' | 'small'): string {
+  return size === 'small' ? `button button--${variant} button--small` : `button button--${variant}`
+}
+
+export function Button({
+  children,
+  onClick,
+  variant = 'quiet',
+  size = 'regular',
+  disabled = false,
+  pending = false,
+  label,
+  describedBy,
+  menuItem,
+}: ButtonProps) {
   return (
     <button
+      ref={menuItem?.ref}
       type="button"
-      className={`button button--${variant}`}
-      onClick={() => onClick()}
+      role={menuItem === undefined ? undefined : 'menuitem'}
+      tabIndex={menuItem?.tabIndex}
+      className={classNameOf(variant, size)}
+      aria-label={label}
+      aria-describedby={describedBy}
+      aria-disabled={pending ? true : undefined}
+      onClick={() => {
+        if (!pending) {
+          onClick()
+        }
+      }}
       disabled={disabled}
     >
       {children}

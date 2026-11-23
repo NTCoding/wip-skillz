@@ -12,12 +12,28 @@ import {
   servedLinks,
   unservedLinks,
 } from '../item-links/item-links-fixtures'
+import { nickFinishesTask } from '../nick-actions/nick-actions'
+import { trackerWithSubtasks } from '../progress-tracker/progress-tracker-fixtures'
+import { assignSubtask } from '../progress-tracker/task-assignments'
+import { type ScratchPadFolder } from '../scratch-pad-folder/scratch-pad-folder'
 import { commentAndGrammarNoteAndDecision } from './agent-commands-fixtures'
 import { readAgentInbox, scratchPadStatus } from './inbox-commands'
 
 const mainTypes = { types: ['comment', 'decision'] as const, includeSeen: false }
 
 freezeClockAt('2026-03-14T09:30:00.000Z')
+
+// Subtask 2.1 is in progress and subtask 2.2 is to do. Both are assigned to Nick.
+function assignedSubtasks(folder: ScratchPadFolder): void {
+  const assignment = { do: 'Ask the bank for the IBAN of the shop', why: "The agent can't call" }
+  const first = assignSubtask(
+    trackerWithSubtasks(['in-progress', 'to-do']),
+    { task: 2, subtask: 1 },
+    assignment,
+  )
+  const both = assignSubtask(first.tracker, { task: 2, subtask: 2 }, assignment)
+  folder.change((pad) => pad.writeProgressTracker(both.tracker))
+}
 
 afterEach(() => {
   removeTemporaryHomes()
@@ -83,6 +99,27 @@ describe('readAgentInbox', () => {
     ).toBe('2 items wait for the agent in 2026-03-14-export-job')
   })
 
+  it('prints a subtask once after Nick has marked it as done in the browser with the subtask that was started', () => {
+    const folder = exportJobScratchPad(temporaryHome())
+    assignedSubtasks(folder)
+    nickFinishesTask(folder, 't-4')
+
+    expect([
+      readAgentInbox(folder, mainTypes, servedLinks),
+      readAgentInbox(folder, mainTypes, servedLinks),
+    ]).toStrictEqual([
+      [
+        '1 new item in 2026-03-14-export-job',
+        '',
+        '[t-4] subtask 2.1 is done: Retry a failed export',
+        `  link: ${exportJobAddress}progress-tracker#t-4`,
+        '  Nick marked it as done in the browser.',
+        '  [t-5] subtask 2.2 has started: Log each retry',
+      ].join('\n'),
+      'nothing new in 2026-03-14-export-job',
+    ])
+  })
+
   it("prints that there aren't any links at the end when the server isn't running", () => {
     const folder = exportJobScratchPad(temporaryHome())
     commentAndGrammarNoteAndDecision(folder)
@@ -118,5 +155,28 @@ describe('scratchPadStatus', () => {
     expect(scratchPadStatus(folder, servedLinks).split('\n')[5]).toBe(
       'waiting for Nick: 2 decisions',
     )
+  })
+
+  it('counts the tasks that are assigned to Nick and are not done yet', () => {
+    const folder = exportJobScratchPad(temporaryHome())
+    assignedSubtasks(folder)
+    nickFinishesTask(folder, 't-4')
+
+    expect(scratchPadStatus(folder, unservedLinks).split('\n').at(-1)).toBe(
+      'waiting for Nick: 1 task',
+    )
+  })
+
+  it('counts a subtask that Nick has done as waiting for the agent until inbox has printed it', () => {
+    const folder = exportJobScratchPad(temporaryHome())
+    assignedSubtasks(folder)
+    nickFinishesTask(folder, 't-4')
+    const before = scratchPadStatus(folder, unservedLinks).split('\n').at(-2)
+    readAgentInbox(folder, mainTypes, servedLinks)
+
+    expect([before, scratchPadStatus(folder, unservedLinks).split('\n').at(-2)]).toStrictEqual([
+      'waiting for the agent: 1 task',
+      'waiting for the agent: nothing',
+    ])
   })
 })

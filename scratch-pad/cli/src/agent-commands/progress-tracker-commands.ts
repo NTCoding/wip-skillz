@@ -14,6 +14,8 @@ import {
 } from '../progress-tracker/progress-tracker'
 import {
   addedTaskText,
+  assignedTaskText,
+  assignedTaskWithSubtasksLines,
   finishedTaskText,
   movedTaskText,
   startedTaskText,
@@ -21,6 +23,12 @@ import {
   taskListText,
   taskShowText,
 } from '../progress-tracker/progress-tracker-text'
+import {
+  assignSubtask,
+  assignTask,
+  type AssignedItem,
+  type AssignmentText,
+} from '../progress-tracker/task-assignments'
 import { moveSubtask, moveTask, type Placement } from '../progress-tracker/task-moves'
 import {
   finishSubtask,
@@ -32,6 +40,7 @@ import {
 } from '../progress-tracker/task-progress'
 import {
   linkLines,
+  progressTrackerLink,
   taskLink,
   textWithLink,
   withLinksNote,
@@ -53,12 +62,23 @@ export function addTaskToTracker(folder: ScratchPadFolder, title: string): strin
   return added(folder, (tracker) => addTask(tracker, title))
 }
 
+// The subtask is added even if its task is assigned. Then the tool prints a reminder for the agent
+// to assign the subtasks that Nick has to do.
 export function addSubtaskToTracker(
   folder: ScratchPadFolder,
   taskNumber: number,
   title: string,
+  links: ItemLinks,
 ): string {
-  return added(folder, (tracker) => addSubtask(tracker, taskNumber, title))
+  const change = folder.change((pad) => {
+    const add = addSubtask(pad.readProgressTracker(), taskNumber, title)
+    save(pad, add.tracker, 'task-added', add.item.id)
+    return add
+  })
+  return [
+    textWithLink(links, addedTaskText(change.item), progressTrackerLink(links)),
+    ...assignedTaskWithSubtasksLines(findTask(change.tracker, taskNumber)),
+  ].join('\n')
 }
 
 export function describeTaskInTracker(
@@ -77,6 +97,24 @@ export function describeSubtaskInTracker(
   links: ItemLinks,
 ): string {
   return described(folder, links, (tracker) => describeSubtask(tracker, number, description))
+}
+
+export function assignTaskInTracker(
+  folder: ScratchPadFolder,
+  number: number,
+  text: AssignmentText,
+  links: ItemLinks,
+): string {
+  return assigned(folder, links, (tracker) => assignTask(tracker, number, text))
+}
+
+export function assignSubtaskInTracker(
+  folder: ScratchPadFolder,
+  number: SubtaskNumber,
+  text: AssignmentText,
+  links: ItemLinks,
+): string {
+  return assigned(folder, links, (tracker) => assignSubtask(tracker, number, text))
 }
 
 export function showTask(folder: ScratchPadFolder, number: number, links: ItemLinks): string {
@@ -156,6 +194,23 @@ function described(
     return change.item
   })
   return textWithLink(links, taskLine(item, 'is described'), taskLink(links, item.id))
+}
+
+function assigned(
+  folder: ScratchPadFolder,
+  links: ItemLinks,
+  assign: Change<AssignedItem>,
+): string {
+  const change = folder.change((pad) => {
+    const assignment = assign(pad.readProgressTracker())
+    save(pad, assignment.tracker, 'task-assigned', assignment.item.id)
+    return assignment
+  })
+  return textWithLink(
+    links,
+    assignedTaskText(change.item, change.unassignedTask),
+    taskLink(links, change.item.id),
+  )
 }
 
 function shown(links: ItemLinks, item: TrackerItem): string {

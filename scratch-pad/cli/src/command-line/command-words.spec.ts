@@ -8,6 +8,7 @@ import {
   MissingArgumentError,
   OptionValueError,
   PlacementError,
+  RepeatedOptionError,
   SubtaskOfSubtaskError,
   UnknownItemTypeError,
   UnknownOptionError,
@@ -45,6 +46,8 @@ describe('parseCommandWords', () => {
         out: undefined,
         before: undefined,
         after: undefined,
+        do: undefined,
+        why: undefined,
       },
       givenOptions: ['pad', 'type', 'all'],
       help: false,
@@ -64,6 +67,8 @@ describe('parseCommandWords', () => {
         out: undefined,
         before: undefined,
         after: undefined,
+        do: undefined,
+        why: undefined,
       },
       givenOptions: [],
       help: false,
@@ -102,6 +107,8 @@ describe('parseCommandWords', () => {
         out: undefined,
         before: undefined,
         after: undefined,
+        do: undefined,
+        why: undefined,
       },
       givenOptions: [],
       help: false,
@@ -123,6 +130,8 @@ describe('parseCommandWords', () => {
         out: undefined,
         before: undefined,
         after: undefined,
+        do: undefined,
+        why: undefined,
       },
       givenOptions: [],
       help: false,
@@ -152,6 +161,8 @@ describe('parseCommandWords', () => {
         out: undefined,
         before: undefined,
         after: undefined,
+        do: undefined,
+        why: undefined,
       },
       givenOptions: ['pad'],
       help: false,
@@ -181,6 +192,37 @@ describe('parseCommandWords', () => {
 
     expect(parse).toThrow(OptionValueError)
     expect(parse).toThrow("--all doesn't take a value.")
+  })
+
+  it('throws OptionValueError when the value of --do is the name of another option', () => {
+    const parse = () =>
+      parseCommandWords(['task', 'assign', '3', '--do', '--why', '--why', 'No access'], noText)
+
+    expect(parse).toThrow(OptionValueError)
+    expect(parse).toThrow('--do needs a value, but the word after it is the option --why.')
+  })
+
+  it('throws RepeatedOptionError when --why is given twice', () => {
+    const parse = () =>
+      parseCommandWords(
+        ['task', 'assign', '3', '--do', 'Run it', '--why', 'No access', '--why', 'No VPN'],
+        noText,
+      )
+
+    expect(parse).toThrow(RepeatedOptionError)
+    expect(parse).toThrow('--why is given more than once. Pass each option only once.')
+  })
+
+  it('keeps an option that is repeated in the text as part of the text', () => {
+    const parsed = parseCommandWords(
+      ['decide', '--pad', 'export', 'Retry 5 times', '--pad', 'export'],
+      textAfterDecide,
+    )
+
+    expect([parsed.words, parsed.options.pad]).toStrictEqual([
+      ['decide', 'Retry 5 times', '--pad', 'export'],
+      'export',
+    ])
   })
 })
 

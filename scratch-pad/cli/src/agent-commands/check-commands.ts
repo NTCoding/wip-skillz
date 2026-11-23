@@ -2,6 +2,7 @@ import { join } from 'node:path'
 import {
   descriptionProblems,
   pageCheckProblems,
+  progressTrackerProblems,
   threadsOnMissingPages,
   type CheckedDescription,
 } from '../page-check/page-check'
@@ -49,9 +50,12 @@ export function checkPages(
   const answeredDecisions = folder
     .read((pad) => pad.readDecisionAnswers())
     .map((answer) => answer.id)
-  const items = trackerItems(folder.read((pad) => pad.readProgressTracker()))
+  const tracker = folder.read((pad) => pad.readProgressTracker())
+  const items = trackerItems(tracker)
   const taskIds = items.map((item) => item.id)
-  const descriptions = requested.length === 0 ? describedItems(items) : []
+  // The descriptions and the progress tracker are only checked when every page is checked.
+  const everyPage = requested.length === 0
+  const descriptions = everyPage ? describedItems(items) : []
   const problems = [
     ...pageCheckProblems(
       rendered,
@@ -69,6 +73,7 @@ export function checkPages(
     ),
     ...orphans,
     ...descriptionProblems(descriptions, taskIds),
+    ...(everyPage ? progressTrackerProblems(tracker) : []),
   ]
   return { text: pageCheckText(problems, checkedPages.length), problemCount: problems.length }
 }

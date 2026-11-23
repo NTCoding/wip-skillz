@@ -1,8 +1,10 @@
 import { countedNoun } from '../counted-noun'
 import { decisionInboxLines } from '../decisions/decision-text'
 import { itemTypeNoun } from '../items/item-id'
-import { missingLinksLine, type ItemLinks } from '../item-links/item-links'
+import { linkLines, missingLinksLine, taskLink, type ItemLinks } from '../item-links/item-links'
 import { type PageLines } from '../pages/page-files'
+import { type TrackerItem } from '../progress-tracker/progress-tracker'
+import { taskLine } from '../progress-tracker/progress-tracker-text'
 import { threadInboxLines } from '../threads/thread-text'
 import { type AgentInboxItem, type AgentInboxSelection, type ItemCount } from './agent-inbox'
 
@@ -33,7 +35,7 @@ export function agentInboxText(
 }
 
 export function itemCountText(entry: ItemCount): string {
-  return countedNoun(entry.count, itemTypeNoun(entry.type))
+  return countedNoun(entry.count, entry.type === 'task' ? 'task' : itemTypeNoun(entry.type))
 }
 
 function headerLine(selection: AgentInboxSelection, context: AgentInboxTextContext): string {
@@ -52,17 +54,38 @@ function headerLine(selection: AgentInboxSelection, context: AgentInboxTextConte
 }
 
 function itemLines(item: AgentInboxItem, context: AgentInboxTextContext): string[] {
-  return item.kind === 'thread'
-    ? threadInboxLines(item.thread, context.readPage(item.thread.page), context.links)
-    : decisionInboxLines(item.decision, context.readPage(item.decision.page).file, context.links)
+  if (item.kind === 'thread') {
+    return threadInboxLines(item.thread, context.readPage(item.thread.page), context.links)
+  }
+  return item.kind === 'decision'
+    ? decisionInboxLines(item.decision, context.readPage(item.decision.page).file, context.links)
+    : doneTaskLines(item.task, item.started, context.links)
+}
+
+// A task or a subtask that was assigned to Nick, which he has marked as done in the browser. The
+// task that was started after it is printed in the same way as by `task done`.
+function doneTaskLines(
+  task: TrackerItem,
+  started: TrackerItem | undefined,
+  links: ItemLinks,
+): string[] {
+  return [
+    taskLine(task, 'is done'),
+    ...linkLines(taskLink(links, task.id), '  '),
+    '  Nick marked it as done in the browser.',
+    ...(started === undefined ? [] : [`  ${taskLine(started, 'has started')}`]),
+  ]
 }
 
 function sideNotesText(sideNotes: readonly ItemCount[]): string {
   return `${countsText(sideNotes)} ${waitVerb(totalOf(sideNotes))} for a subagent`
 }
 
+// A task that Nick has done is printed with the decisions. That's why --type decision prints the task.
 function otherItemsText(otherItems: readonly ItemCount[], padName: string): string {
-  const types = otherItems.map((entry) => entry.type).join(',')
+  const types = [
+    ...new Set(otherItems.map((entry) => (entry.type === 'task' ? 'decision' : entry.type))),
+  ].join(',')
   return `${countsText(otherItems)} ${waitVerb(totalOf(otherItems))} for the agent (scratch-pad inbox --pad ${padName} --type ${types})`
 }
 

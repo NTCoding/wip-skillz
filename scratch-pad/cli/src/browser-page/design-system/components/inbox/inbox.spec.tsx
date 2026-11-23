@@ -3,6 +3,8 @@ import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import { Inbox, type InboxEntry } from './inbox'
 
+class StoppedServerError extends Error {}
+
 const decision: InboxEntry = {
   key: 'd-1',
   href: '/pad/#d-1',
@@ -69,15 +71,46 @@ const changedPage: InboxEntry = {
   context: undefined,
 }
 
-function renderInbox(entries: readonly InboxEntry[], onNavigate = vi.fn<(href: string) => void>()) {
-  render(
-    <>
-      <Inbox entries={entries} onNavigate={onNavigate} />
-      <button type="button">Elsewhere</button>
-    </>,
-  )
-  return { onNavigate, button: screen.getByRole('button', { name: /^Inbox/ }) }
+const assignedSubtask: InboxEntry = {
+  key: 't-8',
+  href: '/pad/progress-tracker#t-8',
+  kind: 'task',
+  heading: 'Run the first export against production',
+  where: 'Progress tracker',
+  quote: undefined,
+  last: undefined,
+  time: undefined,
+  shownTime: undefined,
+  context: undefined,
+  task: {
+    id: 't-8',
+    number: '4.2',
+    state: 'in-progress',
+    summary: 'Run the export job by hand against the accounting system.',
+    canBeDone: true,
+  },
 }
+
+function renderInbox(
+  entries: readonly InboxEntry[],
+  onNavigate = vi.fn<(href: string) => void>(),
+  onMarkDone?: (id: string) => Promise<void>,
+) {
+  const inbox = (shown: readonly InboxEntry[]) => (
+    <>
+      <Inbox entries={shown} onNavigate={onNavigate} onMarkDone={onMarkDone} />
+      <button type="button">Elsewhere</button>
+    </>
+  )
+  const view = render(inbox(entries))
+  return {
+    onNavigate,
+    button: screen.getByRole('button', { name: /^Inbox/ }),
+    rerender: (shown: readonly InboxEntry[]) => view.rerender(inbox(shown)),
+  }
+}
+
+const markDoneName = 'Mark as done: 4.2 Run the first export against production'
 
 function updatesButton(): HTMLElement {
   return screen.getByRole('button', { name: /^Updates to pages/ })
@@ -310,5 +343,63 @@ describe('Inbox', () => {
     await userEvent.click(screen.getByRole('menuitem', { name: 'What counts as a failure' }))
     expect(onNavigate).toHaveBeenCalledWith('/pad/retry-limit.md#what-counts-as-a-failure')
     expect(screen.queryByRole('menu')).toBeNull()
+  })
+
+  it('counts a task that is assigned to Nick as an item that waits for him', () => {
+    const { button } = renderInbox([decision, assignedSubtask])
+    expect(button.getAttribute('aria-label')).toBe('Inbox: 2 items wait for you')
+  })
+
+  it('lists a task with a link to its details and marks it as done when Nick clicks its button', async () => {
+    const onMarkDone = vi.fn<(id: string) => Promise<void>>(() => Promise.resolve())
+    const { button } = renderInbox([decision, assignedSubtask], undefined, onMarkDone)
+    await userEvent.click(button)
+    expect(
+      screen.getAllByRole('menuitem').map((item) => item.textContent?.slice(0, 20)),
+    ).toStrictEqual(['A decision to make20', '4.2 Run the first ex', 'Mark as done'])
+    await userEvent.click(screen.getByRole('menuitem', { name: markDoneName }))
+    expect(onMarkDone).toHaveBeenCalledWith('t-8')
+  })
+
+  // A browser moves the focus away from a disabled button at its next rendering update. jsdom does
+  // the same. So the Inbox would close if the button were disabled.
+  it('stays open with the focus on the button while a task is marked as done', async () => {
+    const { button } = renderInbox([assignedSubtask], undefined, () => new Promise(() => undefined))
+    await userEvent.click(button)
+    await userEvent.click(screen.getByRole('menuitem', { name: markDoneName }))
+    await new Promise((resolve) => setTimeout(resolve, 100))
+    expect([button.getAttribute('aria-expanded'), document.activeElement]).toStrictEqual([
+      'true',
+      screen.getByRole('menuitem', { name: markDoneName }),
+    ])
+  })
+
+  it('stays open and shows the problem when a task can’t be marked as done', async () => {
+    const { button } = renderInbox([assignedSubtask], undefined, () =>
+      Promise.reject(new StoppedServerError('The server has stopped.')),
+    )
+    await userEvent.click(button)
+    await userEvent.click(screen.getByRole('menuitem', { name: markDoneName }))
+    expect([
+      (await screen.findByRole('alert')).textContent,
+      button.getAttribute('aria-expanded'),
+      document.activeElement,
+    ]).toStrictEqual([
+      'The server has stopped.',
+      'true',
+      screen.getByRole('menuitem', { name: markDoneName }),
+    ])
+  })
+
+  it('stays open with the focus on the panel when Nick has marked the only task as done', async () => {
+    const { button, rerender } = renderInbox([assignedSubtask], undefined, () => Promise.resolve())
+    await userEvent.click(button)
+    await userEvent.click(screen.getByRole('menuitem', { name: markDoneName }))
+    rerender([])
+    const panel = screen.getByRole('group', { name: 'Inbox' })
+    expect([document.activeElement, panel.textContent]).toStrictEqual([
+      panel,
+      'Needs your answerNothing waits for you.',
+    ])
   })
 })

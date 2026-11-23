@@ -139,3 +139,53 @@ export const UpdatesOpen: Story = {
 export const OnlyUpdates: Story = { args: { entries: updates } }
 
 export const Empty: Story = { args: { entries: [] } }
+
+// A subtask and a task that are assigned to Nick, below the items that need an answer
+export const TasksAssignedToNick: Story = {
+  args: {
+    entries: [
+      ...answers,
+      {
+        key: 't-8',
+        href: '/2026-11-20-invoice-export/progress-tracker#t-8',
+        kind: 'task',
+        heading: 'Run the first export against production',
+        where: 'Progress tracker',
+        quote: undefined,
+        last: undefined,
+        time: undefined,
+        shownTime: undefined,
+        context: undefined,
+        task: {
+          id: 't-8',
+          number: '4.2',
+          state: 'in-progress',
+          summary: 'Run the export job by hand against the production accounting system.',
+          canBeDone: true,
+        },
+      },
+      {
+        key: 't-10',
+        href: '/2026-11-20-invoice-export/progress-tracker#t-10',
+        kind: 'task',
+        heading: 'Ask the finance team how the tax is rounded',
+        where: 'Progress tracker',
+        quote: undefined,
+        last: undefined,
+        time: undefined,
+        shownTime: undefined,
+        context: undefined,
+        task: {
+          id: 't-10',
+          number: '5',
+          state: 'to-do',
+          summary: 'Ask the finance team whether the tax is rounded on each invoice line.',
+          canBeDone: true,
+        },
+      },
+      ...updates,
+    ],
+    onMarkDone: () => Promise.resolve(),
+  },
+  play: async ({ canvasElement }) => clickButton(canvasElement, /Inbox/),
+}

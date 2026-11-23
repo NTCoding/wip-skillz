@@ -16,3 +16,9 @@ export const Quiet: Story = {}
 export const Primary: Story = { args: { variant: 'primary', children: 'Send the invoice' } }
 
 export const Disabled: Story = { args: { disabled: true } }
+
+// The button that marks a task as done in the Inbox
+export const Small: Story = { args: { size: 'small', children: 'Mark as done' } }
+
+// A button whose request is pending ignores a press. The focus stays on the button.
+export const Pending: Story = { args: { size: 'small', pending: true, children: 'Mark as done' } }

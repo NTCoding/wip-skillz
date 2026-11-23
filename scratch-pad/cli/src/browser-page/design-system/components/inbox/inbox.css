@@ -1,5 +1,6 @@
 .inbox {
   width: var(--inbox-w);
+  max-width: 100%;
   max-height: calc(100vh - var(--top-bar-h) - var(--space-8xl));
   padding: var(--space-md);
   overflow-y: auto;

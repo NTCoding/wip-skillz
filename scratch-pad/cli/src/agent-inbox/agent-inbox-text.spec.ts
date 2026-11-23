@@ -48,6 +48,61 @@ const twoItems: AgentInboxSelection = {
 }
 
 describe('agentInboxText', () => {
+  it('prints a subtask that Nick has marked as done with its link', () => {
+    const logEachRetry = {
+      id: 't-5',
+      number: '2.2',
+      title: 'Log each retry',
+      state: 'done',
+      description: undefined,
+      assignment: { assignee: 'user', do: 'Check the log of the export job', why: 'No access' },
+    } as const
+    const selection: AgentInboxSelection = {
+      ...empty,
+      printed: [{ kind: 'task', task: logEachRetry, started: undefined }],
+    }
+
+    expect(agentInboxText(selection, context)).toBe(
+      [
+        '1 new item in 2026-03-14-export-job',
+        '',
+        '[t-5] subtask 2.2 is done: Log each retry',
+        `  link: ${exportJobAddress}progress-tracker#t-5`,
+        '  Nick marked it as done in the browser.',
+      ].join('\n'),
+    )
+  })
+
+  it('prints the task that was started after the task that Nick has marked as done', () => {
+    const retryFailedExport = {
+      id: 't-4',
+      number: '2.1',
+      title: 'Retry a failed export',
+      state: 'done',
+      description: undefined,
+      assignment: { assignee: 'user', do: 'Retry the export of one shop', why: 'No access' },
+    } as const
+    const logEachRetry = {
+      ...retryFailedExport,
+      id: 't-5',
+      number: '2.2',
+      title: 'Log each retry',
+      state: 'in-progress',
+      assignment: undefined,
+    } as const
+    const selection: AgentInboxSelection = {
+      ...empty,
+      printed: [{ kind: 'task', task: retryFailedExport, started: logEachRetry }],
+    }
+
+    expect(agentInboxText(selection, context).split('\n').slice(2)).toStrictEqual([
+      '[t-4] subtask 2.1 is done: Retry a failed export',
+      `  link: ${exportJobAddress}progress-tracker#t-4`,
+      '  Nick marked it as done in the browser.',
+      '  [t-5] subtask 2.2 has started: Log each retry',
+    ])
+  })
+
   it('prints the count, each item and the side notes separated by blank lines', () => {
     expect(agentInboxText(twoItems, context)).toBe(
       [
@@ -165,6 +220,20 @@ describe('the summary line of agentInboxText', () => {
 
     expect(agentInboxText(selection, context).split('\n')[1]).toBe(
       '2 comments and 1 decision wait for the agent (scratch-pad inbox --pad 2026-03-14-export-job --type comment,decision) · 1 grammar note waits for a subagent',
+    )
+  })
+
+  it('prints a task that Nick has done as a task that is printed with --type decision', () => {
+    const selection: AgentInboxSelection = {
+      ...empty,
+      otherItems: [
+        { type: 'decision', count: 1 },
+        { type: 'task', count: 1 },
+      ],
+    }
+
+    expect(agentInboxText(selection, context).split('\n')[1]).toBe(
+      '1 decision and 1 task wait for the agent (scratch-pad inbox --pad 2026-03-14-export-job --type decision)',
     )
   })
 })

@@ -260,6 +260,14 @@ describe('scratchPadConnection for threads and decisions', () => {
     ])
   })
 
+  it('posts to the address of a task when Nick marks the task as done', async () => {
+    const network = networkWith({ task: { id: 't-5' } })
+    await scratchPadConnection(exportPad, network).markTaskDone('t-5')
+    expect(network.sent).toStrictEqual([
+      { url: `${api}/tasks/t-5/done`, method: 'POST', body: '{}' },
+    ])
+  })
+
   it('posts the title and the details of the edit to the address of the improvement', async () => {
     const network = networkWith({ improvement: { number: 3 } })
     await scratchPadConnection(exportPad, network).editImprovement(3, {

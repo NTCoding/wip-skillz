@@ -43,6 +43,13 @@
   background: var(--outbox-count-bg);
 }
 
+/* The mark of a task that is assigned to Nick is a square in the colour of Nick's avatar so that it
+   differs from the round dots of the other items. */
+.panel-menu__dot[data-kind='task'] {
+  border-radius: var(--r-2xs);
+  background: var(--avatar-nick-bg);
+}
+
 .panel-menu__main {
   display: flex;
   flex-direction: column;
@@ -167,4 +174,62 @@
 
 .panel-menu__item:hover .panel-menu__link {
   text-decoration: underline;
+}
+
+.panel-menu__number {
+  color: var(--text-2);
+  font-weight: var(--fw-regular);
+  font-variant-numeric: tabular-nums;
+}
+
+/* The state of a task is shown where the other items show their time. */
+.panel-menu__state {
+  display: flex;
+  flex: none;
+  margin-left: auto;
+}
+
+/* The first line of what Nick has to do. It's cut off at the end of the line. */
+.panel-menu__summary {
+  margin-top: var(--space-2xs);
+  overflow: hidden;
+  color: var(--text-nav);
+  font-size: var(--fs-ui);
+  line-height: var(--lh-ui);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The button that marks a task as done lines up with the text of the task above the button. */
+.panel-menu__actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-xs);
+  margin: calc(var(--space-md) * -1) var(--space-0) var(--space-0);
+  padding: var(--space-0) var(--space-lg) var(--space-xl)
+    calc(var(--space-lg) + var(--space-md) + var(--space-xl));
+}
+
+.panel-menu__actions .icon {
+  color: var(--icon);
+}
+
+.panel-menu__problem {
+  margin: var(--space-0);
+  color: var(--warning-ink);
+  font-size: var(--fs-sm);
+  line-height: var(--lh-sm);
+}
+
+/* The announcer is outside the menu, because a menu can only contain its items. A screen reader
+   reads a problem out from the announcer, whereas the problem that Nick sees is shown under its
+   button. That's why the announcer is hidden. */
+.panel-menu__announcer {
+  position: absolute;
+  width: var(--hairline);
+  height: var(--hairline);
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }

@@ -355,6 +355,7 @@ export function fakeConnection(): FakeConnection {
       Promise.resolve(
         [...threads.values()].flat().map((thread) => ({ ...thread, resolvedTime: undefined })),
       ),
+    markTaskDone: vi.fn(() => Promise.resolve()),
     markPageRead: vi.fn((file: string) => {
       changeMark(file, (mark) => ({ ...mark, state: 'read', changedSections: [] }))
       return Promise.resolve()

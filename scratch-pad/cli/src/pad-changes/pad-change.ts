@@ -53,6 +53,7 @@ const changesOfKind: Readonly<
   'goal-set': () => progressTrackerChange,
   'task-added': () => progressTrackerChange,
   'task-described': () => progressTrackerChange,
+  'task-assigned': () => progressTrackerChange,
   'task-started': () => progressTrackerChange,
   'task-done': () => progressTrackerChange,
   'task-moved': () => progressTrackerChange,

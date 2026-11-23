@@ -78,20 +78,37 @@ function hasSection(task: TaskOnTracker): boolean {
   return task.html !== undefined || task.subtasks.some((subtask) => subtask.html !== undefined)
 }
 
+// The row of an assigned task is the anchor of the task, because a link from the Inbox opens the
+// row. That's why the heading of its description has another anchor, like t-4-description.
+function sectionAnchor(entry: SubtaskOnTracker | TaskOnTracker): string {
+  return entry.assignment === undefined ? entry.id : `${entry.id}-description`
+}
+
 // The title of a task links to its section below the list. A task without a section has the id of
-// the task on its row instead, which a link to the task points to.
+// the task on its row instead, which a link to the task points to. The row of an assigned task
+// shows what Nick has to do and links to the description of the task.
 function rowOf(
   entry: SubtaskOnTracker | TaskOnTracker,
   withSection: boolean,
   context: MarkdownContext,
 ): SubtaskRow {
+  const href = withSection ? context.addresses.progressTrackerHref(sectionAnchor(entry)) : undefined
+  const { assignment } = entry
   return {
     id: entry.id,
     number: String(entry.number),
     title: entry.title,
     state: entry.state,
-    href: withSection ? context.addresses.progressTrackerHref(entry.id) : undefined,
-    anchor: !withSection,
+    href: assignment === undefined ? href : undefined,
+    anchor: !withSection || assignment !== undefined,
+    assignment:
+      assignment === undefined
+        ? undefined
+        : {
+            do: assignment.do,
+            why: assignment.why,
+            descriptionHref: entry.html === undefined ? undefined : href,
+          },
   }
 }
 
@@ -101,10 +118,10 @@ function TaskSections({ tracker, context, openSection, navigations }: ProgressTr
   return tracker.tasks.filter(hasSection).map((task) => (
     <TaskSection
       key={task.id}
-      id={task.id}
+      id={sectionAnchor(task)}
       level={2}
       title={`${task.number}. ${task.title}`}
-      open={[task, ...task.subtasks].some((entry) => entry.id === openSection)}
+      open={[task, ...task.subtasks].some((entry) => sectionAnchor(entry) === openSection)}
       openRequest={navigations}
     >
       {task.html !== undefined && markdownElements(task.html, task.links, context)}
@@ -113,10 +130,10 @@ function TaskSections({ tracker, context, openSection, navigations }: ProgressTr
           subtask.html !== undefined && (
             <TaskSection
               key={subtask.id}
-              id={subtask.id}
+              id={sectionAnchor(subtask)}
               level={3}
               title={`${subtask.number} ${subtask.title}`}
-              open={subtask.id === openSection}
+              open={sectionAnchor(subtask) === openSection}
               openRequest={navigations}
             >
               {markdownElements(subtask.html, subtask.links, context)}
@@ -125,6 +142,18 @@ function TaskSections({ tracker, context, openSection, navigations }: ProgressTr
       )}
     </TaskSection>
   ))
+}
+
+// The task that the address points to. A link to the description of an assigned task points to
+// the task too. So the row of the task stays open when Nick follows the link in its details.
+function pointedTask(
+  tracker: ProgressTracker,
+  openSection: string | undefined,
+): string | undefined {
+  const entry = tracker.tasks
+    .flatMap((task): (SubtaskOnTracker | TaskOnTracker)[] => [task, ...task.subtasks])
+    .find((each) => sectionAnchor(each) === openSection)
+  return entry?.id ?? openSection
 }
 
 export function ProgressTrackerView(props: ProgressTrackerViewProps) {
@@ -145,7 +174,7 @@ export function ProgressTrackerView(props: ProgressTrackerViewProps) {
         <TaskList
           tasks={rows}
           onNavigate={context.onNavigate}
-          openTask={props.openSection}
+          openTask={pointedTask(tracker, props.openSection)}
           openRequest={props.navigations}
         />
       )}

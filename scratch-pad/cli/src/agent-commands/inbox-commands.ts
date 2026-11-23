@@ -29,6 +29,7 @@ export function selectFromPadDb(pad: PadDb, request: InboxRequest): AgentInboxSe
   return selectAgentInbox({
     threads: pad.readThreads(),
     decisions: pad.readDecisionAnswers(),
+    tracker: pad.readProgressTracker(),
     events: pad.readEvents(),
     lastPrinted: pad.readLastPrintedEvents(),
     types: request.types,
@@ -62,6 +63,8 @@ export function scratchPadStatus(folder: ScratchPadFolder, links: ItemLinks): st
       tracker: pad.readProgressTracker(),
       threads: pad.readThreads(),
       decisions: pad.readDecisionAnswers(),
+      events: pad.readEvents(),
+      lastPrinted: pad.readLastPrintedEvents(),
       nickInbox,
     }),
   )

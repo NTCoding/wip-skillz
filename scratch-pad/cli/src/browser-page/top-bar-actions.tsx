@@ -35,7 +35,11 @@ export function TopBarActions({
       {actions !== undefined && (
         <>
           {notifications !== undefined && <NotificationsButton notifications={notifications} />}
-          <Inbox entries={props.inboxEntries} onNavigate={props.onNavigate} />
+          <Inbox
+            entries={props.inboxEntries}
+            onNavigate={props.onNavigate}
+            onMarkDone={actions.markTaskDone}
+          />
           <Outbox
             count={props.outboxCount}
             entries={props.outboxEntries}

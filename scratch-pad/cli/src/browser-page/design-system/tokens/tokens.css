@@ -229,6 +229,7 @@
   --button-primary-hover: #0f730c;
 
   /* Radii */
+  --r-2xs: 2px;
   --r-xs: 4px;
   --r-sm: 6px;
   --r-md: 8px;

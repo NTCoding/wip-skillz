@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { findSubtask, findTask } from './progress-tracker'
+import { addSubtask, findSubtask, findTask, type ProgressTracker } from './progress-tracker'
 import { trackerWithSubtasks, trackerWithTasks } from './progress-tracker-fixtures'
 import {
+  assignedTaskText,
+  assignedTaskWithSubtasksLines,
   currentTaskLine,
   finishedTaskText,
   movedTaskText,
@@ -9,9 +11,32 @@ import {
   taskLine,
   taskListText,
   taskShowText,
+  trackerProblemTexts,
 } from './progress-tracker-text'
+import { assignSubtask, assignTask } from './task-assignments'
 import { moveTask } from './task-moves'
 import { finishTask, startTask } from './task-progress'
+
+const migration = {
+  do: 'Run the migration against staging',
+  why: "The agent can't reach staging",
+}
+
+// Subtask 2.2 is in progress and assigned to Nick. Task 3 is assigned to Nick too.
+function trackerWithAssignments(): ProgressTracker {
+  const subtask = assignSubtask(
+    trackerWithSubtasks(['done', 'in-progress']),
+    { task: 2, subtask: 2 },
+    migration,
+  )
+  return assignTask(subtask.tracker, 3, migration).tracker
+}
+
+// Task 2 was assigned before the agent added its subtask 2.1.
+function assignedTaskWithSubtask(): ProgressTracker {
+  const assigned = assignTask(trackerWithTasks(['to-do', 'to-do']), 2, migration).tracker
+  return addSubtask(assigned, 2, 'Run the migration against staging').tracker
+}
 
 describe('taskLine', () => {
   it('prints the id, the number, the change and the title of a task', () => {
@@ -185,5 +210,94 @@ describe('taskShowText', () => {
         "there isn't any description yet (write one with subtask describe)",
       ].join('\n'),
     )
+  })
+})
+
+describe('the assignments to Nick', () => {
+  it('marks each assigned task and subtask in the list of tasks', () => {
+    expect(taskListText(trackerWithAssignments()).split('\n').slice(1)).toStrictEqual([
+      '2    [t-2]  in progress  Task about retry 2',
+      '2.1  [t-4]  done         Retry a failed export',
+      '2.2  [t-5]  in progress  Log each retry · assigned to Nick',
+      '3    [t-3]  to do        Task about retry 3 · assigned to Nick',
+    ])
+  })
+
+  it('prints what Nick has to do and why after the link of an assigned task', () => {
+    expect(
+      taskShowText(findTask(trackerWithAssignments(), 3), ['link: http://127.0.0.1:4747/pad/x']),
+    ).toBe(
+      [
+        '[t-3] task 3 is to do: Task about retry 3',
+        'link: http://127.0.0.1:4747/pad/x',
+        'assigned to Nick:',
+        '  do:  Run the migration against staging',
+        "  why: The agent can't reach staging",
+        "there isn't any description yet (write one with task describe)",
+      ].join('\n'),
+    )
+  })
+
+  it('writes which subtask is assigned to Nick at the end of the line of the subtask in progress', () => {
+    expect(currentTaskLine(trackerWithAssignments())).toBe(
+      '[t-5] subtask 2.2: Log each retry · task 2 of 3: Task about retry 2 · subtask 2.2 is assigned to Nick',
+    )
+  })
+
+  it('writes which task is assigned to Nick when its subtask in progress is not assigned', () => {
+    const assigned = assignTask(trackerWithTasks(['to-do', 'in-progress']), 2, migration).tracker
+    const tracker = addSubtask(assigned, 2, 'Run the migration against staging').tracker
+
+    expect(currentTaskLine(tracker)).toBe(
+      '[t-3] subtask 2.1: Run the migration against staging · task 2 of 2: Task about retry 2 · task 2 is assigned to Nick',
+    )
+  })
+
+  it('writes that the task in progress is assigned to Nick at the end of its line', () => {
+    const tracker = assignTask(trackerWithTasks(['in-progress']), 1, migration).tracker
+
+    expect(currentTaskLine(tracker)).toBe(
+      '[t-1] task 1 of 1: Task about retry 1 · task 1 is assigned to Nick',
+    )
+  })
+
+  it('prints the assigned subtask and the task that is not assigned any more', () => {
+    const assigned = assignSubtask(assignedTaskWithSubtask(), { task: 2, subtask: 1 }, migration)
+
+    expect(assignedTaskText(assigned.item, assigned.unassignedTask)).toBe(
+      [
+        '[t-3] subtask 2.1 is assigned to Nick: Run the migration against staging',
+        "[t-2] task 2 isn't assigned to Nick any more, because subtask 2.1 is assigned to him now: Task about retry 2",
+      ].join('\n'),
+    )
+  })
+
+  it('asks which subtasks Nick has to do and prints the assignment of the task when the task is assigned', () => {
+    expect(assignedTaskWithSubtasksLines(findTask(assignedTaskWithSubtask(), 2))).toStrictEqual([
+      'Task 2 is assigned to Nick and now has subtasks.',
+      'Which subtasks does Nick have to do?',
+      'Run "subtask assign <number> --do ... --why ..." for each one.',
+      'The current assignment of task 2, which you can reuse:',
+      '  do:  Run the migration against staging',
+      "  why: The agent can't reach staging",
+    ])
+  })
+
+  it("doesn't print anything about an assignment when the task isn't assigned", () => {
+    expect(
+      assignedTaskWithSubtasksLines(findTask(trackerWithSubtasks(['done', 'done']), 2)),
+    ).toStrictEqual([])
+  })
+
+  it('reports each assigned task that has subtasks as a problem of the progress tracker', () => {
+    expect([
+      trackerProblemTexts(assignedTaskWithSubtask()),
+      trackerProblemTexts(trackerWithAssignments()),
+    ]).toStrictEqual([
+      [
+        'task 2 [t-2] is assigned to Nick but has subtasks. Run subtask assign for each subtask that Nick has to do',
+      ],
+      [],
+    ])
   })
 })

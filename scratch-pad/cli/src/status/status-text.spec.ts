@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { nothingPrinted } from '../agent-inbox/agent-inbox'
 import { aDecisionAnswer } from '../decisions/decision-answer-fixtures'
 import {
   exportJobAddress,
@@ -6,7 +7,9 @@ import {
   servedLinks,
   unservedLinks,
 } from '../item-links/item-links-fixtures'
+import { addSubtask } from '../progress-tracker/progress-tracker'
 import { trackerWithTasks } from '../progress-tracker/progress-tracker-fixtures'
+import { assignTask } from '../progress-tracker/task-assignments'
 import { aThread } from '../threads/thread-fixtures'
 import { statusText } from './status-text'
 
@@ -14,6 +17,8 @@ const scratchPad = {
   padPath: '/pads/2026-03-14-export-job',
   links: servedLinks,
   tracker: trackerWithTasks(['done', 'in-progress', 'to-do']),
+  events: [],
+  lastPrinted: nothingPrinted,
   nickInbox: { threads: [], decisions: [] },
 }
 
@@ -95,5 +100,42 @@ describe('statusText', () => {
     expect(
       statusText({ ...scratchPad, threads: [], decisions: [], nickInbox }).split('\n')[5],
     ).toBe('waiting for Nick: 2 decisions, 1 reply')
+  })
+
+  it('prints each problem of the progress tracker under the link to the progress tracker', () => {
+    const assigned = assignTask(scratchPad.tracker, 3, { do: 'Run it', why: 'It needs SQL' })
+    const tracker = addSubtask(assigned.tracker, 3, 'Run the migration').tracker
+
+    expect(statusText({ ...scratchPad, tracker, threads: [], decisions: [] }).split('\n')[4]).toBe(
+      'problem: task 3 [t-3] is assigned to Nick but has subtasks. Run subtask assign for each subtask that Nick has to do',
+    )
+  })
+
+  it('counts a task that Nick has done as waiting for the agent until inbox has printed it', () => {
+    const done = {
+      number: 4,
+      time: '2026-03-14T09:30:00.000Z',
+      kind: 'task-done',
+      by: 'nick',
+      item: 't-1',
+    } as const
+    const waiting = statusText({
+      ...scratchPad,
+      threads: [],
+      decisions: [aDecisionAnswer({})],
+      events: [done],
+    }).split('\n')[4]
+    const printed = statusText({
+      ...scratchPad,
+      threads: [],
+      decisions: [aDecisionAnswer({})],
+      events: [done],
+      lastPrinted: { ...nothingPrinted, decision: 4 },
+    }).split('\n')[4]
+
+    expect([waiting, printed]).toStrictEqual([
+      'waiting for the agent: 1 decision, 1 task',
+      'waiting for the agent: 1 decision',
+    ])
   })
 })

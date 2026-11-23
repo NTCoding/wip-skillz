@@ -5,6 +5,9 @@ import './top-bar-panel.css'
 export interface TopBarPanelControls {
   readonly close: () => void
   readonly closeAndFocusButton: () => void
+  // Moves the focus to the panel itself so that the panel stays open, like when the control that
+  // had the focus is about to be removed from the panel
+  readonly focusPanel: () => void
   // The id that the content puts on the element whose role is the popup, like the menu of the
   // Inbox, because the button's aria-controls points at that element.
   readonly popupId: string
@@ -49,6 +52,7 @@ export function TopBarPanel({
       setOpen(false)
       document.getElementById(buttonId)?.focus()
     },
+    focusPanel: () => document.getElementById(panelId)?.focus(),
     popupId,
   }
   useEffect(() => {
@@ -94,7 +98,13 @@ export function TopBarPanel({
         {count === 0 && dot === true && <span className="top-bar-panel__dot" />}
       </button>
       {open && (
-        <div className="top-bar-panel__panel" id={panelId} role="group" aria-label={label}>
+        <div
+          className="top-bar-panel__panel"
+          id={panelId}
+          role="group"
+          aria-label={label}
+          tabIndex={-1}
+        >
           {children(controls)}
         </div>
       )}
