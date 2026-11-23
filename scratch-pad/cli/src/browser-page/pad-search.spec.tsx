@@ -112,7 +112,7 @@ describe('the search of the pages', () => {
     },
   )
 
-  it('only searches once Nick has stopped typing for 2 seconds', async () => {
+  it('only searches once Nick has stopped typing for 1 second', async () => {
     const fake = await shownIndexPage()
     pressShortcut()
     fireEvent.change(searchField(), { target: { value: 'ret' } })

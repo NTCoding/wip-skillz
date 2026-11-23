@@ -11,7 +11,7 @@ import { type ScratchPadSearch } from './scratch-pad-connection'
 import { type SearchMatchOnPage } from './text-highlights'
 
 // The search will only ask the server after Nick has stopped typing for this long.
-export const searchDelayMilliseconds = 2000
+export const searchDelayMilliseconds = 1000
 
 export interface SearchMatch extends SearchMatchOnPage {
   readonly page: string

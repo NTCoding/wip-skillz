@@ -288,7 +288,7 @@ The export doesn't contain any read marks, because a reader can't mark anything 
 
 ## How the search works
 
-The search lets Nick find a piece of content on any page of the scratch pad he has open, rather than only on the page he's reading. He opens a command palette with ⌘K or with the search button to the left of the Inbox. The palette only sends the query to the server once he has stopped typing for 2 seconds, because results that change on every key press are annoying.
+The search lets Nick find a piece of content on any page of the scratch pad he has open, rather than only on the page he's reading. He opens a command palette with ⌘K or with the search button to the left of the Inbox. The palette only sends the query to the server once he has stopped typing for 1 second, because results that change on every key press are annoying.
 
 The server searches the raw Markdown of every page rather than the text that the page shows. That's why a match can be in a link's URL or in a code block too. It skips each `:::decision` block, because the search is only for the content of the pages. The results are listed in the same order as the pages in the sidebar. There's one result for each line that contains the query. Each result has the heading that the line is under, the id of that heading and a snippet of the line.
 
