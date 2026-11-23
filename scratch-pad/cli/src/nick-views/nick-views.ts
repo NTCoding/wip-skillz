@@ -13,6 +13,7 @@ import {
   type SectionText,
 } from '../read-marks/read-marks'
 import { type DecisionBlock } from '../rendered-page/decision-block'
+import { contextSummary, type ContextSummary } from '../rendered-page/decision-context'
 import { shownHeadings } from '../rendered-page/index-page'
 import { pageDescription } from '../rendered-page/page-description'
 import { type Heading } from '../rendered-page/page-headings'
@@ -23,6 +24,7 @@ import {
   renderPage,
   type RenderedPage,
 } from '../rendered-page/rendered-page'
+import { type PadDb } from '../scratch-pad-folder/pad-db'
 import { type ScratchPadFolder } from '../scratch-pad-folder/scratch-pad-folder'
 import { type Thread } from '../threads/thread'
 import {
@@ -50,6 +52,13 @@ interface UnansweredDecision {
   readonly id: string
   readonly line: number
   readonly question: string
+  // The time of the decision's decision-asked event
+  readonly time: string
+  readonly context: ContextSummary | undefined
+}
+
+type OpenDecision = Omit<UnansweredDecision, 'time' | 'context'> & {
+  readonly context: string | undefined
 }
 
 interface ImprovementOnTab {
@@ -179,18 +188,82 @@ export function withPositions(
 }
 
 export function nickInboxItems(folder: ScratchPadFolder): NickInboxItems {
+  const decisions = folder.pages().flatMap((page) =>
+    viewPage(folder, page).decisions.flatMap((decision): OpenDecision[] =>
+      decision.answer === undefined && decision.question !== undefined
+        ? [
+            {
+              page,
+              id: decision.id,
+              line: decision.firstLine,
+              question: decision.question,
+              context: decision.context,
+            },
+          ]
+        : [],
+    ),
+  )
   return {
     threads: withPositions(folder, nickInbox(folder.read((pad) => pad.readThreads()))),
-    decisions: folder
-      .pages()
-      .flatMap((page) =>
-        viewPage(folder, page).decisions.flatMap((decision) =>
-          decision.answer === undefined && decision.question !== undefined
-            ? [{ page, id: decision.id, line: decision.firstLine, question: decision.question }]
-            : [],
-        ),
-      ),
+    decisions: askedDecisions(folder, decisions).map((decision) => ({
+      ...decision,
+      context:
+        decision.context === undefined
+          ? undefined
+          : contextSummary(decision.context, decision.page),
+    })),
   }
+}
+
+function askedDecisionIds(pad: PadDb): Set<string | undefined> {
+  return new Set([
+    ...pad
+      .readEvents()
+      .filter((event) => event.kind === 'decision-asked')
+      .map((event) => event.item),
+    ...pad.readDecisionAnswers().map((answer) => answer.id),
+  ])
+}
+
+// The time of a decision is the time of its decision-asked event. The server records that event the
+// first time that it finds the decision on a saved page. The time of the event is the time that
+// the page's file was last written, because the server might not read the page before the browser
+// asks for the Inbox. That can be long after the agent wrote the page. A decision on an older
+// scratch pad is recorded in the same way the first time that this version of the server finds the
+// decision.
+function askedDecisions(
+  folder: ScratchPadFolder,
+  decisions: readonly OpenDecision[],
+): (OpenDecision & { readonly time: string })[] {
+  const asked = new Map(
+    folder
+      .read((pad) => pad.readEvents())
+      .filter((event) => event.kind === 'decision-asked')
+      .map((event) => [event.item, event.time]),
+  )
+  const timed = decisions.map((decision) => ({
+    ...decision,
+    time: asked.get(decision.id) ?? folder.pageChangedTime(decision.page),
+  }))
+  const missing = timed.filter((decision) => !asked.has(decision.id))
+  if (missing.length > 0) {
+    // Another process can record the decision or Nick can answer it in the meantime. That's why
+    // the ids are read again in the same transaction as the new events.
+    folder.change((pad) => {
+      const known = askedDecisionIds(pad)
+      missing
+        .filter((decision) => !known.has(decision.id))
+        .forEach((decision) =>
+          pad.appendEvent({
+            time: decision.time,
+            kind: 'decision-asked',
+            by: 'agent',
+            item: decision.id,
+          }),
+        )
+    })
+  }
+  return timed
 }
 
 export function outboxOf(folder: ScratchPadFolder): Outbox {

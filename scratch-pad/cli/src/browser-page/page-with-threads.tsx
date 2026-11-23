@@ -33,7 +33,7 @@ import {
 import { anchorLinesOf, decisionMarginItems } from './answered-decision-items'
 import { elementContextOf, type PageContext } from './page-element-context'
 import { fileOfPage } from './browser-route'
-import { changedSectionItems, pageMarksOf, type ReadMarkActions } from './changed-section-items'
+import { changedSectionItems, usePageMarks, type ReadMarkActions } from './changed-section-items'
 import { answeredDecisions, pageElements, parsedPageBody } from './page-elements'
 import { type PageAddress } from './current-section'
 import { type NewThread } from './scratch-pad-connection'
@@ -212,6 +212,8 @@ export function PageWithThreads(props: PageWithThreadsProps) {
   const [active, setActive] = useActiveThread(props.address)
   const [posted, setPosted] = useState<ReadonlyMap<string, Thread>>(new Map())
   const [choices, setChoices] = useState<ReadonlyMap<string, Answer>>(new Map())
+  const file = fileOfPage(page.page)
+  const readMarks = usePageMarks(props.readMark, actions, file, setActive)
   const body = useMemo(() => parsedPageBody(page.html), [page.html])
   const shownThreads = useMemo(() => withPostedThreads(threads, posted), [threads, posted])
   const placed = useMemo(() => placeThreads(body, shownThreads), [body, shownThreads])
@@ -370,12 +372,11 @@ export function PageWithThreads(props: PageWithThreadsProps) {
             popup: true,
           },
         ]
-  const file = fileOfPage(page.page)
   const changedItems = changedSectionItems(props.readMark, actions, {
     body,
-    file,
     active: draft === undefined ? active : undefined,
     toggle,
+    problems: readMarks.problems,
   })
   const highlighted = highlightedTexts(body, highlightsOf(placed, placedQueued, active, draft))
   return (
@@ -395,7 +396,7 @@ export function PageWithThreads(props: PageWithThreadsProps) {
           elementContext,
           body,
           highlighted,
-          pageMarksOf(props.readMark, actions, file),
+          readMarks.marks,
           new Set(decisions.map((decision) => decision.id)),
         )}
       </ReadingColumn>

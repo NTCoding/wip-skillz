@@ -253,7 +253,20 @@ export const toneNote: Thread = {
 export const indexInbox: NickInbox = {
   threads: [retryQuestion],
   decisions: [
-    { page: 'pages/index.md', id: 'd-1', line: 28, question: 'Will the export job retry 8 times?' },
+    {
+      page: 'pages/index.md',
+      id: 'd-1',
+      line: 28,
+      question: 'Will the export job retry 8 times?',
+      time: '2026-11-20T21:05:00.000Z',
+      context: {
+        lead: 'A slow network in the evening can make an upload fail. Read these in order:',
+        links: [
+          { text: 'The invoice template', page: 'pages/invoice-template.md', headingId: undefined },
+          { text: 'The retry limit', page: 'pages/retry-limit.md', headingId: 'what-counts' },
+        ],
+      },
+    },
   ],
 }
 

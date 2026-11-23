@@ -13,6 +13,7 @@ const reply: PanelMenuItem = {
   last: 'Agent: I have raised the limit to 8 retries.',
   time: '2026-11-20T21:12:00.000Z',
   shownTime: '20 Nov, 21:12',
+  context: undefined,
   linkLabel: undefined,
 }
 
@@ -26,19 +27,35 @@ const queued: PanelMenuItem = {
   last: 'Is the tax number on every invoice?',
   time: '2026-11-20T21:14:00.000Z',
   shownTime: 'Queued 20 Nov, 21:14',
+  context: undefined,
   linkLabel: 'Show on the page',
 }
 
 const section: PanelMenuItem = {
-  key: 'section pages/invoice-template.md the-logo',
+  key: 'sections pages/invoice-template.md',
   href: '/pad/invoice-template.md#the-logo',
   kind: 'section',
-  heading: 'A section changed',
-  where: 'Invoice template › The logo',
+  heading: 'Updates to Invoice template',
+  where: '2 sections changed',
   quote: undefined,
   last: undefined,
   time: undefined,
   shownTime: undefined,
+  context: undefined,
+  linkLabel: undefined,
+}
+
+const decision: PanelMenuItem = {
+  key: 'd-1',
+  href: '/pad/retry-limit.md#d-1',
+  kind: 'decision',
+  heading: 'A decision to make',
+  where: 'Retry limit',
+  quote: 'Will the export job retry 8 times?',
+  last: undefined,
+  time: undefined,
+  shownTime: undefined,
+  context: { lead: undefined, links: [{ text: 'How the job runs', href: '/pad/how.md' }] },
   linkLabel: undefined,
 }
 
@@ -46,6 +63,7 @@ interface MenuOptions {
   readonly onTab?: () => void
   readonly onChoose?: () => void
   readonly onNavigate?: (href: string) => void
+  readonly focusFirstItem?: boolean
 }
 
 function renderMenu(items: readonly PanelMenuItem[], options: MenuOptions = {}) {
@@ -55,6 +73,7 @@ function renderMenu(items: readonly PanelMenuItem[], options: MenuOptions = {}) 
     onNavigate: options.onNavigate ?? (() => undefined),
     onChoose: options.onChoose ?? (() => undefined),
     onTab: options.onTab,
+    focusFirstItem: options.focusFirstItem ?? true,
   }
   const view = render(
     <>
@@ -86,13 +105,35 @@ describe('PanelMenu', () => {
     expect(screen.getAllByRole('menuitem').map((item) => item.textContent)).toStrictEqual([
       'The agent replied20 Nov, 21:12Retry limitThe export job retries 5 times.Agent: I have raised the limit to 8 retries.',
       'CommentQueued 20 Nov, 21:14Invoice templatethe tax numberIs the tax number on every invoice?Show on the page',
-      'A section changedInvoice template › The logo',
+      'Updates to Invoice template2 sections changed',
     ])
+  })
+
+  it('marks the heading of each item with its kind so that a page with changed sections is quieter', () => {
+    renderMenu([reply, section])
+    expect(
+      ['The agent replied', 'Updates to Invoice template'].map((heading) =>
+        screen.getByText(heading).getAttribute('data-kind'),
+      ),
+    ).toStrictEqual(['reply', 'section'])
+  })
+
+  it('shows the links of a decision’s context without a first paragraph when the context starts with the links', () => {
+    renderMenu([decision])
+    expect(screen.getByRole('menu').textContent).toBe(
+      'A decision to makeRetry limitWill the export job retry 8 times?How the job runs',
+    )
   })
 
   it('focuses the first item when the menu is shown', () => {
     renderMenu([reply, queued])
     expect(document.activeElement?.textContent).toContain('The agent replied')
+    expect(tabIndexes()).toStrictEqual([0, -1])
+  })
+
+  it('leaves the focus where it is when the menu is shown without focusing its first item', () => {
+    renderMenu([reply, queued], { focusFirstItem: false })
+    expect(document.activeElement).toBe(document.body)
     expect(tabIndexes()).toStrictEqual([0, -1])
   })
 
@@ -111,7 +152,7 @@ describe('PanelMenu', () => {
   it('moves the focus to the last item with End and to the first item with Home and ignores another key', async () => {
     renderMenu([reply, queued, section])
     await userEvent.keyboard('{End}')
-    expect(document.activeElement?.textContent).toContain('A section changed')
+    expect(document.activeElement?.textContent).toContain('2 sections changed')
     await userEvent.keyboard('{Home}x')
     expect(document.activeElement?.textContent).toContain('The agent replied')
   })

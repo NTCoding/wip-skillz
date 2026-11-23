@@ -54,7 +54,45 @@ describe('TopBarPanel', () => {
   })
 
   it('doesn’t show a count when the count is 0', () => {
-    expect(renderPanel(0).textContent).toBe('Exports')
+    const button = renderPanel(0)
+    expect(button.textContent).toBe('Exports')
+    expect(button.querySelector('.top-bar-panel__dot')).toBeNull()
+  })
+
+  it('shows a dot without a number when the count is 0 and the panel asks for a dot', () => {
+    render(
+      <TopBarPanel
+        icon="inbox"
+        label="Exports"
+        countText="a file has been written"
+        count={0}
+        dot={true}
+        tone="inbox"
+      >
+        {() => <p>The export of the paid invoices has written a file.</p>}
+      </TopBarPanel>,
+    )
+    const button = screen.getByRole('button', { name: 'Exports: a file has been written' })
+    expect(button.textContent).toBe('Exports')
+    expect(button.querySelector('.top-bar-panel__dot')).not.toBeNull()
+  })
+
+  it('shows the count rather than the dot when the count isn’t 0', () => {
+    render(
+      <TopBarPanel
+        icon="inbox"
+        label="Exports"
+        countText="2 exports are running"
+        count={2}
+        dot={true}
+        tone="inbox"
+      >
+        {() => <p>The export of the paid invoices is running.</p>}
+      </TopBarPanel>,
+    )
+    const button = screen.getByRole('button', { name: 'Exports: 2 exports are running' })
+    expect(button.textContent).toBe('Exports2')
+    expect(button.querySelector('.top-bar-panel__dot')).toBeNull()
   })
 
   it('opens the panel and points the button at the popup when Nick clicks the button', async () => {

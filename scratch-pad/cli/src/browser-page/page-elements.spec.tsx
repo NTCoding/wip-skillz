@@ -370,7 +370,13 @@ describe('pageElements', () => {
       ].join('\n'),
     )
     const context = contextFor(page)
-    const marks = { changedSections: new Set(['limit', 'other']), afterTitle: <p>New</p> }
+    const marks = {
+      changedSections: new Map([
+        ['limit', () => undefined],
+        ['other', () => undefined],
+      ]),
+      afterTitle: <p>New</p>,
+    }
     const { container } = render(
       <article>{pageElements(context, parsedPageBody(page.html), new Map(), marks)}</article>,
     )
@@ -392,9 +398,24 @@ describe('pageElements', () => {
     expect(container.textContent).toContain('A stray text.')
   })
 
+  it('marks a changed section as read when Nick clicks a block or a link in the section, and not when he clicks another block', async () => {
+    const markRead = vi.fn<() => void>()
+    const marks = { changedSections: new Map([['retry-limit', markRead]]), afterTitle: undefined }
+    const body = parsedPageBody(indexPage.html)
+    render(<article>{pageElements(contextFor(indexPage), body, new Map(), marks)}</article>)
+    await userEvent.click(screen.getByRole('heading', { level: 1, name: 'Invoice export' }))
+    expect(markRead).not.toHaveBeenCalled()
+    await userEvent.click(screen.getByRole('heading', { level: 2, name: 'Retry limit' }))
+    await userEvent.click(screen.getByRole('link', { name: 'this section' }))
+    expect(markRead).toHaveBeenCalledTimes(2)
+  })
+
   it('shows the line after the title above the first block when the page doesn’t have a heading of level 1', () => {
     const page = withHtml('<p>The export job retries 5 times.</p>\n<h2 id="limit">Limit</h2>')
-    const marks = { changedSections: new Set<string>(), afterTitle: <p>This page is new.</p> }
+    const marks = {
+      changedSections: new Map<string, () => void>(),
+      afterTitle: <p>This page is new.</p>,
+    }
     const { container } = render(
       <article>
         {pageElements(contextFor(page), parsedPageBody(page.html), new Map(), marks)}

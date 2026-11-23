@@ -7,22 +7,66 @@ const decision: InboxEntry = {
   key: 'd-1',
   href: '/pad/#d-1',
   kind: 'decision',
+  heading: 'A decision to make',
   where: 'Invoice export',
   quote: 'Will the export job retry 8 times?',
   last: undefined,
-  time: undefined,
-  shownTime: undefined,
+  time: '2026-11-20T21:05:00.000Z',
+  shownTime: '20 Nov, 21:05',
+  context: undefined,
+}
+
+const decisionWithContext: InboxEntry = {
+  ...decision,
+  key: 'd-2',
+  href: '/pad/#d-2',
+  quote: 'Will the job tell the team after the last retry?',
+  context: {
+    lead: 'The team only reads the log in the morning. Read these in order:',
+    links: [
+      { text: 'How the job runs', href: '/pad/how-the-job-runs.md' },
+      { text: 'What counts as a failure', href: '/pad/retry-limit.md#what-counts-as-a-failure' },
+    ],
+  },
 }
 
 const reply: InboxEntry = {
   key: 'c-1',
   href: '/pad/invoice-template.md#c-1',
   kind: 'reply',
+  heading: 'The agent replied',
   where: 'Invoice template',
   quote: 'The tax number',
   last: 'Agent: I have moved the tax number.',
   time: '2026-11-20T21:12:00.000Z',
   shownTime: '20 Nov, 21:12',
+  context: undefined,
+}
+
+const newPage: InboxEntry = {
+  key: 'page pages/retry-limit.md',
+  href: '/pad/retry-limit.md',
+  kind: 'page',
+  heading: 'A new page',
+  where: 'Retry limit',
+  quote: 'The export job retries the upload of the invoices.',
+  last: undefined,
+  time: '2026-11-20T21:20:00.000Z',
+  shownTime: '20 Nov, 21:20',
+  context: undefined,
+}
+
+const changedPage: InboxEntry = {
+  key: 'sections pages/invoice-template.md',
+  href: '/pad/invoice-template.md#the-logo',
+  kind: 'section',
+  heading: 'Updates to Invoice template',
+  where: '2 sections changed',
+  quote: undefined,
+  last: undefined,
+  time: '2026-11-20T21:15:00.000Z',
+  shownTime: '20 Nov, 21:15',
+  context: undefined,
 }
 
 function renderInbox(entries: readonly InboxEntry[], onNavigate = vi.fn<(href: string) => void>()) {
@@ -33,6 +77,10 @@ function renderInbox(entries: readonly InboxEntry[], onNavigate = vi.fn<(href: s
     </>,
   )
   return { onNavigate, button: screen.getByRole('button', { name: /^Inbox/ }) }
+}
+
+function updatesButton(): HTMLElement {
+  return screen.getByRole('button', { name: /^Updates to pages/ })
 }
 
 describe('Inbox', () => {
@@ -49,9 +97,10 @@ describe('Inbox', () => {
     await userEvent.click(button)
     const items = screen.getAllByRole('menuitem')
     expect(items.map((item) => item.textContent)).toStrictEqual([
-      'A decision to makeInvoice exportWill the export job retry 8 times?',
+      'A decision to make20 Nov, 21:05Invoice exportWill the export job retry 8 times?',
       'The agent replied20 Nov, 21:12Invoice templateThe tax numberAgent: I have moved the tax number.',
     ])
+    expect(screen.getByRole('menu', { name: 'Needs your answer' })).not.toBeNull()
     expect(document.activeElement).toBe(items[0])
     expect(button.getAttribute('aria-expanded')).toBe('true')
   })
@@ -113,11 +162,15 @@ describe('Inbox', () => {
     expect(screen.queryByRole('menu')).toBeNull()
   })
 
-  it('says that nothing waits for Nick and doesn’t show a count when the Inbox is empty', async () => {
+  it('says that nothing waits for Nick and doesn’t show a count or a dot when the Inbox is empty', async () => {
     const { button } = renderInbox([])
     await userEvent.click(button)
     expect(screen.getByText('Nothing waits for you.').tagName).toBe('P')
-    expect(button.textContent).toBe('Inbox')
+    expect([
+      button.textContent,
+      button.querySelector('.top-bar-panel__dot'),
+      screen.queryByRole('button', { name: /^Updates to pages/ }),
+    ]).toStrictEqual(['Inbox', null, null])
     expect(button.getAttribute('aria-haspopup')).toBeNull()
     expect(button.getAttribute('aria-controls')).toBe(
       screen.getByRole('group', { name: 'Inbox' }).id,
@@ -139,32 +192,123 @@ describe('Inbox', () => {
     expect(button.getAttribute('aria-label')).toBe('Inbox: 1 item waits for you')
   })
 
-  it('shows a new page with its title and its description and a changed section without a quote', async () => {
-    const page: InboxEntry = {
-      key: 'page pages/retry-limit.md',
-      href: '/pad/retry-limit.md',
-      kind: 'page',
-      where: 'Retry limit',
-      quote: 'The export job retries the upload of the invoices.',
-      last: undefined,
-      time: '2026-11-20T21:20:00.000Z',
-      shownTime: '20 Nov, 21:20',
-    }
-    const section: InboxEntry = {
-      key: 'section pages/invoice-template.md the-logo',
-      href: '/pad/invoice-template.md#the-logo',
-      kind: 'section',
-      where: 'Invoice template › The logo',
-      quote: undefined,
-      last: undefined,
-      time: '2026-11-20T21:15:00.000Z',
-      shownTime: 'Changed 20 Nov, 21:15',
-    }
-    const { button } = renderInbox([page, section])
-    await userEvent.click(button)
-    expect(screen.getAllByRole('menuitem').map((item) => item.textContent)).toStrictEqual([
-      'A new page20 Nov, 21:20Retry limitThe export job retries the upload of the invoices.',
-      'A section changedChanged 20 Nov, 21:15Invoice template › The logo',
+  it('doesn’t count the updates to pages and doesn’t show a dot when an item waits for Nick', () => {
+    const { button } = renderInbox([reply, changedPage, newPage])
+    expect(button.textContent).toBe('Inbox1')
+    expect(button.getAttribute('aria-label')).toBe('Inbox: 1 item waits for you')
+    expect(button.querySelector('.top-bar-panel__dot')).toBeNull()
+  })
+
+  it('shows a dot without a number when there are only updates to pages', async () => {
+    const { button } = renderInbox([changedPage])
+    expect([button.textContent, button.getAttribute('aria-label')]).toStrictEqual([
+      'Inbox',
+      'Inbox: pages have been updated',
     ])
+    expect(button.querySelector('.top-bar-panel__dot')).not.toBeNull()
+    await userEvent.click(button)
+    expect([
+      screen.getByText('Nothing waits for you.').tagName,
+      button.getAttribute('aria-haspopup'),
+      updatesButton().getAttribute('aria-expanded'),
+    ]).toStrictEqual(['P', null, 'false'])
+  })
+
+  it('shows the updates to pages collapsed below the items that wait for Nick, with the count of the pages', async () => {
+    const { button } = renderInbox([reply, changedPage, newPage])
+    await userEvent.click(button)
+    expect(updatesButton().textContent).toBe('Updates to pages 2')
+    expect(updatesButton().getAttribute('aria-expanded')).toBe('false')
+    expect(updatesButton().getAttribute('aria-controls')).toBeNull()
+    expect(screen.getAllByRole('menuitem').map((item) => item.textContent)).toStrictEqual([
+      'The agent replied20 Nov, 21:12Invoice templateThe tax numberAgent: I have moved the tax number.',
+    ])
+  })
+
+  it('opens and collapses the updates to pages when Nick clicks their button', async () => {
+    const { button } = renderInbox([reply, changedPage, newPage])
+    await userEvent.click(button)
+    await userEvent.click(updatesButton())
+    const updates = screen.getByRole('menu', { name: 'Updates to pages 2' })
+    expect(updatesButton().getAttribute('aria-expanded')).toBe('true')
+    expect(updatesButton().getAttribute('aria-controls')).toBe(updates.id)
+    expect(
+      screen.getAllByRole('menuitem').map((item) => item.textContent?.slice(0, 27)),
+    ).toStrictEqual([
+      'The agent replied20 Nov, 21',
+      'Updates to Invoice template',
+      'A new page20 Nov, 21:20Retr',
+    ])
+    await userEvent.click(updatesButton())
+    expect(screen.queryByRole('menu', { name: 'Updates to pages 2' })).toBeNull()
+  })
+
+  it('shows a page with changed sections and a new page with their titles, their counts and their descriptions', async () => {
+    const { button } = renderInbox([changedPage, newPage])
+    await userEvent.click(button)
+    await userEvent.click(updatesButton())
+    expect(screen.getAllByRole('menuitem').map((item) => item.textContent)).toStrictEqual([
+      'Updates to Invoice template20 Nov, 21:152 sections changed',
+      'A new page20 Nov, 21:20Retry limitThe export job retries the upload of the invoices.',
+    ])
+  })
+
+  it('goes to the first changed section and closes the list when Nick chooses a page with changed sections', async () => {
+    const { button, onNavigate } = renderInbox([changedPage])
+    await userEvent.click(button)
+    await userEvent.click(updatesButton())
+    await userEvent.click(screen.getByRole('menuitem', { name: /2 sections changed/ }))
+    expect(onNavigate).toHaveBeenCalledWith('/pad/invoice-template.md#the-logo')
+    expect(screen.queryByRole('group', { name: 'Inbox' })).toBeNull()
+  })
+
+  it('moves the focus from the items to the button of the updates when Nick presses Tab and leaves it there when he opens the updates', async () => {
+    const { button } = renderInbox([reply, changedPage])
+    await userEvent.click(button)
+    await userEvent.tab()
+    expect(document.activeElement).toBe(updatesButton())
+    await userEvent.keyboard('{Enter}')
+    expect(document.activeElement).toBe(updatesButton())
+    await userEvent.tab()
+    expect(document.activeElement?.textContent).toContain('2 sections changed')
+    await userEvent.tab({ shift: true })
+    expect(document.activeElement).toBe(updatesButton())
+  })
+
+  it('shows the first paragraph and the numbered links of a decision’s context under its question', async () => {
+    const { button } = renderInbox([decisionWithContext, reply])
+    await userEvent.click(button)
+    expect(screen.getByRole('menu').firstElementChild?.textContent).toBe(
+      'A decision to make20 Nov, 21:05Invoice exportWill the job tell the team after the last retry?The team only reads the log in the morning. Read these in order:How the job runsWhat counts as a failure',
+    )
+    expect(
+      screen
+        .getAllByRole('menuitem')
+        .slice(1, 3)
+        .map((link) => [link.textContent, link.getAttribute('href')]),
+    ).toStrictEqual([
+      ['How the job runs', '/pad/how-the-job-runs.md'],
+      ['What counts as a failure', '/pad/retry-limit.md#what-counts-as-a-failure'],
+    ])
+    expect(screen.getByRole('group', { name: 'Context' }).tagName).toBe('OL')
+  })
+
+  it('moves through the links of a decision’s context with the arrow keys', async () => {
+    const { button } = renderInbox([decisionWithContext, reply])
+    await userEvent.click(button)
+    await userEvent.keyboard('{ArrowDown}')
+    expect(document.activeElement?.textContent).toBe('How the job runs')
+    await userEvent.keyboard('{ArrowDown}{ArrowDown}')
+    expect(document.activeElement?.textContent).toContain('The agent replied')
+    await userEvent.keyboard('{ArrowUp}')
+    expect(document.activeElement?.textContent).toBe('What counts as a failure')
+  })
+
+  it('goes to the section and closes the list when Nick chooses a link of a decision’s context', async () => {
+    const { button, onNavigate } = renderInbox([decisionWithContext])
+    await userEvent.click(button)
+    await userEvent.click(screen.getByRole('menuitem', { name: 'What counts as a failure' }))
+    expect(onNavigate).toHaveBeenCalledWith('/pad/retry-limit.md#what-counts-as-a-failure')
+    expect(screen.queryByRole('menu')).toBeNull()
   })
 })

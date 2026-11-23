@@ -15,7 +15,7 @@ import {
 import { chooseScratchPad, type Environment } from '../scratch-pads-home/scratch-pads-home'
 import { builtTool, homeForServer, stopServers } from '../server-process/server-process-fixtures'
 import { runCommandLine } from './command-line'
-import { environmentWithScratchPad, runScratchPad } from './command-line-fixtures'
+import { environmentWithScratchPad, runScratchPad, waitReminderText } from './command-line-fixtures'
 
 afterEach(() => {
   removeTemporaryHomes()
@@ -101,21 +101,34 @@ describe('the scratch-pad commands', () => {
     )
   })
 
+  it.each([
+    { argv: ['inbox'] },
+    { argv: ['inbox', '--all'] },
+    { argv: ['inbox', '--type', 'grammar'] },
+    { argv: ['show', 'g-1'] },
+  ])('$argv prints the reminder to run wait under its output', async ({ argv }) => {
+    expect((await output(argv)).split('\n').slice(-3)).toStrictEqual([
+      missingLinksText,
+      waitReminderText,
+      '',
+    ])
+  })
+
   it('reply prints that the thread waits for Nick', async () => {
     expect(await output(['reply', 'c-1', 'I raised the limit to 8.'])).toBe(
-      `c-1 now waits for Nick\n${missingLinksText}\n`,
+      `c-1 now waits for Nick\n${missingLinksText}\n${waitReminderText}\n`,
     )
   })
 
   it('done prints that the decision is done', async () => {
     expect(await output(['done', 'd-1', 'Rewrote the section for 8 retries.'])).toBe(
-      `d-1 is done\n${missingLinksText}\n`,
+      `d-1 is done\n${missingLinksText}\n${waitReminderText}\n`,
     )
   })
 
   it('done prints that the note is done', async () => {
     expect(await output(['done', 'g-1', 'Changed the verb.'])).toBe(
-      `g-1 is done\n${missingLinksText}\n`,
+      `g-1 is done\n${missingLinksText}\n${waitReminderText}\n`,
     )
   })
 
@@ -244,7 +257,7 @@ describe('the scratch-pad commands', () => {
   })
 
   it('inbox prints one line for the decision when only comments are requested and a decision waits', async () => {
-    expect((await output(['inbox', '--type', 'comment'])).split('\n').at(-4)).toBe(
+    expect((await output(['inbox', '--type', 'comment'])).split('\n').at(-5)).toBe(
       '1 decision waits for the agent (scratch-pad inbox --pad 2026-03-14-export-job --type decision) · 1 grammar note waits for a subagent',
     )
   })

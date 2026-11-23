@@ -14,15 +14,16 @@ function checkedPage(file: string, markdown: readonly string[]): CheckedPage {
 
 const exportJob = checkedPage('pages/export-job.md', ['# Export job', '', '## Retry limit'])
 
-function problemsOfInvoicePage(markdown: readonly string[]) {
+function problemsOfInvoicePage(markdown: readonly string[], answeredDecisions: string[] = []) {
   const pages = [checkedPage('pages/invoice-template.md', markdown), exportJob]
-  return pageCheckProblems(pages, [], ['pages/invoice-template.md'], () => [])
+  return pageCheckProblems(pages, [], ['pages/invoice-template.md'], answeredDecisions, () => [])
 }
 
 const decision = (id: string): string[] => [
   '## Will the export job retry 8 times?',
   '',
   `:::decision ${id}`,
+  'context: A slow network can make an upload fail.',
   'proposal: a',
   'alternative: b',
   'pick: a',
@@ -88,8 +89,89 @@ describe('pageCheckProblems', () => {
     expect(problemsOfInvoicePage([...decision('d-2'), '', ...decision('d-2')])).toStrictEqual([
       {
         page: 'pages/invoice-template.md',
-        line: 11,
+        line: 12,
         text: 'decision d-2 is used twice (first on line 3)',
+      },
+    ])
+  })
+
+  it("reports the decision when the decision doesn't have a context", () => {
+    expect(
+      problemsOfInvoicePage([
+        '## Will the export job retry 8 times?',
+        '',
+        ':::decision d-2',
+        'proposal: a',
+        'alternative: b',
+        'pick: a',
+        ':::',
+      ]),
+    ).toStrictEqual([
+      {
+        page: 'pages/invoice-template.md',
+        line: 3,
+        text: "decision d-2 doesn't have a context (write one on the context: line)",
+      },
+    ])
+  })
+
+  it('reports the decision when the context: line of the decision is empty', () => {
+    expect(
+      problemsOfInvoicePage([
+        '## Will the export job retry 8 times?',
+        '',
+        ':::decision d-2',
+        'context:',
+        'proposal: a',
+        'alternative: b',
+        'pick: a',
+        ':::',
+      ]),
+    ).toStrictEqual([
+      {
+        page: 'pages/invoice-template.md',
+        line: 3,
+        text: "decision d-2 doesn't have a context (write one on the context: line)",
+      },
+    ])
+  })
+
+  it("doesn't report a decision without a context when Nick has already answered the decision", () => {
+    expect(
+      problemsOfInvoicePage(
+        [
+          '## Will the export job retry 8 times?',
+          '',
+          ':::decision d-2',
+          'proposal: a',
+          'alternative: b',
+          'pick: a',
+          ':::',
+        ],
+        ['d-2'],
+      ),
+    ).toStrictEqual([])
+  })
+
+  it("reports the link when a link in the context of a decision points to a heading that doesn't exist", () => {
+    expect(
+      problemsOfInvoicePage([
+        '## Will the export job retry 8 times?',
+        '',
+        ':::decision d-2',
+        'context: A slow network can make an upload fail. Read these in order:',
+        '  1. [The retry limit](export-job.md#retry-limit) explains the limit of today.',
+        '  2. [The queue](export-job.md#the-queue) shows where the upload waits.',
+        'proposal: a',
+        'alternative: b',
+        'pick: a',
+        ':::',
+      ]),
+    ).toStrictEqual([
+      {
+        page: 'pages/invoice-template.md',
+        line: 6,
+        text: "the link points to the heading #the-queue in pages/export-job.md, which doesn't exist",
       },
     ])
   })
@@ -100,13 +182,15 @@ describe('pageCheckProblems', () => {
       checkedPage('pages/invoice-template.md', ['Intro', '', ...decision('d-2')]),
     ]
 
-    expect(pageCheckProblems(pages, [], ['pages/invoice-template.md'], () => [])).toStrictEqual([
-      {
-        page: 'pages/invoice-template.md',
-        line: 5,
-        text: 'decision d-2 is used twice (first on pages/export-job.md:3)',
-      },
-    ])
+    expect(pageCheckProblems(pages, [], ['pages/invoice-template.md'], [], () => [])).toStrictEqual(
+      [
+        {
+          page: 'pages/invoice-template.md',
+          line: 5,
+          text: 'decision d-2 is used twice (first on pages/export-job.md:3)',
+        },
+      ],
+    )
   })
 
   it('reports the problems of the checked pages only when one page is checked', () => {
@@ -116,7 +200,7 @@ describe('pageCheckProblems', () => {
     ]
 
     expect(
-      pageCheckProblems(pages, [], ['pages/invoice-template.md'], () => []).map(
+      pageCheckProblems(pages, [], ['pages/invoice-template.md'], [], () => []).map(
         (problem) => problem.page,
       ),
     ).toStrictEqual(['pages/invoice-template.md'])
@@ -128,7 +212,7 @@ describe('pageCheckProblems', () => {
     ]
 
     expect(
-      pageCheckProblems(pages, [], ['pages/invoice-template.md'], (checked) => [
+      pageCheckProblems(pages, [], ['pages/invoice-template.md'], [], (checked) => [
         `${checked.file} is too long`,
       ]).map((problem) => problem.line),
     ).toStrictEqual([1, 3, undefined])
@@ -148,6 +232,7 @@ describe('pageCheckProblems on the numbers of the pages', () => {
       pages,
       pageFiles,
       pages.map((page) => page.page),
+      [],
       () => [],
     )
   }

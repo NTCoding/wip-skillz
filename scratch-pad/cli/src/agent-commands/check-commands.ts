@@ -40,14 +40,22 @@ export function checkPages(
           pages,
         )
       : []
+  const answeredDecisions = folder
+    .read((pad) => pad.readDecisionAnswers())
+    .map((answer) => answer.id)
   const problems = [
-    ...pageCheckProblems(rendered, folder.pageFiles(), checkedPages, (checked) =>
-      proseCheck === undefined
-        ? []
-        : proseCheck(
-            join(folder.path, checked.file),
-            folder.readPageLines(checked.page).join('\n'),
-          ),
+    ...pageCheckProblems(
+      rendered,
+      folder.pageFiles(),
+      checkedPages,
+      answeredDecisions,
+      (checked) =>
+        proseCheck === undefined
+          ? []
+          : proseCheck(
+              join(folder.path, checked.file),
+              folder.readPageLines(checked.page).join('\n'),
+            ),
     ),
     ...orphans,
   ]

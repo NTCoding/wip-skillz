@@ -44,6 +44,13 @@
   color: var(--outbox-count-fg);
 }
 
+.top-bar-panel__dot {
+  width: var(--space-md);
+  height: var(--space-md);
+  border-radius: var(--r-round);
+  background: var(--inbox-count-bg);
+}
+
 .top-bar-panel__panel {
   position: absolute;
   top: calc(100% + var(--space-md));

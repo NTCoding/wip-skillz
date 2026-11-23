@@ -12,30 +12,79 @@ import { nickInboxEntries } from './nick-inbox-entries'
 const noReadMarks = { pages: [] }
 
 describe('nickInboxEntries', () => {
-  it('lists the open decisions first and then the replies with the page, the quote and the last message', () => {
+  it('lists the replies and the open decisions with the newest first, with the page, the quote, the last message and the context', () => {
     expect(
       nickInboxEntries(exportPadAddresses, indexInbox, pageSummaries, noReadMarks),
     ).toStrictEqual([
       {
-        key: 'd-1',
-        href: `/${exportPad}/#d-1`,
-        kind: 'decision',
-        where: 'Invoice export',
-        quote: 'Will the export job retry 8 times?',
-        last: undefined,
-        time: undefined,
-        shownTime: undefined,
-      },
-      {
         key: 'c-1',
         href: `/${exportPad}/#c-1`,
         kind: 'reply',
+        heading: 'The agent replied',
         where: 'Invoice export',
         quote: 'retries 5 times',
         last: 'Agent: I have raised the limit to 8.',
         time: '2026-11-20T21:12:00.000Z',
         shownTime: '20 Nov, 21:12',
+        context: undefined,
       },
+      {
+        key: 'd-1',
+        href: `/${exportPad}/#d-1`,
+        kind: 'decision',
+        heading: 'A decision to make',
+        where: 'Invoice export',
+        quote: 'Will the export job retry 8 times?',
+        last: undefined,
+        time: '2026-11-20T21:05:00.000Z',
+        shownTime: '20 Nov, 21:05',
+        context: {
+          lead: 'A slow network in the evening can make an upload fail. Read these in order:',
+          links: [
+            { text: 'The invoice template', href: `/${exportPad}/invoice-template.md` },
+            { text: 'The retry limit', href: `/${exportPad}/retry-limit.md#what-counts` },
+          ],
+        },
+      },
+    ])
+  })
+
+  it('sorts the replies and the decisions together by their time with the newest first', () => {
+    const olderReply: Thread = {
+      ...retryQuestion,
+      id: 'c-2',
+      messages: [{ author: 'agent', text: 'Done.', time: '2026-11-20T21:01:00.000Z' }],
+    }
+    const newerReply: Thread = {
+      ...retryQuestion,
+      id: 'c-3',
+      messages: [{ author: 'agent', text: 'Done.', time: '2026-11-20T21:30:00.000Z' }],
+    }
+    const entries = nickInboxEntries(
+      exportPadAddresses,
+      {
+        threads: [olderReply, retryQuestion, newerReply],
+        decisions: [
+          {
+            page: 'pages/index.md',
+            id: 'd-2',
+            line: 30,
+            question: 'Will the job log each retry?',
+            time: '2026-11-20T21:40:00.000Z',
+            context: undefined,
+          },
+          ...indexInbox.decisions,
+        ],
+      },
+      pageSummaries,
+      noReadMarks,
+    )
+    expect(entries.map((entry) => [entry.key, entry.shownTime])).toStrictEqual([
+      ['d-2', '20 Nov, 21:40'],
+      ['c-3', '20 Nov, 21:30'],
+      ['c-1', '20 Nov, 21:12'],
+      ['d-1', '20 Nov, 21:05'],
+      ['c-2', '20 Nov, 21:01'],
     ])
   })
 
@@ -100,10 +149,10 @@ describe('nickInboxEntries', () => {
     ).toStrictEqual([])
   })
 
-  it('lists the new pages and then the changed sections with their places, the newest first, before the decisions', () => {
+  it('lists each new page and each page with changed sections, the newest first, after the decisions', () => {
     const entries = nickInboxEntries(
       exportPadAddresses,
-      { threads: [], decisions: [] },
+      { threads: [], decisions: indexInbox.decisions },
       pageSummaries,
       {
         pages: [
@@ -111,8 +160,14 @@ describe('nickInboxEntries', () => {
             page: 'pages/invoice-template.md',
             state: 'read',
             changedTime: '2026-11-20T21:30:00.000Z',
-            sections: [{ id: 'the-logo', hash: 'b2' }],
-            changedSections: [{ id: 'the-logo', title: 'The logo', hash: 'b2' }],
+            sections: [
+              { id: 'tax-number', hash: 'a1' },
+              { id: 'the-logo', hash: 'b2' },
+            ],
+            changedSections: [
+              { id: 'tax-number', title: 'Tax number', hash: 'a1' },
+              { id: 'the-logo', title: 'The logo', hash: 'b2' },
+            ],
           },
           {
             page: 'pages/first-retry.md',
@@ -129,6 +184,13 @@ describe('nickInboxEntries', () => {
             changedSections: [],
           },
           {
+            page: 'pages/retry-limit.md',
+            state: 'read',
+            changedTime: '2026-11-20T21:15:00.000Z',
+            sections: [{ id: 'what-counts', hash: 'c3' }],
+            changedSections: [{ id: 'what-counts', title: 'What counts', hash: 'c3' }],
+          },
+          {
             page: 'pages/index.md',
             state: 'read',
             changedTime: '2026-11-20T21:00:00.000Z',
@@ -139,26 +201,44 @@ describe('nickInboxEntries', () => {
       },
     )
     expect(
-      entries.map((entry) => [entry.kind, entry.where, entry.quote, entry.shownTime]),
+      entries.map((entry) => [
+        entry.kind,
+        entry.heading,
+        entry.where,
+        entry.quote,
+        entry.shownTime,
+      ]),
     ).toStrictEqual([
       [
+        'decision',
+        'A decision to make',
+        'Invoice export',
+        'Will the export job retry 8 times?',
+        '20 Nov, 21:05',
+      ],
+      ['section', 'Updates to Invoice template', '2 sections changed', undefined, '20 Nov, 21:30'],
+      [
         'page',
+        'A new page',
         'retry-limit.md › 2.1 Wait between retries',
         'Each retry waits twice as long as the retry before it.',
         '20 Nov, 21:20',
       ],
+      ['section', 'Updates to retry-limit.md', '1 section changed', undefined, '20 Nov, 21:15'],
       [
         'page',
+        'A new page',
         'retry-limit.md › 2.1.1 First retry',
         'The first retry waits 30 seconds.',
         '20 Nov, 21:10',
       ],
-      ['section', 'Invoice template › The logo', undefined, 'Changed 20 Nov, 21:30'],
     ])
     expect(entries.map((entry) => entry.href)).toStrictEqual([
+      `/${exportPad}/#d-1`,
+      `/${exportPad}/invoice-template.md#tax-number`,
       `/${exportPad}/wait-between-retries.md`,
+      `/${exportPad}/retry-limit.md#what-counts`,
       `/${exportPad}/first-retry.md`,
-      `/${exportPad}/invoice-template.md#the-logo`,
     ])
   })
 })

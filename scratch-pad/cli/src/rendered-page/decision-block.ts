@@ -1,12 +1,18 @@
+import { type Token } from 'markdown-it'
 import { isDecisionId } from '../items/item-id'
 import { bodyLines, type NamedBlock, type NamedBlockContent } from './named-block'
+import { firstWordOf, namedBlockType } from './page-markdown-parser'
 import { type PageProblem } from './page-problem'
 
-const decisionFields = ['proposal', 'alternative', 'pick'] as const
+// The context is optional, because the decisions on an older page don't have one. The check
+// command reports an open decision without a context.
+const decisionFields = ['context', 'proposal', 'alternative', 'pick'] as const
+const requiredFields = ['proposal', 'alternative', 'pick'] as const
 type DecisionField = (typeof decisionFields)[number]
 type DecisionFields = Readonly<Record<DecisionField, string | undefined>>
 
 const fieldLabels: Readonly<Record<DecisionField, string>> = {
+  context: 'Context',
   proposal: 'Proposal',
   alternative: 'Alternative',
   pick: 'Pick',
@@ -25,16 +31,33 @@ interface FieldScan {
   readonly problems: readonly PageProblem[]
 }
 
-type InlineRenderer = (markdown: string) => string
+type MarkdownRenderer = (markdown: string) => string
+
+// The context can contain a paragraph and a numbered list, which are rendered as blocks. Each of the
+// other fields is rendered as one paragraph.
+interface DecisionRenderers {
+  readonly inline: MarkdownRenderer
+  readonly blocks: MarkdownRenderer
+}
+
+export function isDecision(token: Token): boolean {
+  return token.type === namedBlockType && firstWordOf(token.info) === 'decision'
+}
 
 export function decisionBlockContent(
   block: NamedBlock,
   question: string | undefined,
-  renderInline: InlineRenderer,
+  render: DecisionRenderers,
 ): NamedBlockContent {
   const id = isDecisionId(block.options) ? block.options : undefined
   const name = id === undefined ? 'the decision' : `decision ${id}`
   const scan = scanFields(block, name)
+  // An empty context: line counts as a missing context. So the page doesn't show an empty label and
+  // the check command reports the decision.
+  const fields = {
+    ...scan.fields,
+    context: scan.fields.context === '' ? undefined : scan.fields.context,
+  }
   const problems = [
     ...idProblems(block),
     ...(question === undefined
@@ -46,8 +69,8 @@ export function decisionBlockContent(
         ]
       : []),
     ...scan.problems,
-    ...decisionFields
-      .filter((field) => scan.fields[field] === undefined)
+    ...requiredFields
+      .filter((field) => fields[field] === undefined)
       .map((field) => ({
         line: block.lines.firstLine,
         text: `${name} doesn't have the ${field}: line`,
@@ -57,11 +80,11 @@ export function decisionBlockContent(
     className: 'decision',
     attributes: id === undefined ? [] : [['data-decision', id]],
     html: [
-      ...decisionFields.flatMap((field) => fieldHtml(field, scan.fields[field], renderInline)),
+      ...decisionFields.flatMap((field) => fieldHtml(field, fields[field], render)),
       ...(id === undefined ? [] : [buttonsHtml]),
     ].join(''),
     problems,
-    decision: id === undefined ? undefined : { id, ...block.lines, question, ...scan.fields },
+    decision: id === undefined ? undefined : { id, ...block.lines, question, ...fields },
   }
 }
 
@@ -78,7 +101,7 @@ function idProblems(block: NamedBlock): PageProblem[] {
 function scanFields(block: NamedBlock, name: string): FieldScan {
   const start: FieldScan = {
     current: undefined,
-    fields: { proposal: undefined, alternative: undefined, pick: undefined },
+    fields: { context: undefined, proposal: undefined, alternative: undefined, pick: undefined },
     problems: [],
   }
   return bodyLines(block).reduce(
@@ -102,7 +125,11 @@ function scanField(scan: FieldScan, text: string, line: number, name: string): F
     const value = `${scan.fields[scan.current]}\n${text.trim()}`
     return { ...scan, fields: { ...scan.fields, [scan.current]: value } }
   }
-  return withProblem(scan, line, "the line doesn't start with proposal:, alternative: or pick:")
+  return withProblem(
+    scan,
+    line,
+    "the line doesn't start with context:, proposal:, alternative: or pick:",
+  )
 }
 
 function withProblem(scan: FieldScan, line: number, text: string): FieldScan {
@@ -112,14 +139,16 @@ function withProblem(scan: FieldScan, line: number, text: string): FieldScan {
 function fieldHtml(
   field: DecisionField,
   value: string | undefined,
-  renderInline: InlineRenderer,
+  render: DecisionRenderers,
 ): string[] {
-  return value === undefined
-    ? []
-    : [
-        `<div class="decision-${field}"><p class="decision-label">${fieldLabels[field]}</p>`,
-        `<p>${renderInline(value)}</p></div>\n`,
-      ]
+  if (value === undefined) {
+    return []
+  }
+  const html = field === 'context' ? render.blocks(value) : `<p>${render.inline(value)}</p>`
+  return [
+    `<div class="decision-${field}"><p class="decision-label">${fieldLabels[field]}</p>`,
+    `${html}</div>\n`,
+  ]
 }
 
 const buttonsHtml = [

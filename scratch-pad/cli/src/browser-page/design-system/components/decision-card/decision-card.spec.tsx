@@ -3,11 +3,16 @@ import { type ReactNode } from 'react'
 import { describe, expect, it } from 'vitest'
 import { DecisionCard } from './decision-card'
 
-function renderCard(answer: string | undefined, question: string | undefined) {
+function renderCard(
+  answer: string | undefined,
+  question: string | undefined,
+  context: ReactNode = undefined,
+) {
   render(
     <DecisionCard
       id="d-1"
       question={question}
+      context={context}
       proposal="Raise the retry limit to 8."
       alternative="Keep the retry limit at 5."
       pick="The proposal."
@@ -25,7 +30,29 @@ describe('DecisionCard', () => {
     expect(card.getAttribute('data-answered')).toBe('false')
     expect(card.textContent).toContain('Waiting for Nick')
     expect(card.textContent).toContain('Will the export job retry 8 times?')
-    expect(card.querySelectorAll('dt')).toHaveLength(3)
+    expect([
+      card.querySelectorAll('dt').length,
+      card.textContent.includes('Context'),
+    ]).toStrictEqual([3, false])
+  })
+
+  it('shows the context under its label above the fields when the agent has written one', () => {
+    const card = renderCard(
+      undefined,
+      'Will the export job retry 8 times?',
+      <>
+        <p>A slow network in the evening can make an upload fail.</p>
+        <ol>
+          <li>How the job runs</li>
+          <li>The retry limit</li>
+        </ol>
+      </>,
+    )
+    const context = card.querySelector('.decision-card__context')
+    expect(context?.textContent).toBe(
+      'ContextA slow network in the evening can make an upload fail.How the job runsThe retry limit',
+    )
+    expect(context?.nextElementSibling?.tagName).toBe('DL')
   })
 
   it('shows Nick’s answer when the decision is answered', () => {
@@ -40,6 +67,7 @@ describe('DecisionCard', () => {
       <DecisionCard
         id="d-1"
         question="Will the export job retry 8 times?"
+        context={undefined}
         proposal="Raise the retry limit to 8."
         alternative="Keep the retry limit at 5."
         pick="The proposal."

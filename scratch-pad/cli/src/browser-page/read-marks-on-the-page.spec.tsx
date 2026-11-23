@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { type PageReadMark } from './api-responses'
@@ -125,15 +125,16 @@ describe('a new page', () => {
     expect(screen.getByText('This page is new.')).not.toBeNull()
   })
 
-  it('is listed in the Inbox together with the other items', async () => {
+  it('is listed in the Inbox under the updates to pages, below the items that need an answer', async () => {
     await renderIndex(fakeWithMark(newIndex))
     await screen.findByText('This page is new.')
 
     await userEvent.click(screen.getByRole('button', { name: /^Inbox/ }))
+    await userEvent.click(screen.getByRole('button', { name: /^Updates to pages/ }))
 
     expect(
       screen.getAllByRole('menuitem').map((item) => item.textContent?.slice(0, 10)),
-    ).toStrictEqual(['A new page', 'A decision', 'The agent '])
+    ).toStrictEqual(['The agent ', 'A decision', 'The invoic', 'The retry ', 'A new page'])
   })
 })
 
@@ -157,12 +158,12 @@ describe('a changed section', () => {
     expect(within(breadcrumb()).getByRole('button', { name: 'Mark as unread' })).not.toBeNull()
   })
 
-  it('removes the card, the bars and the dot when Nick marks the section as read', async () => {
+  it('removes the card, the bars, the dot and the row in the Inbox when Nick clicks inside the section', async () => {
     const fake = fakeWithMark(changedIndex)
     await renderIndex(fake)
-    const changed = await screen.findByRole('region', { name: 'Retry limit has changed' })
+    await screen.findByRole('region', { name: 'Retry limit has changed' })
 
-    await userEvent.click(within(changed).getByRole('button', { name: 'Mark as read' }))
+    await userEvent.click(screen.getByRole('heading', { level: 2, name: 'Retry limit' }))
 
     expect(fake.connection.markSectionRead).toHaveBeenCalledWith('index.md', {
       ...retryLimit,
@@ -171,8 +172,127 @@ describe('a changed section', () => {
     await waitFor(() =>
       expect(screen.queryByRole('region', { name: 'Retry limit has changed' })).toBeNull(),
     )
-    expect(document.querySelectorAll('[data-changed-section]')).toHaveLength(0)
-    expect(within(sidebar()).queryByRole('img', { name: 'Changed' })).toBeNull()
+    await userEvent.click(screen.getByRole('button', { name: 'Inbox: 2 items wait for you' }))
+    expect([
+      document.querySelectorAll('[data-changed-section]').length,
+      within(sidebar()).queryByRole('img', { name: 'Changed' }),
+      screen.queryByRole('button', { name: /^Updates to pages/ }),
+    ]).toStrictEqual([0, null, null])
+  })
+
+  it('counts one section less in the Inbox when Nick clicks inside one of 2 changed sections', async () => {
+    const waitBetweenRetries = { id: 'wait-between-retries', hash: 'c3' }
+    await renderIndex(
+      fakeWithMark({
+        ...changedIndex,
+        sections: [retryLimit, waitBetweenRetries],
+        changedSections: [
+          { ...retryLimit, title: 'Retry limit' },
+          { ...waitBetweenRetries, title: 'Wait between retries' },
+        ],
+      }),
+    )
+    await screen.findByRole('region', { name: 'Retry limit has changed' })
+    const inbox = screen.getByRole('button', { name: /^Inbox/ })
+    const changedPageRow = async (): Promise<string> => {
+      await userEvent.click(inbox)
+      await userEvent.click(screen.getByRole('button', { name: /^Updates to pages/ }))
+      const updates = screen.getByRole('menu', { name: /^Updates to pages/ })
+      const row = within(updates).getByRole('menuitem')
+      await userEvent.keyboard('{Escape}')
+      return String(row.textContent)
+    }
+    expect(await changedPageRow()).toBe('Updates to Invoice export20 Nov, 21:302 sections changed')
+
+    await userEvent.click(screen.getByRole('heading', { level: 3, name: 'Wait between retries' }))
+
+    await waitFor(() =>
+      expect(screen.queryByRole('region', { name: 'Wait between retries has changed' })).toBeNull(),
+    )
+    expect(screen.getByRole('region', { name: 'Retry limit has changed' })).not.toBeNull()
+    expect(await changedPageRow()).toBe('Updates to Invoice export20 Nov, 21:301 section changed')
+  })
+
+  it('shows the problem in the card and keeps the section changed when the server can’t mark the section as read', async () => {
+    const fake = fakeWithMark(changedIndex)
+    vi.mocked(fake.connection.markSectionRead).mockRejectedValueOnce(
+      new UnreachableServerError('There isn’t any section retry-limit on index.md.'),
+    )
+    await renderIndex(fake)
+    const changed = await screen.findByRole('region', { name: 'Retry limit has changed' })
+
+    await userEvent.click(screen.getByRole('heading', { level: 2, name: 'Retry limit' }))
+
+    expect((await within(changed).findByRole('alert')).textContent).toBe(
+      'There isn’t any section retry-limit on index.md.',
+    )
+    expect(document.querySelectorAll('[data-changed-section]')).not.toHaveLength(0)
+    await userEvent.click(screen.getByRole('heading', { level: 2, name: 'Retry limit' }))
+    await waitFor(() =>
+      expect(screen.queryByRole('region', { name: 'Retry limit has changed' })).toBeNull(),
+    )
+    expect(fake.connection.markSectionRead).toHaveBeenCalledTimes(2)
+  })
+
+  it('opens the card of the section below its marker when the server can’t mark the section as read, so that a narrow reading column shows the problem too', async () => {
+    const fake = fakeWithMark(changedIndex)
+    vi.mocked(fake.connection.markSectionRead).mockRejectedValueOnce(
+      new UnreachableServerError('There isn’t any section retry-limit on index.md.'),
+    )
+    await renderIndex(fake)
+    const changed = await screen.findByRole('region', { name: 'Retry limit has changed' })
+    const marker = screen.getByRole('button', { name: 'Retry limit has changed' })
+    expect([
+      changed.closest('[data-popup]')?.getAttribute('data-popup'),
+      marker.getAttribute('aria-expanded'),
+    ]).toStrictEqual(['false', 'false'])
+
+    await userEvent.click(screen.getByRole('heading', { level: 2, name: 'Retry limit' }))
+
+    await within(changed).findByRole('alert')
+    expect([
+      changed.closest('[data-popup]')?.getAttribute('data-popup'),
+      marker.getAttribute('aria-expanded'),
+    ]).toStrictEqual(['true', 'true'])
+  })
+
+  it('sends one request when Nick double clicks inside the section and another one after the first has failed', async () => {
+    const fake = fakeWithMark(changedIndex)
+    const answered = Promise.withResolvers<undefined>()
+    vi.mocked(fake.connection.markSectionRead).mockReturnValueOnce(answered.promise)
+    await renderIndex(fake)
+    await screen.findByRole('region', { name: 'Retry limit has changed' })
+    const heading = screen.getByRole('heading', { level: 2, name: 'Retry limit' })
+
+    await userEvent.dblClick(heading)
+    expect(fake.connection.markSectionRead).toHaveBeenCalledOnce()
+    answered.reject(new UnreachableServerError('The server didn’t respond.'))
+    await screen.findByRole('alert')
+    await userEvent.click(heading)
+
+    expect(fake.connection.markSectionRead).toHaveBeenCalledTimes(2)
+  })
+
+  it('still opens a comment on the text that Nick selects in the section, after the click at the end of the selection marks the section as read', async () => {
+    const fake = fakeWithMark(changedIndex)
+    const startThread = vi.spyOn(fake.connection, 'startThread')
+    await renderIndex(fake)
+    await screen.findByRole('region', { name: 'Retry limit has changed' })
+    const block = document.querySelector('[data-lines="8-8"]') ?? document.body
+    const range = document.createRange()
+    range.setStart(block.firstChild ?? block, 0)
+    range.setEnd(block.firstChild ?? block, 3)
+    document.getSelection()?.removeAllRanges()
+    document.getSelection()?.addRange(range)
+
+    fireEvent.mouseUp(block)
+    fireEvent.click(block)
+    await waitFor(() => expect(document.querySelectorAll('[data-changed-section]')).toHaveLength(0))
+    await userEvent.click(screen.getByRole('button', { name: 'Comment' }))
+    await userEvent.keyboard('Is 5 enough?{Enter}')
+
+    expect(fake.connection.markSectionRead).toHaveBeenCalledOnce()
+    expect(startThread.mock.calls.at(-1)?.[0].selectedText).toBe('The')
   })
 
   it('shows the card of a changed section at the top of the margin when the page doesn’t have its heading', async () => {
@@ -196,7 +316,8 @@ describe('a changed section', () => {
     )
 
     const view = screen.getByRole('dialog', { name: 'Retry limit has changed' })
-    expect(within(view).getByRole('button', { name: 'Mark as read' })).not.toBeNull()
+    expect(view.textContent).toContain('This section has changed')
+    expect(within(view).queryByRole('button', { name: 'Mark as read' })).toBeNull()
   })
 
   it('opens and closes the card when Nick clicks its marker beside the text', async () => {

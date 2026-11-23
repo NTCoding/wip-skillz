@@ -28,6 +28,8 @@ const taxNumberDecision = {
   id: 'd-1',
   line: 12,
   question: 'Does the invoice template show the tax number?',
+  time: '2026-11-20T21:30:00.000Z',
+  context: undefined,
 }
 
 function fakeNotifications(permission: NotificationPermission) {

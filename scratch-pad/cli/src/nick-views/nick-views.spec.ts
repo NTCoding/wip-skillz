@@ -25,7 +25,6 @@ import {
 } from './nick-views-fixtures'
 import {
   decisionLogOf,
-  nickInboxItems,
   pageSummaries,
   progressTrackerOf,
   threadsOfPage,
@@ -349,52 +348,6 @@ describe('threadsOfPage', () => {
       threadsOfPage(folder, 'board-edge.md').map((thread) => [thread.id, thread.position?.kind]),
     ).toStrictEqual([['c-1', 'detached']])
     expect(threadsOfPage(folder, 'queue.md')).toStrictEqual([])
-  })
-})
-
-describe('nickInboxItems', () => {
-  it('returns the threads that wait for Nick and the decisions that Nick has not answered', () => {
-    const folder = folderWithDecisions()
-    commentOnRetryPolicy(folder, 'Is 5 retries enough?')
-    commentOnRetryPolicy(folder, 'Is 30 seconds enough?')
-    replyToThread(folder, 'c-2', 'I have raised the wait to 60 seconds.', unservedLinks)
-    nickAnswersRetryQuestion(folder)
-
-    const inbox = nickInboxItems(folder)
-
-    expect(inbox.threads.map((thread) => [thread.id, thread.position?.kind])).toStrictEqual([
-      ['c-2', 'attached'],
-    ])
-    expect(inbox.decisions).toStrictEqual([
-      { page: 'pages/invoice-decisions.md', id: 'd-2', line: 13, question: taxQuestion },
-    ])
-  })
-
-  it('keeps the other decision under the same heading when Nick has answered one of them', () => {
-    const folder = exportJobScratchPad(temporaryHome())
-    writeRetryChoicesPage(folder)
-    nickAnswersDecision(folder, {
-      id: 'd-3',
-      page: 'pages/retry-choices.md',
-      line: 5,
-      question: retryQuestion,
-      answer: { choice: 'proposal' },
-    })
-
-    expect(nickInboxItems(folder).decisions).toStrictEqual([
-      { page: 'pages/retry-choices.md', id: 'd-4', line: 11, question: retryQuestion },
-    ])
-  })
-
-  it("leaves out the decision when there aren't any headings above the decision", () => {
-    const folder = exportJobScratchPad(temporaryHome())
-    writeFileInPad(
-      folder,
-      'pages/schedule.md',
-      ':::decision d-7\nproposal: Export at night.\nalternative: Export every hour.\npick: proposal\n:::\n',
-    )
-
-    expect(nickInboxItems(folder).decisions).toStrictEqual([])
   })
 })
 

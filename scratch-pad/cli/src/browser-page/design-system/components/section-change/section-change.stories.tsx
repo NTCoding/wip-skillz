@@ -8,7 +8,7 @@ const meta = {
     title: 'Retry limit',
     shownTime: '20 Nov, 21:42',
     active: false,
-    onMarkAsRead: () => Promise.resolve(),
+    problem: undefined,
   },
 } satisfies Meta<typeof SectionChange>
 
@@ -19,3 +19,7 @@ type Story = StoryObj<typeof meta>
 export const Changed: Story = {}
 
 export const Active: Story = { args: { active: true } }
+
+export const Problem: Story = {
+  args: { problem: 'There isn’t any section retry-limit on index.md.' },
+}

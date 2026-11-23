@@ -52,3 +52,7 @@ export const Open: Story = {
 }
 
 export const OutboxTone: Story = { args: { icon: 'outbox', tone: 'outbox' } }
+
+export const Dot: Story = {
+  args: { countText: 'a file has been written', count: 0, dot: true },
+}

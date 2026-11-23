@@ -6,6 +6,7 @@ export const eventKinds = [
   'thread-replied',
   'thread-resolved',
   'note-done',
+  'decision-asked',
   'decision-answered',
   'decision-followed',
   'decision-logged',

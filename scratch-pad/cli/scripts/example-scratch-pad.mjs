@@ -1,6 +1,6 @@
 // The invented scratch pad that pnpm try and the screenshots of the browser page show. It contains
 // an example of every feature that Nick checks on the browser page.
-import { writeFileSync } from 'node:fs'
+import { readFileSync, utimesSync, writeFileSync } from 'node:fs'
 import { basename, join } from 'node:path'
 import { DatabaseSync } from 'node:sqlite'
 
@@ -56,6 +56,9 @@ export async function exportShop(shop: Shop): Promise<ExportResult> {
 The network of a small shop can be slow in the evening. That's why 5 retries aren't always enough.
 
 :::decision d-1
+context: A slow network in the evening can make an upload fail. Read these in order:
+  1. [The steps](#the-steps) show where the upload happens.
+  2. [The retry limit](retry-limit.md) explains why the limit is 5 today.
 proposal: Raise the retry limit to 8.
 alternative: Keep the retry limit at 5.
 pick: proposal, because the network of a shop can be slow.
@@ -88,6 +91,9 @@ I haven't measured how long the storage of a shop takes to come back after a tim
 A retry limit of 8 would make the last retry wait more than an hour.
 
 :::decision d-2
+context: The job has to finish before the shops open in the morning. Read these in order:
+  1. [Timeout of the storage](storage-timeout.md) explains how long a shop takes to come back.
+  2. [The steps](how-the-job-runs.md#the-steps) show how long one night of the job takes.
 proposal: Stop the wait at 10 minutes.
 alternative: Keep doubling the wait.
 pick: proposal, because the job has to finish before the shops open.
@@ -304,6 +310,43 @@ const featureExamples = [
       )
     },
   },
+  {
+    feature:
+      'The Inbox with 2 decisions and a reply that need an answer, above the collapsed updates to a page with several changed sections, a page with one changed section and a new page',
+    add: async (demo) => {
+      demo.changePage('3-invoice-template.md', (markdown) =>
+        markdown
+          .replace('at the top right.', 'at the top right, under the logo of the shop.')
+          .replace('uses the default fonts.', 'uses the default fonts of the export job.')
+          .replace('and the bank details.', 'and the bank details of the shop.'),
+      )
+      demo.changePage(
+        '2-retry-limit.md',
+        (markdown) => `${markdown}
+## Will the job tell the team after the last retry?
+
+The team only reads the log in the morning. That's why a shop that fails every retry can wait a whole day for its file.
+
+:::decision d-3
+context: A shop that fails every retry can wait a whole day for its file. Read these in order:
+  1. [What counts as a failure](#what-counts-as-a-failure) explains when the job retries a shop.
+  2. [What the agent logs](#what-the-agent-logs) shows what the team reads in the morning.
+proposal: Send an email to the team after the last retry.
+alternative: Only write the failure to the log.
+pick: proposal, because a shop expects its file in the morning.
+:::
+`,
+      )
+    },
+  },
+  {
+    feature:
+      'The decisions and the replies in the Inbox sorted together by time, with decision d-2 older than the reply of the agent and decision d-3 newer',
+    add: async (demo) => {
+      demo.writtenAgo('c-1', 30 * minute)
+      demo.savedAgo('2.1-wait-between-retries.md', 2 * 60 * minute)
+    },
+  },
 ]
 
 // Adds every example of `featureExamples` to the scratch pad `pad` while its server is running at
@@ -342,9 +385,20 @@ export async function addFeatureExamples({ run, home, pad, address }) {
         database.close()
       }
     },
-    // Changes a page on the disk, as the agent does with its own tools
+    // Moves the time that a page was last written back, as if the agent had saved the page earlier.
+    // When the server first finds a decision, it records the time that the page of the decision was
+    // last written as the time of the decision. That's why this only changes the time of a decision
+    // that the server hasn't found yet.
+    savedAgo: (file, milliseconds) => {
+      const saved = new Date(Date.now() - milliseconds)
+      utimesSync(join(home, pad, 'pages', file), saved, saved)
+    },
+    // Changes a page on the disk, as the agent does with its own tools. `change` is passed the
+    // text that is on the disk now so that an example can change a page again after an earlier
+    // example.
     changePage: (file, change) => {
-      writeFileSync(join(home, pad, 'pages', file), change(examplePages[file]))
+      const path = join(home, pad, 'pages', file)
+      writeFileSync(path, change(readFileSync(path, 'utf8')))
     },
   }
   for (const example of featureExamples) {

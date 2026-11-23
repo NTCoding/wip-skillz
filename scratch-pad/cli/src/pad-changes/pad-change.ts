@@ -33,6 +33,10 @@ const changesOfKind: Readonly<
   'thread-replied': threadChange,
   'thread-resolved': threadChange,
   'note-done': threadChange,
+  // The event is recorded while the decisions of the Inbox are read. The browser reads them again
+  // after every change to a page, which is how a new decision appears on a page. That's why the
+  // event doesn't need a change of its own.
+  'decision-asked': () => [],
   'decision-answered': decisionChange,
   'decision-followed': () => [],
   'decision-logged': () => [{ kind: 'decision-log' }],

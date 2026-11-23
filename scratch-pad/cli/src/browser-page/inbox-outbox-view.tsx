@@ -30,13 +30,6 @@ const statusTitles: Readonly<Record<Status, string>> = {
   resolved: 'Resolved',
 }
 
-const entryKinds: Readonly<Record<InboxEntry['kind'], string>> = {
-  page: 'A new page',
-  section: 'A section changed',
-  reply: 'The agent replied',
-  decision: 'A decision to make',
-}
-
 const entryLinks: Readonly<Record<InboxEntry['kind'], string>> = {
   page: 'Open the page',
   section: 'Open the page',
@@ -73,7 +66,7 @@ function useNow(): number {
 function entryRow(entry: InboxEntry): ItemRow {
   return {
     key: entry.key,
-    kind: entryKinds[entry.kind],
+    kind: entry.heading,
     where: entry.where,
     quote: entry.quote,
     quoteKind: entryQuotes[entry.kind],
@@ -175,20 +168,44 @@ function rowsByStatus(props: InboxOutboxViewProps, now: number): Record<Status, 
   }
 }
 
-function groupsOf(rows: Record<Status, ItemRow[]>, filter: Filter): ItemGroup[] {
+// The count of "Waiting for you" only includes the replies and the decisions, like the count on the
+// Inbox button, because an update to a page doesn't need an answer. The updates to pages are still
+// listed under "Waiting for you". The count of "All" is the sum of the other counts.
+function countsOf(
+  rows: Record<Status, ItemRow[]>,
+  props: InboxOutboxViewProps,
+): Record<Status, number> {
+  return {
+    'waiting-for-nick': props.inboxEntries.filter(
+      (entry) => entry.kind === 'reply' || entry.kind === 'decision',
+    ).length,
+    'waiting-for-agent': rows['waiting-for-agent'].length,
+    outbox: rows.outbox.length,
+    resolved: rows.resolved.length,
+  }
+}
+
+function groupsOf(
+  rows: Record<Status, ItemRow[]>,
+  counts: Record<Status, number>,
+  filter: Filter,
+): ItemGroup[] {
   if (filter !== 'all') {
-    return rows[filter].length === 0 ? [] : [{ title: undefined, rows: rows[filter] }]
+    return rows[filter].length === 0
+      ? []
+      : [{ title: undefined, count: counts[filter], rows: rows[filter] }]
   }
   return statuses
     .filter((status) => rows[status].length > 0)
-    .map((status) => ({ title: statusTitles[status], rows: rows[status] }))
+    .map((status) => ({ title: statusTitles[status], count: counts[status], rows: rows[status] }))
 }
 
 export function InboxOutboxView(props: InboxOutboxViewProps) {
   const now = useNow()
   const [filter, setFilter] = useState<Filter>('all')
   const rows = rowsByStatus(props, now)
-  const groups = groupsOf(rows, filter)
+  const counts = countsOf(rows, props)
+  const groups = groupsOf(rows, counts, filter)
   return (
     <ReadingColumn>
       <h1>Inbox / Outbox</h1>
@@ -198,12 +215,12 @@ export function InboxOutboxView(props: InboxOutboxViewProps) {
           {
             value: 'all',
             label: 'All',
-            count: statuses.reduce((sum, status) => sum + rows[status].length, 0),
+            count: statuses.reduce((sum, status) => sum + counts[status], 0),
           },
           ...statuses.map((status) => ({
             value: status,
             label: statusTitles[status],
-            count: rows[status].length,
+            count: counts[status],
           })),
         ]}
         selected={filter}

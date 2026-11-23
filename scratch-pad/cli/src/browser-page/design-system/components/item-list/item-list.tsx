@@ -22,6 +22,9 @@ export interface ItemRow {
 // A group without a title shows its rows without a heading.
 export interface ItemGroup {
   readonly title: string | undefined
+  // The number in the heading. It can be lower than the number of rows, because a group can list
+  // rows that aren't counted, like the updates to pages.
+  readonly count: number
   readonly rows: readonly ItemRow[]
 }
 
@@ -68,7 +71,7 @@ export function ItemList({ groups, onNavigate }: ItemListProps) {
           {group.title !== undefined && (
             <h2 className="item-list__heading">
               {group.title}
-              <span className="item-list__count">{group.rows.length}</span>
+              <span className="item-list__count">{group.count}</span>
             </h2>
           )}
           <ol className="item-list__rows" aria-label={group.title ?? 'Items'}>

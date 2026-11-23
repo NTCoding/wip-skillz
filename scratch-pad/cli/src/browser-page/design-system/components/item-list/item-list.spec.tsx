@@ -32,18 +32,18 @@ const changed: ItemRow = {
 }
 
 describe('ItemList', () => {
-  it('shows each group under its heading with its count and each row with its kind, place, quote, last message and time', () => {
+  it('shows each group under its heading with the count of the group and each row with its kind, place, quote, last message and time', () => {
     render(
       <ItemList
         groups={[
-          { title: 'Waiting for you', rows: [changed] },
-          { title: 'Waiting for the agent', rows: [sent] },
+          { title: 'Waiting for you', count: 0, rows: [changed] },
+          { title: 'Waiting for the agent', count: 1, rows: [sent] },
         ]}
         onNavigate={() => undefined}
       />,
     )
     expect(screen.getAllByRole('heading').map((heading) => heading.textContent)).toStrictEqual([
-      'Waiting for you1',
+      'Waiting for you0',
       'Waiting for the agent1',
     ])
     const rows = within(screen.getByRole('list', { name: 'Waiting for the agent' }))
@@ -55,14 +55,21 @@ describe('ItemList', () => {
   })
 
   it('shows the rows without a heading when the group doesn’t have a title', () => {
-    render(<ItemList groups={[{ title: undefined, rows: [sent] }]} onNavigate={() => undefined} />)
+    render(
+      <ItemList
+        groups={[{ title: undefined, count: 1, rows: [sent] }]}
+        onNavigate={() => undefined}
+      />,
+    )
     expect(screen.queryByRole('heading')).toBeNull()
     expect(screen.getByRole('list', { name: 'Items' }).childElementCount).toBe(1)
   })
 
   it('navigates to the thread when Nick clicks the link of a row', async () => {
     const onNavigate = vi.fn<(href: string) => void>()
-    render(<ItemList groups={[{ title: undefined, rows: [sent] }]} onNavigate={onNavigate} />)
+    render(
+      <ItemList groups={[{ title: undefined, count: 1, rows: [sent] }]} onNavigate={onNavigate} />,
+    )
     await userEvent.click(screen.getByRole('link', { name: 'Open the thread' }))
     expect(onNavigate).toHaveBeenCalledWith('/pad/invoice-template.md#c-2')
   })

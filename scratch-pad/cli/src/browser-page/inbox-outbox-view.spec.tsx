@@ -116,24 +116,24 @@ afterEach(() => {
 })
 
 describe('the Inbox / Outbox view', () => {
-  it('shows every item under the heading of its status with a count on each filter', async () => {
+  it('shows every item under the heading of its status with a count on each filter, where Waiting for you and All only count the replies and the decisions', async () => {
     await renderView()
     await screen.findByRole('list', { name: 'Waiting for the agent' })
 
     expect(pills()).toStrictEqual([
-      'All11',
-      'Waiting for you3',
+      'All10',
+      'Waiting for you2',
       'Waiting for the agent2',
       'In the outbox3',
       'Resolved3',
     ])
     expect(
       screen.getAllByRole('heading', { level: 2 }).map((heading) => heading.textContent),
-    ).toStrictEqual(['Waiting for you3', 'Waiting for the agent2', 'In the outbox3', 'Resolved3'])
+    ).toStrictEqual(['Waiting for you2', 'Waiting for the agent2', 'In the outbox3', 'Resolved3'])
     expect(rowsOf('Waiting for you')).toStrictEqual([
-      'A new page20 Nov, 21:40retry-limit.md › 2.1.1 First retryThe first retry waits 30 seconds.Open the page',
-      'A decision to makeInvoice exportWill the export job retry 8 times?Open the decision',
       'The agent replied20 Nov, 21:12Invoice exportretries 5 timesAgent: I have raised the limit to 8.Open the thread',
+      'A decision to make20 Nov, 21:05Invoice exportWill the export job retry 8 times?Open the decision',
+      'A new page20 Nov, 21:40retry-limit.md › 2.1.1 First retryThe first retry waits 30 seconds.Open the page',
     ])
   })
 

@@ -18,6 +18,9 @@ interface TopBarPanelProps {
   readonly label: string
   readonly countText: string
   readonly count: number
+  // If the count is 0 and dot is true, the button will show a red dot without a number. The Inbox
+  // shows the dot when pages have been updated but there aren't any items that need an answer.
+  readonly dot?: boolean | undefined
   readonly tone: 'inbox' | 'outbox'
   readonly popup?: 'menu' | undefined
   readonly children: (controls: TopBarPanelControls) => ReactNode
@@ -28,6 +31,7 @@ export function TopBarPanel({
   label,
   countText,
   count,
+  dot,
   tone,
   popup,
   children,
@@ -87,6 +91,7 @@ export function TopBarPanel({
             {count}
           </span>
         )}
+        {count === 0 && dot === true && <span className="top-bar-panel__dot" />}
       </button>
       {open && (
         <div className="top-bar-panel__panel" id={panelId} role="group" aria-label={label}>

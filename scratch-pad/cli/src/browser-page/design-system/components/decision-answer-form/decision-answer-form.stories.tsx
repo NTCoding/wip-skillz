@@ -11,6 +11,7 @@ const meta = {
       <DecisionCard
         id="d-1"
         question="Will the export job retry 8 times?"
+        context="A slow network in the evening can make an upload fail."
         proposal="Raise the retry limit to 8."
         alternative="Keep the retry limit at 5."
         pick="The proposal, because the network of a shop can be slow."

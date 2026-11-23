@@ -1,37 +1,36 @@
 import { render, screen } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
-import { describe, expect, it, vi } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import { SectionChange } from './section-change'
 
-class UnreachableServerError extends Error {}
-
-function renderChange(onMarkAsRead: () => Promise<void>) {
-  render(
-    <SectionChange
-      title="Retry limit"
-      shownTime="20 Nov, 21:42"
-      active={false}
-      onMarkAsRead={onMarkAsRead}
-    />,
-  )
-}
-
 describe('SectionChange', () => {
-  it('says when the agent changed the section and marks the section as read when Nick clicks the button', async () => {
-    const onMarkAsRead = vi.fn(() => new Promise<void>(() => undefined))
-    renderChange(onMarkAsRead)
-    expect(screen.getByRole('region', { name: 'Retry limit has changed' }).textContent).toBe(
-      'This section has changedThe agent changed this section at 20 Nov, 21:42, after you last read it.Mark as read',
+  it('says when the agent changed the section and doesn’t show a button to mark the section as read', () => {
+    render(
+      <SectionChange
+        title="Retry limit"
+        shownTime="20 Nov, 21:42"
+        active={false}
+        problem={undefined}
+      />,
     )
-    await userEvent.click(screen.getByRole('button', { name: 'Mark as read' }))
-    expect(onMarkAsRead).toHaveBeenCalledOnce()
-    expect(screen.getByRole('button', { name: 'Mark as read' })).toHaveProperty('disabled', true)
+    const card = screen.getByRole('region', { name: 'Retry limit has changed' })
+    expect(card.textContent).toBe(
+      'This section has changedThe agent changed this section at 20 Nov, 21:42, after you last read it.',
+    )
+    expect(screen.queryByRole('button', { name: 'Mark as read' })).toBeNull()
+    expect(screen.queryByRole('alert')).toBeNull()
   })
 
-  it('shows the problem and enables the button again when the section couldn’t be marked as read', async () => {
-    renderChange(() => Promise.reject(new UnreachableServerError('The server didn’t respond.')))
-    await userEvent.click(screen.getByRole('button', { name: 'Mark as read' }))
-    expect((await screen.findByRole('alert')).textContent).toBe('The server didn’t respond.')
-    expect(screen.getByRole('button', { name: 'Mark as read' })).toHaveProperty('disabled', false)
+  it('shows the problem when the section couldn’t be marked as read', () => {
+    render(
+      <SectionChange
+        title="Retry limit"
+        shownTime="20 Nov, 21:42"
+        active={false}
+        problem="There isn’t any section retry-limit on index.md."
+      />,
+    )
+    expect(screen.getByRole('alert').textContent).toBe(
+      'There isn’t any section retry-limit on index.md.',
+    )
   })
 })

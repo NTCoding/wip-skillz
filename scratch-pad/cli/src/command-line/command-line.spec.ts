@@ -11,7 +11,7 @@ import { missingLinksText } from '../item-links/item-links-fixtures'
 import { ScratchPadFolder } from '../scratch-pad-folder/scratch-pad-folder'
 import { retryAnchor } from '../threads/thread-fixtures'
 import { helpText, runCommandLine } from './command-line'
-import { environmentWithScratchPad, runScratchPad } from './command-line-fixtures'
+import { environmentWithScratchPad, runScratchPad, waitReminderText } from './command-line-fixtures'
 
 class ClosedStreamError extends Error {}
 
@@ -107,7 +107,7 @@ describe('runCommandLine', () => {
       await runScratchPad(['reply', 'c-1', '--help', 'prints', 'the', 'usage'], environment),
     ).toStrictEqual({
       exitCode: 0,
-      stdout: `c-1 now waits for Nick\n${missingLinksText}\n`,
+      stdout: `c-1 now waits for Nick\n${missingLinksText}\n${waitReminderText}\n`,
       stderr: '',
     })
     expect(lastMessageOfComment(environment)).toBe('--help prints the usage')
