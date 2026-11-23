@@ -42,6 +42,15 @@ const startMilliseconds = 5000
 const stopMilliseconds = 5000
 const defaultQuietMilliseconds = 10_000
 
+// An agent that ends its turn without starting `wait` again misses Nick's next comment. That's why
+// the output of the commands that the agent runs while it deals with Nick's items ends with this
+// line.
+const waitReminder = 'Run `wait` in the background before you end your turn.'
+
+function withWaitReminder(text: string): string {
+  return `${text}\n${waitReminder}`
+}
+
 async function withTrackerLink(
   input: CommandInput,
   change: (folder: ScratchPadFolder) => string,
@@ -141,7 +150,7 @@ export const scratchPadCommands: ReadonlyMap<string, ScratchPadCommand> = new Ma
       run: async (input: CommandInput) => {
         const folder = input.folder()
         const request = { types: inboxTypes(input.options.type), includeSeen: input.options.all }
-        return readAgentInbox(folder, request, await linksOf(input, folder))
+        return withWaitReminder(readAgentInbox(folder, request, await linksOf(input, folder)))
       },
     },
   ],
@@ -174,7 +183,7 @@ export const scratchPadCommands: ReadonlyMap<string, ScratchPadCommand> = new Ma
       run: async (input: CommandInput) => {
         const folder = input.folder()
         const id = requiredWord(input.words, 0, 'id', input.usage)
-        return showItem(folder, id, await linksOf(input, folder))
+        return withWaitReminder(showItem(folder, id, await linksOf(input, folder)))
       },
     },
   ],
@@ -189,7 +198,7 @@ export const scratchPadCommands: ReadonlyMap<string, ScratchPadCommand> = new Ma
         const folder = input.folder()
         const id = requiredWord(input.words, 0, 'id', input.usage)
         const text = restOfWords(input.words, 1, 'text', input.usage)
-        return replyToThread(folder, id, text, await linksOf(input, folder))
+        return withWaitReminder(replyToThread(folder, id, text, await linksOf(input, folder)))
       },
     },
   ],
@@ -205,7 +214,7 @@ export const scratchPadCommands: ReadonlyMap<string, ScratchPadCommand> = new Ma
         const folder = input.folder()
         const id = requiredWord(input.words, 0, 'id', input.usage)
         const outcome = restOfWords(input.words, 1, 'outcome', input.usage)
-        return finishItem(folder, id, outcome, await linksOf(input, folder))
+        return withWaitReminder(finishItem(folder, id, outcome, await linksOf(input, folder)))
       },
     },
   ],

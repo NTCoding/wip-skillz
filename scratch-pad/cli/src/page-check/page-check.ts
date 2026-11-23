@@ -1,6 +1,7 @@
 import { fileOfPage } from '../browser-page/pad-paths'
 import { pageFileOf, parentNumberOf, type PageFile } from '../pages/page-files'
 import { type PageLink } from '../rendered-page/page-links'
+import { type DecisionBlock } from '../rendered-page/decision-block'
 import { byLine, type PageProblem } from '../rendered-page/page-problem'
 import { type RenderedPage } from '../rendered-page/rendered-page'
 import { type HtmlBlockSource } from '../rendered-page/named-blocks'
@@ -33,6 +34,7 @@ export function pageCheckProblems(
   pages: readonly CheckedPage[],
   files: readonly PageFile[],
   checkedPages: readonly string[],
+  answeredDecisions: readonly string[],
   proseProblems: ProseProblems,
 ): ScratchPadProblem[] {
   const duplicates = duplicateDecisions(pages)
@@ -44,6 +46,9 @@ export function pageCheckProblems(
         .flatMap((file) => numberProblems(file, files)),
       ...[
         ...checked.rendered.problems,
+        ...checked.rendered.decisions
+          .filter((decision) => !answeredDecisions.includes(decision.id))
+          .flatMap(contextProblems),
         ...checked.rendered.links.flatMap((link) => linkProblems(link, pages)),
         ...duplicates.filter((duplicate) => duplicate.page === checked.file),
         ...checked.rendered.htmlBlocks.flatMap(rawColourProblems),
@@ -88,6 +93,20 @@ function numberProblems(file: PageFile, files: readonly PageFile[]): ScratchPadP
         ]
       : []),
   ].map((text) => ({ page: file.file, line: undefined, text }))
+}
+
+// The page still shows a decision without a context. But then Nick has to find out on his own
+// which sections he should read before he decides. Only an open decision is reported, because Nick
+// has already decided the others. An empty context: line counts as a missing context.
+function contextProblems(decision: DecisionBlock): PageProblem[] {
+  return decision.context === undefined
+    ? [
+        {
+          line: decision.firstLine,
+          text: `decision ${decision.id} doesn't have a context (write one on the context: line)`,
+        },
+      ]
+    : []
 }
 
 function linkProblems(link: PageLink, pages: readonly CheckedPage[]): PageProblem[] {

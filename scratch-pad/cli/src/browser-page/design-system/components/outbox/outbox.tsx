@@ -84,11 +84,13 @@ function OutboxPanel({
               last: entry.text,
               time: entry.time,
               shownTime: entry.shownTime,
+              context: undefined,
               linkLabel: 'Show on the page',
             }))}
             onNavigate={onNavigate}
             onChoose={controls.close}
             onTab={undefined}
+            focusFirstItem={true}
           />
         </div>
       )}

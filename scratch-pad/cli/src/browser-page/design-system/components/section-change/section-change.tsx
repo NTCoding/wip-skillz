@@ -1,5 +1,3 @@
-import { usePendingAction } from '../../pending-action'
-import { Button } from '../button/button'
 import { Icon } from '../icon/icon'
 import { MarginCard } from '../margin-card/margin-card'
 import './section-change.css'
@@ -9,12 +7,14 @@ interface SectionChangeProps {
   // The time that the page's file was last written, as Nick reads it
   readonly shownTime: string
   readonly active: boolean
-  readonly onMarkAsRead: () => Promise<void>
+  // The problem of the last click that should have marked the section as read, which the card
+  // shows with role="alert"
+  readonly problem: string | undefined
 }
 
-// The card in the margin beside a section that has changed since Nick read it
-export function SectionChange({ title, shownTime, active, onMarkAsRead }: SectionChangeProps) {
-  const { pending, problem, run } = usePendingAction(onMarkAsRead)
+// The card in the margin beside a section that has changed since Nick last read the section. The
+// section is marked as read when Nick clicks inside the section on the page.
+export function SectionChange({ title, shownTime, active, problem }: SectionChangeProps) {
   return (
     <MarginCard
       label={`${title} has changed`}
@@ -30,11 +30,6 @@ export function SectionChange({ title, shownTime, active, onMarkAsRead }: Sectio
         <p className="section-change__text">
           The agent changed this section at {shownTime}, after you last read it.
         </p>
-        <div className="section-change__actions">
-          <Button onClick={run} disabled={pending}>
-            Mark as read
-          </Button>
-        </div>
         {problem !== undefined && (
           <p className="section-change__problem" role="alert">
             {problem}

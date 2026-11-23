@@ -4,7 +4,12 @@ import { decisionBlockContent, type DecisionBlock } from './decision-block'
 import { htmlBlockContent, type CustomFileReader } from './html-block'
 import { type NamedBlock, type NamedBlockContent } from './named-block'
 import { type Heading } from './page-headings'
-import { firstWordOf, namedBlockType, pageMarkdownParser } from './page-markdown-parser'
+import {
+  blockBodyParser,
+  firstWordOf,
+  namedBlockType,
+  pageMarkdownParser,
+} from './page-markdown-parser'
 import { type PageProblem } from './page-problem'
 import { linesAttribute, sourceLinesOf } from './source-lines'
 
@@ -88,9 +93,10 @@ function renderNamedBlock(
 function namedBlockContent(block: NamedBlock, context: NamedBlockContext): NamedBlockContent {
   if (block.name === 'decision') {
     const question = context.headings.findLast((heading) => heading.line < block.lines.firstLine)
-    return decisionBlockContent(block, question?.text, (markdown) =>
-      pageMarkdownParser.renderInline(markdown),
-    )
+    return decisionBlockContent(block, question?.text, {
+      inline: (markdown) => pageMarkdownParser.renderInline(markdown),
+      blocks: (markdown) => blockBodyParser.render(markdown),
+    })
   }
   if (block.name === 'html') {
     return htmlBlockContent(block, context.readCustomFile)

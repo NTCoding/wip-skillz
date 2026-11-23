@@ -24,6 +24,8 @@ type ScratchPadEnvironment = Environment & {
   readonly SCRATCH_PAD: string
 }
 
+export const waitReminderText = 'Run `wait` in the background before you end your turn.'
+
 const noProcessSetUp: ProcessSetUp = {
   readStandardInput: () => Promise.resolve(''),
   toolCommand: [process.execPath, '--eval', 'process.exit(9)'],

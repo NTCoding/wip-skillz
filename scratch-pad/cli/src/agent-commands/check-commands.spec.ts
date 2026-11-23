@@ -1,7 +1,7 @@
 import { mkdirSync, rmSync } from 'node:fs'
 import { join } from 'node:path'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { nickComments, nickResolves } from '../nick-actions/nick-actions'
+import { nickAnswersDecision, nickComments, nickResolves } from '../nick-actions/nick-actions'
 import { UnknownPageError } from '../pages/page-markdown'
 import {
   exportJobScratchPad,
@@ -77,7 +77,7 @@ describe('checkPages', () => {
     writeFileInPad(
       folder,
       'pages/1-schedule.md',
-      ':::decision d-7\nproposal: Export at night.\nalternative: Export every hour.\npick: proposal\n:::\n',
+      ':::decision d-7\ncontext: The shops close at night.\nproposal: Export at night.\nalternative: Export every hour.\npick: proposal\n:::\n',
     )
 
     expect(checkPages(folder, ['schedule'], undefined)).toStrictEqual({
@@ -87,6 +87,31 @@ describe('checkPages', () => {
       ].join('\n'),
       problemCount: 1,
     })
+  })
+
+  it("reports a decision without a context only while Nick hasn't answered the decision", () => {
+    const folder = exportJobScratchPad(temporaryHome())
+    writeFileInPad(
+      folder,
+      'pages/1-schedule.md',
+      '## When does the job export?\n\n:::decision d-7\nproposal: Export at night.\nalternative: Export every hour.\npick: proposal\n:::\n',
+    )
+    expect(checkPages(folder, ['schedule'], undefined).text).toBe(
+      [
+        "pages/1-schedule.md:3  decision d-7 doesn't have a context (write one on the context: line)",
+        '1 problem in 1 page',
+      ].join('\n'),
+    )
+
+    nickAnswersDecision(folder, {
+      id: 'd-7',
+      page: 'schedule',
+      line: 3,
+      question: 'When does the job export?',
+      answer: { choice: 'proposal' },
+    })
+
+    expect(checkPages(folder, ['schedule'], undefined).problemCount).toBe(0)
   })
 
   it('checks only the requested page when a page is requested', () => {

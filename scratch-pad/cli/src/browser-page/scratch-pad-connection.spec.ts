@@ -193,13 +193,25 @@ const threadWithoutPosition = { ...storedThread, anchor: null, position: null }
 describe('scratchPadConnection for threads and decisions', () => {
   it('reads the threads of a page and Nick’s Inbox with null turned into undefined', async () => {
     const threads = scratchPadConnection(exportPad, networkWith({ threads: [storedThread] }))
+    const decision = {
+      page: 'pages/index.md',
+      id: 'd-1',
+      line: 28,
+      question: 'Will the export job retry 8 times?',
+      time: '2026-11-20T21:05:00.000Z',
+      context: null,
+    }
     const inbox = scratchPadConnection(
       exportPad,
-      networkWith({ threads: [threadWithoutPosition], decisions: [] }),
+      networkWith({ threads: [threadWithoutPosition], decisions: [decision] }),
     )
     await expect(threads.threads('index.md')).resolves.toStrictEqual([retryQuestion])
-    const [noted] = (await inbox.nickInbox()).threads
-    expect([noted?.anchor, noted?.position]).toStrictEqual([undefined, undefined])
+    const { threads: noted, decisions } = await inbox.nickInbox()
+    expect([noted[0]?.anchor, noted[0]?.position, decisions[0]?.context]).toStrictEqual([
+      undefined,
+      undefined,
+      undefined,
+    ])
   })
 
   it('posts a new comment with its anchor as JSON and returns the stored thread', async () => {

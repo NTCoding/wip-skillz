@@ -5,6 +5,9 @@ import './decision-card.css'
 interface DecisionCardProps {
   readonly id: string
   readonly question: string | undefined
+  // A few words about the problem and the links to the sections that Nick should read before he
+  // decides. A decision on an older page doesn't have a context.
+  readonly context: ReactNode
   readonly proposal: ReactNode
   readonly alternative: ReactNode
   readonly pick: ReactNode
@@ -15,6 +18,7 @@ interface DecisionCardProps {
 export function DecisionCard({
   id,
   question,
+  context,
   proposal,
   alternative,
   pick,
@@ -43,6 +47,12 @@ export function DecisionCard({
         <span className="decision-card__state">{answered ? 'Answered' : 'Waiting for Nick'}</span>
       </p>
       {question !== undefined && <p className="decision-card__question">{question}</p>}
+      {context !== undefined && (
+        <div className="decision-card__context">
+          <p className="decision-card__label">Context</p>
+          {context}
+        </div>
+      )}
       <dl className="decision-card__fields">
         <dt>Proposal</dt>
         <dd>{proposal}</dd>

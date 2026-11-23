@@ -1,5 +1,6 @@
 import { type Token } from 'markdown-it'
 import { isAgentNote } from './agent-note-block'
+import { isDecision } from './decision-block'
 import { blockBodyParser, namedBlockType, pageMarkdownParser } from './page-markdown-parser'
 import { sourceLinesOf, type SourceLines } from './source-lines'
 
@@ -36,8 +37,11 @@ function textOfTokens(tokens: readonly Token[]): string {
     .join('')
 }
 
+// The body of an :::agent-note block and the body of a :::decision block are parsed as Markdown,
+// because the browser shows the text of a link rather than its Markdown. A link in the context of a
+// decision is an example.
 function textOf(token: Token): string {
-  if (isAgentNote(token)) {
+  if (isAgentNote(token) || isDecision(token)) {
     return textOfTokens(blockBodyParser.parse(token.content, {}))
   }
   if (token.type === 'text' || token.type === 'code_inline' || blockTextTypes.has(token.type)) {

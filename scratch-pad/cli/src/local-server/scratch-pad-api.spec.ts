@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest'
 import {
+  invoiceDecisionsSavedTime,
   retryQuestion,
   taxQuestion,
   writeInvoiceDecisionsPage,
@@ -181,13 +182,8 @@ describe('respondToApiRequest for the pages', () => {
       threads: [],
       decisions: [
         { page: 'pages/invoice-decisions.md', id: 'd-1', line: 5, question: retryQuestion },
-        {
-          page: 'pages/invoice-decisions.md',
-          id: 'd-2',
-          line: 13,
-          question: 'Should the invoice template show the tax number?',
-        },
-      ],
+        { page: 'pages/invoice-decisions.md', id: 'd-2', line: 13, question: taxQuestion },
+      ].map((decision) => ({ ...decision, time: invoiceDecisionsSavedTime, context: undefined })),
     })
   })
 

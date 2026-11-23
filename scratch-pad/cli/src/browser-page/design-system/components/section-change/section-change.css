@@ -31,8 +31,3 @@
 .section-change__problem {
   color: var(--warning-ink);
 }
-
-.section-change__actions {
-  display: flex;
-  justify-content: flex-end;
-}

@@ -14,6 +14,47 @@
   font-weight: var(--fw-medium);
 }
 
+/* The button of the updates to pages looks like the title of the entries that need an answer. */
+.inbox__updates {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  width: 100%;
+  margin-top: var(--space-md);
+  padding: var(--space-sm) var(--space-lg);
+  border: 0;
+  border-radius: var(--r-md);
+  background: none;
+  color: var(--text-2);
+  font-size: var(--fs-xs);
+  line-height: var(--lh-xs);
+  font-weight: var(--fw-medium);
+  text-align: left;
+  cursor: pointer;
+}
+
+.inbox__updates:hover {
+  background: var(--surface-soft);
+  color: var(--text);
+}
+
+.inbox__updates .icon {
+  color: var(--icon);
+}
+
+/* The chevron points right when the updates are collapsed and down when they're open. */
+.inbox__updates[aria-expanded='true'] .icon {
+  transform: rotate(90deg);
+}
+
+.inbox__updates-count {
+  padding: var(--space-0) var(--space-md);
+  border-radius: var(--r-pill);
+  background: var(--tint);
+  color: var(--text-2);
+  font-weight: var(--fw-regular);
+}
+
 .inbox__empty {
   margin: var(--space-0);
   padding: var(--space-lg);

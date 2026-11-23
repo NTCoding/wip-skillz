@@ -54,6 +54,21 @@
   letter-spacing: var(--ls-h3);
 }
 
+/* The context reads as a short text above the fields, under its own label. */
+.decision-card__context {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  margin: var(--space-4xl) var(--space-0) var(--space-0);
+}
+
+.decision-card__label {
+  color: var(--text-2);
+  font-family: var(--font-ui);
+  font-size: var(--fs-sm);
+  line-height: var(--lh-md);
+}
+
 .decision-card__fields {
   display: grid;
   grid-template-columns: fit-content(var(--decision-label-max-w)) minmax(0, 1fr);

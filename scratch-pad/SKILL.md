@@ -120,17 +120,21 @@ You can give a page a new number at any time. However, the rest of the file name
 
 Write the question as a heading and put a `:::decision` block with its own id under the heading. Nick then picks the proposal or the alternative with a button, or he writes a reply of his own instead. This is an example of a question on a page, with invented content:
 
+<!-- prettier-ignore -->
 ```markdown
 ## Will the export job retry 8 times?
 
-The network of a small shop can be slow in the evening.
-
 :::decision d-1
+context: A slow network in the evening can make an upload fail. Read these in order:
+  1. [How the job runs](how-the-job-runs.md#how-the-job-runs) shows where the upload happens.
+  2. [The retry limit](retry-limit.md) explains why the limit is 5 today.
 proposal: Raise the retry limit to 8.
 alternative: Keep the retry limit at 5.
 pick: proposal, because the network of a shop can be slow.
 :::
 ```
+
+Start the `context:` with a few words about the problem. Then add a numbered list of links to the sections that Nick should read before he decides, in the order that he should read them. After each link, write why the section matters for the decision.
 
 If you reword the question, keep the same id. Give a new decision the next free id.
 
@@ -203,6 +207,7 @@ If Nick has asked for a change in his comment, change the page first and then re
 $ scratch-pad reply --pad 2026-11-21-invoice-export c-1 "No. Every shop exports at 02:00, which I've added to the page."
 c-1 now waits for Nick
 link: http://127.0.0.1:4747/2026-11-21-invoice-export/how-the-job-runs.md#c-1
+Run `wait` in the background before you end your turn.
 ```
 
 ### Follow Nick's decision
@@ -214,10 +219,12 @@ $ scratch-pad show --pad 2026-11-21-invoice-export d-1
 [d-1] decision · pages/1-how-the-job-runs.md:9 · "Will the export job retry 8 times?" · waits for the agent
   link: http://127.0.0.1:4747/2026-11-21-invoice-export/how-the-job-runs.md#d-1
   Nick chose: proposal
+Run `wait` in the background before you end your turn.
 
 $ scratch-pad done --pad 2026-11-21-invoice-export d-1 "Raised the retry limit to 8 on the page."
 d-1 is done
 link: http://127.0.0.1:4747/2026-11-21-invoice-export/how-the-job-runs.md#d-1
+Run `wait` in the background before you end your turn.
 ```
 
 Don't run `reply` or `decide` for a decision, because a decision can't be replied to and the server has already logged Nick's choice. If Nick has written his own reply and it leaves something open, write the open point as a new question below the old one. Put a new `:::decision` block under the new question.
@@ -233,6 +240,7 @@ Run the tool as: scratch-pad <command>
 2. Change the page file of each note in the way that Nick asks for. Only change the text that the note is about.
 3. Close each note with: done --pad 2026-11-21-invoice-export <id> "<one line about what you changed>"
 Don't reply to any comment, don't answer any decision and don't stop the server.
+Only the main agent runs `wait` so ignore the line "Run `wait` in the background before you end your turn."
 ```
 
 This is an example of what the subagent runs and what it sees:
@@ -245,10 +253,12 @@ $ scratch-pad inbox --pad 2026-11-21-invoice-export --type grammar,improvement
   Nick: Write when it is slow.
   block:
     7 | The network of a small shop can be slow in the evening.
+Run `wait` in the background before you end your turn.
 
 $ scratch-pad done --pad 2026-11-21-invoice-export g-1 "Wrote that the network is slow in the evening."
 g-1 is done
 link: http://127.0.0.1:4747/2026-11-21-invoice-export/how-the-job-runs.md#g-1
+Run `wait` in the background before you end your turn.
 ```
 
 Nick still sees the closed note on the page. The note includes the line about the change.

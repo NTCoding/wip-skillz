@@ -49,6 +49,7 @@ Put `--pad` before the text of `new`, `goal`, `task add`, `decide`, `improve`, `
 $ scratch-pad reply --pad 2026-11-21-invoice-export c-1 "Every shop can pick a time."
 c-1 now waits for Nick
 link: http://127.0.0.1:4747/2026-11-21-invoice-export/how-the-job-runs.md#c-1
+Run `wait` in the background before you end your turn.
 ```
 
 ## The environment variables
@@ -108,6 +109,7 @@ $ scratch-pad show --pad 2026-11-21-invoice-export c-1
   block:
     3 | The export job writes the paid invoices of each shop to a CSV file every night.
   Nick (2026-11-21 09:12): Can a shop pick another time?
+Run `wait` in the background before you end your turn.
 ```
 
 If the text that an item is attached to is deleted from the page, the item will be detached. For a detached item, the tool prints the line that the text was on rather than its block:
@@ -143,7 +145,8 @@ pages/3-bad.md:3  the link points to pages/nowhere.md, which doesn't exist
 pages/3-bad.md:5  decision d-1 doesn't have the alternative: line
 pages/3-bad.md:5  decision d-1 is used twice (first on pages/1-how-the-job-runs.md:9)
 pages/3-bad.md:7  the link includes the number 1.1 of the page. Write the link as retry-limit.md so that it still works after the page is renumbered
-5 problems in 4 pages
+pages/3-bad.md:11  decision d-4 doesn't have a context (write one on the context: line)
+6 problems in 4 pages
 ```
 
 ## The folder of a scratch pad
@@ -187,10 +190,13 @@ A named block starts with a line like `:::decision d-1` and ends with a `:::` li
 
 ### The decision block
 
-A decision block needs an id like `d-1` and the 3 entries below. Each entry can run over several lines of the file and can contain inline Markdown.
+A decision block needs an id like `d-1` and the 3 entries `proposal:`, `alternative:` and `pick:`. Each of those entries can run over several lines of the file and can contain inline Markdown. A `context:` entry before them is optional. The context can run over several lines too. It can contain a paragraph and a numbered list of links to the sections that Nick should read before he decides.
 
+<!-- prettier-ignore -->
 ```markdown
 :::decision d-2
+context: A shop only downloads the invoices of its own customers. Read these in order:
+  1. [The export file](export-file.md) lists the columns of the file.
 proposal: Write one CSV file per shop.
 alternative: Write one CSV file for every shop together.
 pick: proposal, because a shop only downloads its own file.
@@ -198,6 +204,8 @@ pick: proposal, because a shop only downloads its own file.
 ```
 
 The heading above the block is the question. If there isn't a heading above the block, Nick won't be able to choose an option for the decision.
+
+If the `context:` line of an open decision is missing or empty, `check` will print a problem. It won't print a problem for a decision once Nick has decided.
 
 ### The html block
 

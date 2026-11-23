@@ -20,37 +20,58 @@ function newestFirst(first: PageReadMark, second: PageReadMark): number {
   return second.changedTime.localeCompare(first.changedTime)
 }
 
-// The new pages come first and then the changed sections, each with the newest first. The Inbox
-// lists every page, including a sub page that the sidebar doesn't show.
+function changedSectionsText(count: number): string {
+  return count === 1 ? '1 section changed' : `${count} sections changed`
+}
+
+function entryOf(
+  addresses: PadAddresses,
+  mark: PageReadMark,
+  pages: readonly PageSummary[],
+): InboxEntry[] {
+  const where = placeOf(pages, mark.page, undefined)
+  if (mark.state === 'new') {
+    return [
+      {
+        key: `page ${mark.page}`,
+        href: addresses.pageHref(fileOfPage(mark.page)),
+        kind: 'page',
+        heading: 'A new page',
+        where,
+        quote: pages.find((summary) => summary.page === mark.page)?.description,
+        last: undefined,
+        time: mark.changedTime,
+        shownTime: shownTime(mark.changedTime),
+        context: undefined,
+      },
+    ]
+  }
+  const [first] = mark.changedSections
+  return first === undefined
+    ? []
+    : [
+        {
+          key: `sections ${mark.page}`,
+          href: addresses.pageHref(fileOfPage(mark.page), first.id),
+          kind: 'section',
+          heading: `Updates to ${where}`,
+          where: changedSectionsText(mark.changedSections.length),
+          quote: undefined,
+          last: undefined,
+          time: mark.changedTime,
+          shownTime: shownTime(mark.changedTime),
+          context: undefined,
+        },
+      ]
+}
+
+// The Inbox lists each new page and each page with changed sections, the newest first. The entry
+// of a page with changed sections links to the first changed section. The Inbox lists every page,
+// including a sub page that the sidebar doesn't show.
 export function readMarkEntries(
   addresses: PadAddresses,
   marks: ReadMarks,
   pages: readonly PageSummary[],
 ): InboxEntry[] {
-  const sorted = marks.pages.toSorted(newestFirst)
-  const newPages = sorted
-    .filter((mark) => mark.state === 'new')
-    .map((mark): InboxEntry => ({
-      key: `page ${mark.page}`,
-      href: addresses.pageHref(fileOfPage(mark.page)),
-      kind: 'page',
-      where: placeOf(pages, mark.page, undefined),
-      quote: pages.find((summary) => summary.page === mark.page)?.description,
-      last: undefined,
-      time: mark.changedTime,
-      shownTime: shownTime(mark.changedTime),
-    }))
-  const changedSections = sorted.flatMap((mark) =>
-    mark.changedSections.map((section): InboxEntry => ({
-      key: `section ${mark.page} ${section.id}`,
-      href: addresses.pageHref(fileOfPage(mark.page), section.id),
-      kind: 'section',
-      where: placeOf(pages, mark.page, section.title),
-      quote: undefined,
-      last: undefined,
-      time: mark.changedTime,
-      shownTime: `Changed ${shownTime(mark.changedTime)}`,
-    })),
-  )
-  return [...newPages, ...changedSections]
+  return marks.pages.toSorted(newestFirst).flatMap((mark) => entryOf(addresses, mark, pages))
 }

@@ -88,6 +88,17 @@ function decisionFields(element: Element, context: ConversionContext) {
   return { proposal: field('proposal'), alternative: field('alternative'), pick: field('pick') }
 }
 
+// The context of a decision can contain a paragraph and a numbered list. They're rendered as blocks
+// under the label of the context. A decision on an older page doesn't have a context.
+function decisionContext(element: Element, context: ConversionContext): ReactNode {
+  const field = element.querySelector('.decision-context')
+  return field === null
+    ? undefined
+    : [...field.children]
+        .filter((child) => !child.classList.contains('decision-label'))
+        .map((child, index) => nodeElement(child, index, context))
+}
+
 // A decision that Nick has answered is shown in the margin beside the heading of its question,
 // rather than in the text. A decision stays in the text if it doesn't have a heading above it, if
 // it has a warning or if it's inside another block, because the margin can't show it there.
@@ -177,6 +188,7 @@ function decisionElement(element: Element, key: Key, context: ConversionContext)
       <DecisionCard
         id={id}
         question={decision?.question}
+        context={decisionContext(element, context)}
         proposal={fields.proposal}
         alternative={fields.alternative}
         pick={fields.pick}
@@ -336,15 +348,17 @@ export function keyedBlocks(nodes: readonly ChildNode[]): KeyedBlock[] {
   })
 }
 
-// The read marks of a page. afterTitle is shown under the first heading of level 1, like the
-// line that says that the page is new. If the page doesn't have a heading of level 1, afterTitle
-// is shown above the first block.
+// PageMarks contains the read marks of a page. changedSections maps the id of each changed section
+// to the function that marks the section as read, which is called when Nick clicks a block of that
+// section. afterTitle is shown under the first heading of level 1, like the line that tells Nick
+// that the page is new. If the page doesn't have a heading of level 1, afterTitle is shown above
+// the first block.
 export interface PageMarks {
-  readonly changedSections: ReadonlySet<string>
+  readonly changedSections: ReadonlyMap<string, () => void>
   readonly afterTitle: ReactNode
 }
 
-const noMarks: PageMarks = { changedSections: new Set(), afterTitle: undefined }
+const noMarks: PageMarks = { changedSections: new Map(), afterTitle: undefined }
 
 const sectionTags = new Set(['H1', 'H2', 'H3'])
 
@@ -362,11 +376,14 @@ function sectionsOfBlocks(blocks: readonly ChildNode[]): (string | undefined)[] 
 
 interface ChangedSectionProps {
   readonly 'data-changed-section'?: string
+  readonly onClick?: () => void
 }
 
-function markedChanged(element: ReactNode): ReactNode {
+// A click anywhere inside the block marks its section as read. That includes a click on a link and
+// the click at the end of a selection, because the click event bubbles up to the block.
+function markedChanged(element: ReactNode, markRead: () => void): ReactNode {
   return isValidElement<ChangedSectionProps>(element) && typeof element.type === 'string'
-    ? cloneElement(element, { 'data-changed-section': '' })
+    ? cloneElement(element, { 'data-changed-section': '', onClick: markRead })
     : element
 }
 
@@ -392,11 +409,10 @@ export function pageElements(
   const elements = keyedBlocks(blocks).flatMap(({ node, key }, index) => {
     const section = sections[index]
     const element = nodeElement(node, key, conversion)
+    const markRead = section === undefined ? undefined : marks.changedSections.get(section)
     const shown = (
       <Fragment key={key}>
-        {section !== undefined && marks.changedSections.has(section)
-          ? markedChanged(element)
-          : element}
+        {markRead === undefined ? element : markedChanged(element, markRead)}
       </Fragment>
     )
     return index === title ? [shown, ...afterTitle] : [shown]

@@ -43,6 +43,7 @@ describe('the :::decision block', () => {
         firstLine: 5,
         lastLine: 10,
         question: 'Will the invoice show the tax number?',
+        context: undefined,
         proposal: 'Show the **tax number** on every invoice.',
         alternative: 'Show the tax number only for companies.',
         pick: 'proposal, because\nthe law asks for a tax number.',
@@ -112,7 +113,63 @@ describe('the :::decision block', () => {
     expect(
       decisionWith(['', 'Should we?', 'proposal: a', '', 'alternative: b', 'pick: a']).problems,
     ).toStrictEqual([
-      { line: 5, text: "the line doesn't start with proposal:, alternative: or pick:" },
+      {
+        line: 5,
+        text: "the line doesn't start with context:, proposal:, alternative: or pick:",
+      },
+    ])
+  })
+
+  it('renders the context with its paragraph and its numbered list above the proposal and returns the text of the context', () => {
+    const page = decisionWith([
+      'context: A slow network in the evening can make an upload fail. Read these in order:',
+      '  1. [How the job runs](how-the-job-runs.md) shows where the upload happens.',
+      '  2. [The retry limit](retry-limit.md) explains why the limit is 5 today.',
+      ...completeLines,
+    ])
+
+    expect(page.problems).toStrictEqual([])
+    expect(page.html.split('\n').slice(1, 9)).toStrictEqual([
+      '<div class="decision" data-decision="d-3" data-lines="3-10">',
+      '<div class="decision-context"><p class="decision-label">Context</p><p>A slow network in the evening can make an upload fail. Read these in order:</p>',
+      '<ol>',
+      '<li><a href="how-the-job-runs.md">How the job runs</a> shows where the upload happens.</li>',
+      '<li><a href="retry-limit.md">The retry limit</a> explains why the limit is 5 today.</li>',
+      '</ol>',
+      '</div>',
+      '<div class="decision-proposal"><p class="decision-label">Proposal</p><p>a</p></div>',
+    ])
+    expect(page.decisions.map((decision) => decision.context)).toStrictEqual([
+      [
+        'A slow network in the evening can make an upload fail. Read these in order:',
+        '1. [How the job runs](how-the-job-runs.md) shows where the upload happens.',
+        '2. [The retry limit](retry-limit.md) explains why the limit is 5 today.',
+      ].join('\n'),
+    ])
+  })
+
+  it('renders the decision without a Context label and returns an undefined context when the context: line is empty', () => {
+    const page = decisionWith(['context:', ...completeLines])
+
+    expect(page.html).not.toContain('decision-context')
+    expect(page.decisions.map((decision) => decision.context)).toStrictEqual([undefined])
+  })
+
+  it('returns the links in the context of the decision with their lines as links of the page', () => {
+    const page = decisionWith([
+      'context: Read these in order:',
+      '  1. [The retry limit](retry-limit.md#limit) explains the limit.',
+      ...completeLines,
+    ])
+
+    expect(page.links).toStrictEqual([
+      {
+        kind: 'page',
+        line: 5,
+        href: 'retry-limit.md#limit',
+        page: 'pages/retry-limit.md',
+        headingId: 'limit',
+      },
     ])
   })
 })

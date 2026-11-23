@@ -237,6 +237,44 @@ describe('currentPosition at the start or the end of a block', () => {
   })
 })
 
+describe('currentPosition in the context of a decision', () => {
+  const page = [
+    '## Will the export job retry 8 times?',
+    '',
+    ':::decision d-2',
+    'context: A slow network can make an upload fail. Read these in order:',
+    '  1. [What counts as a failure](#what-counts-as-a-failure) lists the errors.',
+    '  2. [The queue](#the-queue) shows where the upload waits.',
+    'proposal: Raise the retry limit to 8.',
+    'alternative: Keep the retry limit at 5.',
+    'pick: proposal',
+    ':::',
+  ]
+  // The text of the decision that the browser shows around the links of the context
+  const shown =
+    'Context A slow network can make an upload fail. Read these in order: What counts as a failure lists the errors. The queue shows where the upload waits. Proposal Raise the retry limit to 8.'
+
+  it('returns the decision with an exact match when Nick selects the text of a link in the context', () => {
+    const selectedText = 'The queue'
+    const start = shown.indexOf(selectedText)
+    const anchor: Anchor = {
+      firstLine: 3,
+      lastLine: 10,
+      selectedText,
+      prefix: contextBefore(shown.slice(0, start)),
+      suffix: contextAfter(shown.slice(start + selectedText.length)),
+      copiesOnPage: copiesOnPage(selectedText, page.join('\n')),
+    }
+    expect(positionIn(page, anchor)).toMatchObject({
+      kind: 'attached',
+      firstLine: 3,
+      lastLine: 10,
+      text: 'The queue',
+      match: 'exact',
+    })
+  })
+})
+
 describe('currentPosition of a short quote', () => {
   const page = ['The export job retries 5 times a night.']
   const anchor = anchorIn(page, '5 times')

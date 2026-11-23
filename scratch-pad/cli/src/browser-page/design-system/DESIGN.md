@@ -270,15 +270,19 @@ The read marks from the API contain the hash of each section that the browser sh
 
 The read marks feature is made of these files:
 
-| File                        | What it does                                                                                                                                              |
-| --------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `read-marks.ts`             | Finds the read mark of a page and the dot of the page in the sidebar. It also builds the entries of the Inbox for the new pages and the changed sections. |
-| `changed-section-items.tsx` | Shows the line at the top of a new page and the card in the margin beside each changed section                                                            |
-| `item-places.ts`            | Builds the place of an item from the page and the section of the item, like "Invoice template › 1.1 Tax number › Shops outside the EU"                    |
-| `outbox-entries.ts`         | Builds the entries of the Outbox in the top bar. Each entry links to the card of its item on its page, where Nick edits or removes the item.              |
-| `inbox-outbox-view.tsx`     | Shows every item of the Inbox and of the Outbox under the heading of its status. The buttons at the top filter the items by status.                       |
+| File                        | What it does                                                                                                                                                           |
+| --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `read-marks.ts`             | Finds the read mark of a page and the dot of the page in the sidebar. It also builds one entry of the Inbox for each new page and for each page with changed sections. |
+| `changed-section-items.tsx` | Shows the line at the top of a new page and the card in the margin beside each changed section                                                                         |
+| `item-places.ts`            | Builds the place of an item from the page and the section of the item, like "Invoice template › 1.1 Tax number › Shops outside the EU"                                 |
+| `outbox-entries.ts`         | Builds the entries of the Outbox in the top bar. Each entry links to the card of its item on its page, where Nick edits or removes the item.                           |
+| `inbox-outbox-view.tsx`     | Shows every item of the Inbox and of the Outbox under the heading of its status. The buttons at the top filter the items by status.                                    |
 
-Each block of a changed section has `data-changed-section`, which `ReadingColumn` draws as a bar on the left of the block.
+Each block of a changed section has `data-changed-section`, which `ReadingColumn` draws as a bar on the left of the block. A click anywhere inside one of those blocks marks the section as read, which removes the bar and the card of the section. If the server can't mark the section as read, the card of the section will show the problem. The card is opened too, because the cards are hidden behind their markers below a reading width of 1040px.
+
+The Inbox shows the replies and the decisions under "Needs your answer". They're sorted together by their time with the newest first. The time of a decision is the time that its page file was last written when the server first found the decision. The row of a decision shows the first paragraph of its context and the links of the context, which Nick can follow from the Inbox.
+
+The new pages and the pages with changed sections are collapsed under "Updates to pages", below them. When Nick opens the updates, the focus will stay on their button. The count on the Inbox button only includes the replies and the decisions. If there are only updates to pages, the button will show a red dot without a number.
 
 The export doesn't contain any read marks, because a reader can't mark anything as read in the file. The sidebar of the export doesn't link to the Inbox / Outbox view either.
 

@@ -175,11 +175,20 @@ const queuedItem = z.discriminatedUnion('kind', [
 
 export const outboxResponse = z.object({ items: z.array(queuedItem) })
 
+const contextLink = z.object({ text: z.string(), page: z.string(), headingId: optionalText })
+
+// The first paragraph of a decision's context and its links to the pages of the scratch pad
+const contextSummary = z.object({ lead: optionalText, links: z.array(contextLink) })
+
 const openDecision = z.object({
   page: z.string(),
   id: z.string(),
   line: z.number(),
   question: z.string(),
+  // The time that the decision's page file was last written when the server first found the
+  // decision
+  time: z.string(),
+  context: contextSummary.nullable().transform((value) => value ?? undefined),
 })
 
 export const nickInboxResponse = z.object({

@@ -61,6 +61,11 @@
   font-weight: var(--fw-strong);
 }
 
+/* A new page and a page with changed sections are quieter than the items that need an answer. */
+.panel-menu__what:is([data-kind='page'], [data-kind='section']) {
+  color: var(--text-2);
+}
+
 .panel-menu__time {
   margin-left: auto;
   flex: none;
@@ -74,12 +79,8 @@
   line-height: var(--lh-sm);
 }
 
-.panel-menu__where[data-kind='page'] {
-  color: var(--text);
-  font-weight: var(--fw-medium);
-}
-
 .panel-menu__quote,
+.panel-menu__lead,
 .panel-menu__last {
   display: -webkit-box;
   overflow: hidden;
@@ -119,6 +120,37 @@
   font-size: var(--fs-sm);
   font-style: normal;
   line-height: var(--lh-sm);
+}
+
+/* The lead is the first paragraph of a decision's context. The links of the context are shown below
+   the lead. */
+.panel-menu__lead {
+  margin-top: var(--space-sm);
+  color: var(--text-2);
+  font-size: var(--fs-sm);
+  line-height: var(--lh-sm);
+}
+
+/* The links of a decision's context are numbered in the order that Nick should read them. They
+   line up with the text of their decision above them. */
+.panel-menu__context {
+  margin: calc(var(--space-xl) * -1) var(--space-0) var(--space-0);
+  padding: var(--space-0) var(--space-lg) var(--space-xl)
+    calc(var(--space-lg) + var(--space-md) + var(--space-xl) + var(--space-3xl));
+  color: var(--text-2);
+  font-size: var(--fs-sm);
+  line-height: var(--lh-sm);
+}
+
+.panel-menu__context-link {
+  border-radius: var(--r-sm);
+  color: var(--accent-strong);
+  text-decoration: none;
+}
+
+.panel-menu__context-link:hover,
+.panel-menu__context-link:focus-visible {
+  text-decoration: underline;
 }
 
 .panel-menu__link {

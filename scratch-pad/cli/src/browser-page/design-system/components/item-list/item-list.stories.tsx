@@ -49,8 +49,8 @@ const meta = {
   component: ItemList,
   args: {
     groups: [
-      { title: 'Waiting for you', rows: [newPage, decision] },
-      { title: 'Waiting for the agent', rows: [sent] },
+      { title: 'Waiting for you', count: 1, rows: [newPage, decision] },
+      { title: 'Waiting for the agent', count: 1, rows: [sent] },
     ],
     onNavigate: () => undefined,
   },
@@ -63,4 +63,4 @@ type Story = StoryObj<typeof meta>
 
 export const UnderTheHeadingsOfTheirStatus: Story = {}
 
-export const OneStatus: Story = { args: { groups: [{ title: undefined, rows: [sent] }] } }
+export const OneStatus: Story = { args: { groups: [{ title: undefined, count: 1, rows: [sent] }] } }

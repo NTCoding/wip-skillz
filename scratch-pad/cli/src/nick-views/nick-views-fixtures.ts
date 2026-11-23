@@ -1,3 +1,5 @@
+import { utimesSync } from 'node:fs'
+import { join } from 'node:path'
 import { nickAnswersDecision } from '../nick-actions/nick-actions'
 import { writeFileInPad } from '../scratch-pad-folder/scratch-pad-folder-fixtures'
 import { type ScratchPadFolder } from '../scratch-pad-folder/scratch-pad-folder'
@@ -49,8 +51,13 @@ export function writeRetryChoicesPage(folder: ScratchPadFolder): void {
   writeFileInPad(folder, 'pages/retry-choices.md', retryChoicesPage)
 }
 
+// The time that the file of the page with the invoice decisions was last written
+export const invoiceDecisionsSavedTime = '2026-03-14T09:00:00.000Z'
+
 export function writeInvoiceDecisionsPage(folder: ScratchPadFolder): void {
   writeFileInPad(folder, 'pages/invoice-decisions.md', invoiceDecisionsPage)
+  const saved = new Date(invoiceDecisionsSavedTime)
+  utimesSync(join(folder.path, 'pages/invoice-decisions.md'), saved, saved)
 }
 
 export function nickAnswersRetryQuestion(folder: ScratchPadFolder): void {

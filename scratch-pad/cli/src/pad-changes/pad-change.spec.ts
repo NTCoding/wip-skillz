@@ -24,8 +24,9 @@ describe('changesOfEvents', () => {
     ])
   })
 
-  it('returns no changes when the agent has marked a decision as done', () => {
+  it('returns no changes when the agent has marked a decision as done or the server has found a new decision', () => {
     expect(changesOfEvents([event(1, 'decision-followed', 'd-1')])).toStrictEqual([])
+    expect(changesOfEvents([event(2, 'decision-asked', 'd-1')])).toStrictEqual([])
   })
 
   it('returns the decision and the log of decisions when Nick answers a decision', () => {
