@@ -14,8 +14,9 @@ export function pageHref(pad: string, file: string, section?: string): string {
   return section === undefined ? path : `${path}#${encodeURIComponent(section)}`
 }
 
-export function progressTrackerHref(pad: string): string {
-  return `${padPath(pad)}${progressTrackerPath}`
+export function progressTrackerHref(pad: string, section?: string): string {
+  const path = `${padPath(pad)}${progressTrackerPath}`
+  return section === undefined ? path : `${path}#${encodeURIComponent(section)}`
 }
 
 export function decisionLogHref(pad: string): string {

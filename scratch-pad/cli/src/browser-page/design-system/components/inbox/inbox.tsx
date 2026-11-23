@@ -38,6 +38,11 @@ function needsAnswer(entry: InboxEntry): boolean {
   return entry.kind === 'reply' || entry.kind === 'decision'
 }
 
+// The count on the Inbox button. The blinking title of the tab shows the same count.
+export function answerCountOf(entries: readonly InboxEntry[]): number {
+  return entries.filter((entry) => needsAnswer(entry)).length
+}
+
 // The count only includes the entries that need an answer, because an update to a page doesn't.
 function countText(answers: number, updates: number): string {
   if (answers === 0 && updates > 0) {
@@ -111,7 +116,7 @@ function InboxMenu({ entries, onNavigate, controls }: InboxMenuProps) {
 }
 
 export function Inbox(props: InboxProps) {
-  const answers = props.entries.filter((entry) => needsAnswer(entry)).length
+  const answers = answerCountOf(props.entries)
   const updates = props.entries.length - answers
   return (
     <TopBarPanel

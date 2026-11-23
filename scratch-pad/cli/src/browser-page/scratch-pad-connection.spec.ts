@@ -98,7 +98,8 @@ describe('scratchPadConnection', () => {
   })
 
   it('reads the progress tracker and the log of decisions when they are asked for', async () => {
-    const tracker = scratchPadConnection(exportPad, networkReturning(jsonResponse(progressTracker)))
+    const trackerBody = JSON.stringify(progressTracker, (_key, value: unknown) => value ?? null)
+    const tracker = scratchPadConnection(exportPad, networkReturning(new Response(trackerBody)))
     const log = scratchPadConnection(
       exportPad,
       networkReturning(

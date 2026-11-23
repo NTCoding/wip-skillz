@@ -2,6 +2,7 @@ import { type Token } from 'markdown-it'
 import { isAgentNote } from './agent-note-block'
 import { isDecision } from './decision-block'
 import { blockBodyParser, namedBlockType, pageMarkdownParser } from './page-markdown-parser'
+import { taskReferenceScheme } from './page-links'
 import { sourceLinesOf, type SourceLines } from './source-lines'
 
 export interface PageBlock extends SourceLines {
@@ -31,10 +32,19 @@ export function pageBlocksOf(markdown: string): readonly PageBlock[] {
 }
 
 function textOfTokens(tokens: readonly Token[]): string {
-  return tokens
-    .flatMap((part) => part.children ?? [part])
+  const parts = tokens.flatMap((part) => part.children ?? [part])
+  return parts
+    .filter((_, index) => !insideTaskReference(parts, index))
     .map(textOf)
     .join('')
+}
+
+// The browser shows a task reference like <task:t-4> as the number and the title of the task,
+// which this module doesn't know. That's why the text of a task reference isn't part of the text
+// of its block, on the server and in the browser.
+function insideTaskReference(parts: readonly Token[], index: number): boolean {
+  const link = parts.slice(0, index).findLast((part) => part.type.startsWith('link_'))
+  return link?.type === 'link_open' && String(link.attrGet('href')).startsWith(taskReferenceScheme)
 }
 
 // The body of an :::agent-note block and the body of a :::decision block are parsed as Markdown,

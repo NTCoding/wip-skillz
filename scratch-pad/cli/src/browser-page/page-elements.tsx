@@ -18,10 +18,12 @@ import {
   Notice,
   PageLink,
   TableBlock,
+  TaskLink,
   type DecisionAnswer,
   type Navigate,
   type PreviewContent,
 } from './design-system/design-system'
+import { taskLabel, taskReferenceScheme, type FindTask } from './task-references'
 
 export interface PageElementContext {
   readonly addresses: PadAddresses
@@ -34,6 +36,7 @@ export interface PageElementContext {
   readonly onAnswerDecision: ((id: string, answer: DecisionAnswer) => Promise<void>) | undefined
   readonly onCommentOnBlock: ((lines: string) => void) | undefined
   readonly answersOnThisPage: ReadonlyMap<string, Answer>
+  readonly findTask: FindTask
 }
 
 interface ConversionContext extends PageElementContext {
@@ -210,8 +213,26 @@ function opensAnotherSite(href: string): boolean {
   )
 }
 
+// A reference to a task that isn't on the progress tracker keeps its text, like task:t-9, which
+// `check` reports.
+function taskReference(href: string, key: Key, context: ConversionContext): ReactNode {
+  const task = context.findTask(href.slice(taskReferenceScheme.length))
+  return (
+    <TaskLink
+      key={key}
+      href={task === undefined ? undefined : context.addresses.progressTrackerHref(task.id)}
+      onNavigate={context.onNavigate}
+    >
+      {task === undefined ? href : taskLabel(task)}
+    </TaskLink>
+  )
+}
+
 function linkElement(element: Element, key: Key, context: ConversionContext): ReactNode {
   const href = String(element.getAttribute('href'))
+  if (href.startsWith(taskReferenceScheme)) {
+    return taskReference(href, key, context)
+  }
   const children = childrenOf(element, context)
   const pageLink = context.page.links.find((link) => link.kind === 'page' && link.href === href)
   if (pageLink?.kind === 'page') {

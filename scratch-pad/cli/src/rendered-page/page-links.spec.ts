@@ -76,6 +76,12 @@ describe('the links of a rendered page', () => {
     expect(linksOfLine(`[x](${href})`)).toStrictEqual([{ kind: 'other', line: 1, href }])
   })
 
+  it('returns a task link with the id of the task when the agent writes a task reference', () => {
+    expect(linksOfLine('See <task:t-4>.')).toStrictEqual([
+      { kind: 'task', line: 1, href: 'task:t-4', id: 't-4' },
+    ])
+  })
+
   it('returns the line of each link when a paragraph has several lines and a hard break', () => {
     const page = renderedInvoicePage([
       'Intro',

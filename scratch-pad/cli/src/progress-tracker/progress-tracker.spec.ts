@@ -1,19 +1,24 @@
 import { describe, expect, it } from 'vitest'
 import {
   EmptyGoalError,
+  EmptyTaskDescriptionError,
   EmptyTaskTitleError,
-  TaskAlreadyDoneError,
+  UnknownSubtaskError,
   UnknownTaskError,
+  UnknownTaskIdError,
+  addSubtask,
   addTask,
-  currentTask,
-  finishTask,
+  describeSubtask,
+  describeTask,
+  findSubtask,
+  itemWithId,
   newProgressTracker,
   setGoal,
-  startTask,
+  type ProgressTracker,
 } from './progress-tracker'
-import { trackerWithTasks } from './progress-tracker-fixtures'
+import { trackerWithSubtasks, trackerWithTasks } from './progress-tracker-fixtures'
 
-const states = (tasks: ReturnType<typeof trackerWithTasks>) => tasks.tasks.map((task) => task.state)
+const states = (tracker: ProgressTracker) => tracker.tasks.map((task) => task.state)
 
 describe('newProgressTracker', () => {
   it('starts without a goal and without tasks', () => {
@@ -39,20 +44,29 @@ describe('setGoal', () => {
 })
 
 describe('addTask', () => {
-  it('adds a task that is to do with the next number', () => {
+  it('adds a task that is to do with the next number and the next id', () => {
     const added = addTask(trackerWithTasks(['done', 'to-do']), ' Write the invoice template ')
 
-    expect(added.task).toStrictEqual({
+    expect(added.item).toStrictEqual({
+      id: 't-3',
       number: 3,
       title: 'Write the invoice template',
       state: 'to-do',
+      description: undefined,
+      subtasks: [],
     })
+  })
+
+  it('gives the new task the id after the highest id of every task and subtask', () => {
+    expect(addTask(trackerWithSubtasks(['to-do', 'to-do']), 'Ship the export job').item.id).toBe(
+      't-6',
+    )
   })
 
   it('adds the task at the end of the tracker', () => {
     const added = addTask(trackerWithTasks([]), 'Write the invoice template')
 
-    expect(added.tracker.tasks).toStrictEqual([added.task])
+    expect(added.tracker.tasks).toStrictEqual([added.item])
   })
 
   it('throws EmptyTaskTitleError when the title is blank', () => {
@@ -61,103 +75,146 @@ describe('addTask', () => {
   })
 })
 
-describe('startTask', () => {
-  it('puts the task in progress', () => {
-    const start = startTask(trackerWithTasks(['to-do', 'to-do']), 2)
+describe('addSubtask', () => {
+  it('adds a subtask that is to do after the other subtasks of the task', () => {
+    const added = addSubtask(trackerWithSubtasks(['done', 'done']), 2, ' Alert the team ')
 
-    expect([states(start.tracker), start.started.state]).toStrictEqual([
-      ['to-do', 'in-progress'],
+    expect(added.item).toStrictEqual({
+      id: 't-6',
+      number: '2.3',
+      title: 'Alert the team',
+      state: 'to-do',
+      description: undefined,
+    })
+  })
+
+  it('numbers the first subtask of a task 1 after the number of the task', () => {
+    const added = addSubtask(trackerWithTasks(['to-do', 'to-do']), 2, 'Retry a failed export')
+
+    expect(added.tracker.tasks[1]?.subtasks.map((subtask) => subtask.number)).toStrictEqual(['2.1'])
+  })
+
+  it('puts a task whose subtasks were all done back in progress', () => {
+    const added = addSubtask(trackerWithSubtasks(['done', 'done']), 2, 'Alert the team')
+
+    expect(states(added.tracker)).toStrictEqual(['to-do', 'in-progress', 'to-do'])
+  })
+
+  it('makes a done task without subtasks to do, because its only subtask is to do', () => {
+    const added = addSubtask(trackerWithTasks(['done']), 1, 'Alert the team')
+
+    expect([states(added.tracker), added.item.state]).toStrictEqual([['to-do'], 'to-do'])
+  })
+
+  it('puts the first subtask of the task in progress in progress, which keeps the task in progress', () => {
+    const added = addSubtask(trackerWithTasks(['in-progress']), 1, 'Retry a failed export')
+
+    expect([states(added.tracker), added.item.state]).toStrictEqual([
+      ['in-progress'],
       'in-progress',
     ])
   })
 
-  it('puts the task that was in progress back to to do', () => {
-    const start = startTask(trackerWithTasks(['in-progress', 'to-do']), 2)
-
-    expect([states(start.tracker), start.paused?.number]).toStrictEqual([
-      ['to-do', 'in-progress'],
+  it('adds a later subtask of the task in progress as to do', () => {
+    const tracker = addSubtask(
+      trackerWithTasks(['in-progress']),
       1,
+      'Retry a failed export',
+    ).tracker
+
+    expect(addSubtask(tracker, 1, 'Log each retry').item.state).toBe('to-do')
+  })
+
+  it('throws EmptyTaskTitleError when the title is blank', () => {
+    expect(() => addSubtask(trackerWithTasks(['to-do']), 1, ' ')).toThrow(EmptyTaskTitleError)
+  })
+
+  it('throws UnknownTaskError when the tracker does not have the task', () => {
+    expect(() => addSubtask(trackerWithTasks(['to-do']), 3, 'Alert the team')).toThrow(
+      "There isn't any task 3. The progress tracker has tasks 1 to 1.",
+    )
+  })
+})
+
+describe('describeTask', () => {
+  it('replaces the description of the task with the trimmed Markdown', () => {
+    const first = describeTask(trackerWithTasks(['to-do', 'to-do']), 2, '- The first version\n')
+    const described = describeTask(first.tracker, 2, '\n- The retry limit is 5.\n')
+
+    expect(described.item.description).toBe('- The retry limit is 5.')
+    expect(described.tracker.tasks.map((task) => task.description)).toStrictEqual([
+      undefined,
+      '- The retry limit is 5.',
     ])
   })
 
-  it('pauses nothing when the task was already in progress', () => {
-    expect(startTask(trackerWithTasks(['in-progress']), 1).paused).toBeUndefined()
+  it('throws EmptyTaskDescriptionError when the description is blank', () => {
+    const describe = () => describeTask(trackerWithTasks(['to-do']), 1, ' \n')
+
+    expect(describe).toThrow(EmptyTaskDescriptionError)
+    expect(describe).toThrow(
+      'The description is empty. Write the description in Markdown on standard input, for example with a heredoc.',
+    )
   })
 
   it('throws UnknownTaskError with the range of tasks when the number does not exist', () => {
-    expect(() => startTask(trackerWithTasks(['to-do', 'to-do']), 9)).toThrow(UnknownTaskError)
-    expect(() => startTask(trackerWithTasks(['to-do', 'to-do']), 9)).toThrow(
-      "There isn't any task 9. The progress tracker has tasks 1 to 2.",
-    )
+    const describe = () => describeTask(trackerWithTasks(['to-do', 'to-do']), 9, '- The limit')
+
+    expect(describe).toThrow(UnknownTaskError)
+    expect(describe).toThrow("There isn't any task 9. The progress tracker has tasks 1 to 2.")
   })
 
   it('throws UnknownTaskError that explains there are no tasks when the tracker is empty', () => {
-    const start = () => startTask(trackerWithTasks([]), 1)
-
-    expect(start).toThrow(UnknownTaskError)
-    expect(start).toThrow(
+    expect(() => describeTask(trackerWithTasks([]), 1, '- The limit')).toThrow(
       "There isn't any task 1 because the progress tracker doesn't have any tasks yet.",
     )
   })
-
-  it('records that the task was done when a done task is started again', () => {
-    expect(startTask(trackerWithTasks(['done']), 1).wasDone).toBe(true)
-  })
-
-  it('records that the task was not done when a task that is to do is started', () => {
-    expect(startTask(trackerWithTasks(['to-do']), 1).wasDone).toBe(false)
-  })
 })
 
-describe('finishTask', () => {
-  it('finishes the task', () => {
-    const finish = finishTask(trackerWithTasks(['done', 'in-progress', 'to-do', 'to-do']), 2)
+describe('describeSubtask', () => {
+  it('replaces the description of the subtask with the trimmed Markdown', () => {
+    const described = describeSubtask(
+      trackerWithSubtasks(['to-do', 'to-do']),
+      { task: 2, subtask: 2 },
+      '\n- Each retry is one line of the log.\n',
+    )
 
-    expect(finish.finished).toStrictEqual({ number: 2, title: 'Task about retry 2', state: 'done' })
-  })
-
-  it('starts the first task that is to do when no other task is in progress', () => {
-    const finish = finishTask(trackerWithTasks(['done', 'in-progress', 'to-do', 'to-do']), 2)
-
-    expect(states(finish.tracker)).toStrictEqual(['done', 'done', 'in-progress', 'to-do'])
-  })
-
-  it('starts no task when another task is still in progress', () => {
-    const finish = finishTask(trackerWithTasks(['to-do', 'in-progress', 'to-do']), 1)
-
-    expect([states(finish.tracker), finish.started]).toStrictEqual([
-      ['done', 'in-progress', 'to-do'],
-      undefined,
-    ])
-  })
-
-  it('starts no task when every task is done', () => {
-    const finish = finishTask(trackerWithTasks(['done', 'in-progress']), 2)
-
-    expect([finish.finished.state, finish.started]).toStrictEqual(['done', undefined])
-  })
-
-  it('throws TaskAlreadyDoneError when the task is already done', () => {
-    const finish = () => finishTask(trackerWithTasks(['done', 'to-do']), 1)
-
-    expect(finish).toThrow(TaskAlreadyDoneError)
-    expect(finish).toThrow(
-      'Task 1 is already done. Start it again with the task start command to work on it again.',
+    expect(findSubtask(described.tracker, { task: 2, subtask: 2 }).description).toStrictEqual(
+      '- Each retry is one line of the log.',
     )
   })
 
-  it('throws UnknownTaskError when the number does not exist', () => {
-    expect(() => finishTask(trackerWithTasks(['to-do']), 2)).toThrow(UnknownTaskError)
-    expect(() => finishTask(trackerWithTasks(['to-do']), 2)).toThrow("There isn't any task 2.")
+  it('throws EmptyTaskDescriptionError when the description is blank', () => {
+    expect(() =>
+      describeSubtask(trackerWithSubtasks(['to-do', 'to-do']), { task: 2, subtask: 1 }, ''),
+    ).toThrow(EmptyTaskDescriptionError)
   })
 })
 
-describe('currentTask', () => {
-  it('returns the task in progress', () => {
-    expect(currentTask(trackerWithTasks(['done', 'in-progress']))?.number).toBe(2)
+describe('findSubtask', () => {
+  it('throws UnknownSubtaskError with the range of subtasks when the number does not exist', () => {
+    const find = () => findSubtask(trackerWithSubtasks(['to-do', 'to-do']), { task: 2, subtask: 3 })
+
+    expect(find).toThrow(UnknownSubtaskError)
+    expect(find).toThrow("There isn't any subtask 2.3. Task 2 has subtasks 2.1 to 2.2.")
   })
 
-  it('returns undefined when no task is in progress', () => {
-    expect(currentTask(trackerWithTasks(['done', 'to-do']))).toBeUndefined()
+  it('throws UnknownSubtaskError that explains the task has no subtasks yet', () => {
+    expect(() =>
+      findSubtask(trackerWithSubtasks(['to-do', 'to-do']), { task: 1, subtask: 1 }),
+    ).toThrow("There isn't any subtask 1.1 because task 1 doesn't have any subtasks yet.")
+  })
+})
+
+describe('itemWithId', () => {
+  it('returns the subtask with the id', () => {
+    expect(itemWithId(trackerWithSubtasks(['to-do', 'done']), 't-5').number).toBe('2.2')
+  })
+
+  it('throws UnknownTaskIdError when no task has the id', () => {
+    expect(() => itemWithId(trackerWithTasks(['to-do']), 't-9')).toThrow(UnknownTaskIdError)
+    expect(() => itemWithId(trackerWithTasks(['to-do']), 't-9')).toThrow(
+      "There isn't any task or subtask with the id t-9 on the progress tracker.",
+    )
   })
 })

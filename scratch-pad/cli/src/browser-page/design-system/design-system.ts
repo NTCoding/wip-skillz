@@ -32,7 +32,7 @@ export {
   type ImprovementActions,
   type ImprovementRow,
 } from './components/improvement-list/improvement-list'
-export { Inbox, type InboxEntry } from './components/inbox/inbox'
+export { answerCountOf, Inbox, type InboxEntry } from './components/inbox/inbox'
 export { ItemList, type ItemGroup, type ItemRow } from './components/item-list/item-list'
 export { LinkPreview, type PreviewContent } from './components/link-preview/link-preview'
 export { MarginCard } from './components/margin-card/margin-card'
@@ -60,7 +60,11 @@ export {
   type ContentsEntry,
 } from './components/table-of-contents/table-of-contents'
 export { StatusPill } from './components/status-pill/status-pill'
-export { TaskList, type TaskRow } from './components/task-list/task-list'
+export { TaskChips, type TaskChipRow } from './components/task-chips/task-chips'
+export { TaskLink } from './components/task-link/task-link'
+export { TaskList, type SubtaskRow, type TaskRow } from './components/task-list/task-list'
+export { TaskSection } from './components/task-section/task-section'
+export { TaskStateLabel } from './components/task-state-label/task-state-label'
 export {
   SelectedTextQuote,
   type ThreadQuote,

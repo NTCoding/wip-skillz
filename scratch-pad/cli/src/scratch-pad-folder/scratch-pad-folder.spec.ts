@@ -11,7 +11,7 @@ import {
 import { join } from 'node:path'
 import { DatabaseSync } from 'node:sqlite'
 import { afterEach, describe, expect, it } from 'vitest'
-import { EmptyTaskTitleError } from '../progress-tracker/progress-tracker'
+import { addTask, EmptyTaskTitleError } from '../progress-tracker/progress-tracker'
 import {
   BrokenPadDbError,
   BusyPadDbError,
@@ -71,10 +71,10 @@ describe('ScratchPadFolder.create', () => {
   })
 
   it('stores the version of the tables in pad.db when the scratch pad is created', () => {
-    expect(pragma(exportJobScratchPad(temporaryHome()), 'user_version')).toBe(4)
+    expect(pragma(exportJobScratchPad(temporaryHome()), 'user_version')).toBe(6)
   })
 
-  it('migrates pad.db to version 4 when a scratch pad of version 1 is read by a schema of version 4', () => {
+  it('migrates pad.db to version 6 when a scratch pad of version 1 is read by a schema of version 6', () => {
     const folder = firstVersionScratchPad(temporaryHome())
     const thread = folder.read((pad) => pad.readThread('c-1'))
 
@@ -85,7 +85,7 @@ describe('ScratchPadFolder.create', () => {
       prefix: undefined,
       suffix: undefined,
     })
-    expect(pragma(folder, 'user_version')).toBe(4)
+    expect(pragma(folder, 'user_version')).toBe(6)
   })
 
   it('keeps the threads of version 1 when the migrated scratch pad is changed', () => {
@@ -125,7 +125,7 @@ describe('ScratchPadFolder.create', () => {
 
   it('throws PadDbFailureError and leaves nothing behind when SQLite refuses what the creator writes', () => {
     const home = temporaryHome()
-    const task = { number: 0, title: 'Write the retry policy', state: 'to-do' } as const
+    const task = { ...addTask(exportJobTracker, 'Write the retry policy').item, id: 'task-1' }
     const create = () =>
       ScratchPadFolder.create(join(home, '2026-03-14-export-job'), exportJobIndexPage, (pad) =>
         pad.writeProgressTracker({ ...exportJobTracker, tasks: [task] }),
@@ -133,7 +133,7 @@ describe('ScratchPadFolder.create', () => {
 
     expect(create).toThrow(PadDbFailureError)
     expect(create).toThrow(
-      'failed: CHECK constraint failed: number >= 1. Nothing was saved. Tell Nick.',
+      "failed: CHECK constraint failed: id GLOB 't-[1-9]*'. Nothing was saved. Tell Nick.",
     )
     expect(readdirSync(home)).toStrictEqual([])
   })
@@ -208,13 +208,13 @@ describe('ScratchPadFolder', () => {
 
   it('throws PadDbFailureError that tells the agent to tell Nick when SQLite refuses a change', () => {
     const folder = exportJobScratchPad(temporaryHome())
-    const task = { number: 0, title: 'Write the retry policy', state: 'to-do' } as const
+    const task = { ...addTask(exportJobTracker, 'Write the retry policy').item, id: 'task-1' }
     const change = () =>
       folder.change((pad) => pad.writeProgressTracker({ ...exportJobTracker, tasks: [task] }))
 
     expect(change).toThrow(PadDbFailureError)
     expect(change).toThrow(
-      'pad.db in 2026-03-14-export-job failed: CHECK constraint failed: number >= 1. Nothing was saved. Tell Nick.',
+      `pad.db in 2026-03-14-export-job failed: CHECK constraint failed: id GLOB 't-[1-9]*'. Nothing was saved. Tell Nick.`,
     )
   })
 
@@ -293,7 +293,7 @@ describe('ScratchPadFolder', () => {
     runSqlOnPadDb(
       folder,
       `PRAGMA ignore_check_constraints = ON;
-       INSERT INTO tasks (number, title, state) VALUES (0, 'Write the retry policy', 'to-do')`,
+       INSERT INTO tasks (id, position, title, state) VALUES ('t-1', 0, 'Write the retry policy', 'to-do')`,
     )
     refuseNewEvents(folder)
     const change = () => folder.change((pad) => pad.appendEvent(goalSet))
@@ -309,7 +309,7 @@ describe('ScratchPadFolder', () => {
     runSqlOnPadDb(
       folder,
       `PRAGMA ignore_check_constraints = ON;
-       INSERT INTO tasks (number, title, state) VALUES (0, 'Write the retry policy', 'to-do')`,
+       INSERT INTO tasks (id, position, title, state) VALUES ('t-1', 0, 'Write the retry policy', 'to-do')`,
     )
 
     expect(folder.read((pad) => pad.readEvents())).toStrictEqual([])
@@ -339,12 +339,12 @@ describe('ScratchPadFolder', () => {
 
   it('throws NewerPadDbError when the tables come from a newer scratch-pad', () => {
     const folder = exportJobScratchPad(temporaryHome())
-    runSqlOnPadDb(folder, 'PRAGMA user_version = 5')
+    runSqlOnPadDb(folder, 'PRAGMA user_version = 7')
     const read = () => folder.read((pad) => pad.readEvents())
 
     expect(read).toThrow(NewerPadDbError)
     expect(read).toThrow(
-      'pad.db in 2026-03-14-export-job has the tables of version 5, but this scratch-pad only knows version 4. Update scratch-pad.',
+      'pad.db in 2026-03-14-export-job has the tables of version 7, but this scratch-pad only knows version 6. Update scratch-pad.',
     )
   })
 

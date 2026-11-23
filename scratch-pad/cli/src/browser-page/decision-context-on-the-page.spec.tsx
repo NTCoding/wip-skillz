@@ -32,6 +32,7 @@ describe('the context of a decision on the page', () => {
       page: decisionWithContext,
       onNavigate,
       loadPreview: () => Promise.resolve(undefined),
+      findTask: () => undefined,
       onAnswerDecision: () => Promise.resolve(),
       onCommentOnBlock: () => undefined,
       answersOnThisPage: new Map(),

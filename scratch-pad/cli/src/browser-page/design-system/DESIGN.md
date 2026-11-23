@@ -77,6 +77,7 @@ The reading column is the area beside the sidebar. Its layout depends on its own
 
 - Below 1040px, the text is centred and the margin with the comments is hidden. Each thread is shown as a marker beside the text instead. If Nick clicks a marker, the card of the thread will open below the text that the thread is about.
 - From 1040px, the margin is shown beside the text and the markers are hidden. The margin is `--lane-w-narrow` wide below 1152px and `--lane-w` wide from 1152px.
+- From 1040px, the card for a resolved thread is hidden behind its marker in the margin. `resolved-threads.ts` works out which cards are hidden. If Nick clicks the marker, the card opens below the text that the thread is about, in the same way as it does in a narrow reading column.
 
 The widths are written out in `reading-column.css` and `margin-lane.css`, because a container query can't read a custom property. `reading-column.spec.tsx` will fail if the widths in the 2 files differ.
 
@@ -128,17 +129,23 @@ Import the components from `design-system/design-system` and compose them, becau
 
 ```tsx
 // src/browser-page/pad-views.tsx
-import { Notice, ReadingColumn, TaskList } from './design-system/design-system'
+import { Notice, ReadingColumn, TaskList, TaskSection } from './design-system/design-system'
 
-export function ProgressTrackerView({ tracker }: { readonly tracker: ProgressTracker }) {
+export function ProgressTrackerView(props: ProgressTrackerViewProps) {
+  const { tracker, context } = props
+  const rows = tracker.tasks.map((task) => ({
+    ...rowOf(task, hasSection(task), context),
+    subtasks: task.subtasks.map((subtask) => rowOf(subtask, subtask.html !== undefined, context)),
+  }))
   return (
     <ReadingColumn>
       <h1>Progress tracker</h1>
       {tracker.tasks.length === 0 ? (
         <Notice tone="info">There aren’t any tasks yet.</Notice>
       ) : (
-        <TaskList tasks={tracker.tasks} />
+        <TaskList tasks={rows} onNavigate={context.onNavigate} openTask={props.openSection} />
       )}
+      {/* … one collapsed TaskSection for each task that has a description */}
     </ReadingColumn>
   )
 }
@@ -239,16 +246,17 @@ Import the theme's CSS file in `design-system.ts` and then set `data-theme` on `
 
 The comments feature is made of these files:
 
-| File                          | What it does                                                                                                                                                                                                                             |
-| ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `selected-block.ts`           | Turns Nick's selection into the selected text and the lines of its block. It also adds the text before and after the selection.                                                                                                          |
-| `visible-text.ts`             | Builds a block's text in the same way as the server does. It puts a space between table cells and between list items. It leaves out a code block's bar and the text of every button.                                                     |
-| `thread-anchors.ts`           | Shows each card beside the block where the server found the thread's text. If the thread is detached, the card will be shown near the thread's old lines.                                                                                |
-| `text-highlights.tsx`         | Finds the selected text in a block and splits the text nodes into `Highlight` components                                                                                                                                                 |
-| `page-with-threads.tsx`       | Shows the page with its cards in the margin. It also shows the draft of a new thread and the selection tools.                                                                                                                            |
-| `missing-page-view.tsx`       | Shows the threads that are waiting for Nick on a page that the agent has deleted. Nick can still reply to those threads or resolve them there. It also shows the items in the outbox for that page, which Nick can edit or remove there. |
-| `page-element-context.ts`     | Builds the context that `page-elements.tsx` needs to show a page. If the context doesn't have the action for a decision, the page is read only so Nick can't comment on a block or answer a decision.                                    |
-| `answered-decision-items.tsx` | Shows each decision that Nick has answered as a marker beside the heading of its question. A thread on the text of that decision is shown beside the same heading.                                                                       |
+| File                          | What it does                                                                                                                                                                                                                                                                                                                                                                                                    |
+| ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `selected-block.ts`           | Turns Nick's selection into the selected text and the lines of its block. It also adds the text before and after the selection.                                                                                                                                                                                                                                                                                 |
+| `visible-text.ts`             | Builds a block's text in the same way as the server does. It puts a space between table cells and between list items. It leaves out a code block's bar and the text of every button. It also leaves out a task reference (`data-task-reference`), because the server doesn't know the number and the title that the browser shows for the task. So a comment is never attached to the text of a task reference. |
+| `thread-anchors.ts`           | Shows each card beside the block where the server found the thread's text. If the thread is detached, the card will be shown near the thread's old lines.                                                                                                                                                                                                                                                       |
+| `text-highlights.tsx`         | Finds the selected text in a block and splits the text nodes into `Highlight` components                                                                                                                                                                                                                                                                                                                        |
+| `resolved-threads.ts`         | Finds which resolved threads are hidden behind their markers in the margin. A resolved thread is hidden if it was already resolved when the thread was first shown on the page. It's hidden too if Nick resolved it with the resolve button. If the agent resolves a thread that Nick has seen open, the thread's card stays in the margin until the page is reloaded.                                          |
+| `page-with-threads.tsx`       | Shows the page with its cards in the margin. It also shows the draft of a new thread and the selection tools.                                                                                                                                                                                                                                                                                                   |
+| `missing-page-view.tsx`       | Shows the threads that are waiting for Nick on a page that the agent has deleted. Nick can still reply to those threads or resolve them there. It also shows the items in the outbox for that page, which Nick can edit or remove there.                                                                                                                                                                        |
+| `page-element-context.ts`     | Builds the context that `page-elements.tsx` needs to show a page. If the context doesn't have the action for a decision, the page is read only so Nick can't comment on a block or answer a decision.                                                                                                                                                                                                           |
+| `answered-decision-items.tsx` | Shows each decision that Nick has answered as a marker beside the heading of its question. A thread on the text of that decision is shown beside the same heading.                                                                                                                                                                                                                                              |
 
 The server builds a block's text from the Markdown in the same way as `visible-text.ts` does in the browser. The server's code for this is in `src/rendered-page/page-blocks.ts`. `visible-text.ts` and `page-blocks.ts` are both tested against `visible-text-fixtures.ts`. If you change how one of them builds the text, a test will fail until the other one builds the same text again.
 

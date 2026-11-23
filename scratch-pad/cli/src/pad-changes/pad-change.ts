@@ -52,8 +52,10 @@ const changesOfKind: Readonly<
   'section-read': () => readMarksChange,
   'goal-set': () => progressTrackerChange,
   'task-added': () => progressTrackerChange,
+  'task-described': () => progressTrackerChange,
   'task-started': () => progressTrackerChange,
   'task-done': () => progressTrackerChange,
+  'task-moved': () => progressTrackerChange,
 }
 
 export function changesOfEvents(events: readonly ScratchPadEvent[]): PadChange[] {

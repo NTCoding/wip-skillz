@@ -13,6 +13,8 @@ export type PageLink =
       readonly page: string
       readonly headingId: string | undefined
     }
+  // A reference to a task or a subtask on the progress tracker, which the agent writes as <task:t-4>
+  | { readonly kind: 'task'; readonly line: number; readonly href: string; readonly id: string }
   | { readonly kind: 'other'; readonly line: number; readonly href: string }
 
 interface LinkScan {
@@ -21,6 +23,7 @@ interface LinkScan {
 }
 
 const schemePattern = /^[a-z][a-z\d+.-]*:/i
+export const taskReferenceScheme = 'task:'
 
 export function linksOf(tokens: readonly Token[], page: string): PageLink[] {
   return linksAfterLine(tokens, page, 0)
@@ -63,6 +66,9 @@ export function pageLink(href: string, line: number, page: string): PageLink {
   const hashAt = target.indexOf('#')
   const path = hashAt === -1 ? target : target.slice(0, hashAt)
   const headingId = hashAt === -1 ? undefined : target.slice(hashAt + 1) || undefined
+  if (target.startsWith(taskReferenceScheme)) {
+    return { kind: 'task', line, href, id: target.slice(taskReferenceScheme.length) }
+  }
   if (path === '') {
     return { kind: 'page', line, href, page, headingId }
   }

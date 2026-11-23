@@ -2,6 +2,7 @@ import { type ReactNode } from 'react'
 import { type ThreadType } from './api-responses'
 import { Highlight } from './design-system/design-system'
 import { headingTags } from './page-elements'
+import { taskReferenceScheme } from './task-references'
 
 export interface TextHighlight {
   readonly thread: string
@@ -43,11 +44,17 @@ function withoutWhitespace(text: string): string {
   return text.replaceAll(/\s+/g, '')
 }
 
+// The text of a task reference, like task:t-4, isn't part of the text that a thread is attached
+// to, which visible-text.ts explains.
 function textNodesOf(node: Node): Text[] {
   if (node instanceof Text) {
     return [node]
   }
-  if (node instanceof Element && hiddenTags.has(node.tagName)) {
+  if (
+    node instanceof Element &&
+    (hiddenTags.has(node.tagName) ||
+      String(node.getAttribute('href')).startsWith(taskReferenceScheme))
+  ) {
     return []
   }
   return [...node.childNodes].flatMap(textNodesOf)

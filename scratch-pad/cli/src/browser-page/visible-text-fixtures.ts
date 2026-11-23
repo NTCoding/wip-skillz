@@ -34,6 +34,8 @@ export const visibleTextMarkdown = [
   '',
   'I only read the `git log`.',
   ':::',
+  '',
+  'The retries are part of <task:t-4>.',
 ].join('\n')
 
 export const visibleTextHtml = [
@@ -77,6 +79,7 @@ export const visibleTextHtml = [
   "<p>I haven't read the <strong>retry</strong> code.</p>",
   '<p>I only read the <code>git log</code>.</p>',
   '</div>',
+  '<p data-lines="30-30">The retries are part of <a href="task:t-4">task:t-4</a>.</p>',
   '',
 ].join('\n')
 
@@ -90,6 +93,10 @@ export const visibleBlockTexts: Readonly<Record<string, string>> = {
   '15-18': 'const retries = 5 const wait = 30',
   '20-22': 'The finance team reads the report. It arrives every Monday.',
   '24-28': "I haven't read the retry code. I only read the git log.",
+  // The browser shows a task reference as the number and the title of the task, which the server
+  // doesn't know when it builds the text of a block. That's why the text of a task reference is
+  // left out on both sides.
+  '30-30': 'The retries are part of .',
 }
 
 export const selectionsAround: readonly SelectionAround[] = [

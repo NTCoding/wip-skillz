@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { type PageSummary, type SearchResult } from './api-responses'
-import { fileOfPage } from './browser-route'
+import { fileOfPage, type PadAddresses } from './browser-route'
 import {
   CommandPalette,
   IconButton,
@@ -144,10 +144,14 @@ export function PadSearch({ search, pages, onOpen }: PadSearchProps) {
   )
 }
 
-// The highlight of the search match stays on the page until Nick clicks anywhere or presses
-// Escape. The page removes the highlight as soon as the mouse button is pressed. So the click
-// that opened the result doesn't remove the highlight.
-export function useSearchMatch(): [SearchMatch | undefined, (match: SearchMatch) => void] {
+// Opening a search match goes to the page and the heading of the match. The highlight of the match
+// stays on the page until Nick clicks anywhere or presses Escape. The page removes the highlight as
+// soon as the mouse button is pressed. So the click that opened the result doesn't remove the
+// highlight.
+export function useSearchMatch(
+  navigate: (href: string) => void,
+  pageHref: PadAddresses['pageHref'],
+): [SearchMatch | undefined, (match: SearchMatch) => void] {
   const [match, setMatch] = useState<SearchMatch | undefined>(undefined)
   useEffect(() => {
     if (match === undefined) {
@@ -166,5 +170,9 @@ export function useSearchMatch(): [SearchMatch | undefined, (match: SearchMatch)
       document.removeEventListener('keydown', removeOnEscape)
     }
   }, [match])
-  return [match, setMatch]
+  const openSearchMatch = (opened: SearchMatch): void => {
+    setMatch(opened)
+    navigate(pageHref(fileOfPage(opened.page), opened.headingId))
+  }
+  return [match, openSearchMatch]
 }

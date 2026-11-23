@@ -35,6 +35,8 @@ export function pageCheckProblems(
   files: readonly PageFile[],
   checkedPages: readonly string[],
   answeredDecisions: readonly string[],
+  // The ids of the tasks and the subtasks on the progress tracker, like t-4
+  taskIds: readonly string[],
   proseProblems: ProseProblems,
 ): ScratchPadProblem[] {
   const duplicates = duplicateDecisions(pages)
@@ -49,7 +51,7 @@ export function pageCheckProblems(
         ...checked.rendered.decisions
           .filter((decision) => !answeredDecisions.includes(decision.id))
           .flatMap(contextProblems),
-        ...checked.rendered.links.flatMap((link) => linkProblems(link, pages)),
+        ...checked.rendered.links.flatMap((link) => linkProblems(link, pages, taskIds)),
         ...duplicates.filter((duplicate) => duplicate.page === checked.file),
         ...checked.rendered.htmlBlocks.flatMap(rawColourProblems),
       ]
@@ -109,9 +111,18 @@ function contextProblems(decision: DecisionBlock): PageProblem[] {
     : []
 }
 
-function linkProblems(link: PageLink, pages: readonly CheckedPage[]): PageProblem[] {
+const taskIdPattern = /^t-[1-9]\d*$/
+
+function linkProblems(
+  link: PageLink,
+  pages: readonly CheckedPage[],
+  taskIds: readonly string[],
+): PageProblem[] {
   if (link.kind === 'other') {
     return []
+  }
+  if (link.kind === 'task') {
+    return taskReferenceProblems(link.id, link.line, taskIds)
   }
   const target = pages.find((page) => page.page === link.page)
   if (target === undefined) {
@@ -130,6 +141,30 @@ function linkProblems(link: PageLink, pages: readonly CheckedPage[]): PageProble
       text: `the link points to the heading #${headingId} in ${link.page}, which doesn't exist`,
     },
   ]
+}
+
+// The page shows a reference to a task that doesn't exist as its text, without a link.
+function taskReferenceProblems(
+  id: string,
+  line: number,
+  taskIds: readonly string[],
+): PageProblem[] {
+  if (!taskIdPattern.test(id)) {
+    return [
+      {
+        line,
+        text: `<task:${id}> isn't a task reference. Write the id of the task or the subtask, like <task:t-4>`,
+      },
+    ]
+  }
+  return taskIds.includes(id)
+    ? []
+    : [
+        {
+          line,
+          text: `the task reference <task:${id}> points to ${id}, which isn't a task or a subtask on the progress tracker. Run tasks to list the ids`,
+        },
+      ]
 }
 
 function missingTargetText(linkedPage: string, pages: readonly CheckedPage[]): string {
@@ -167,6 +202,33 @@ function duplicateDecisions(pages: readonly CheckedPage[]): (PageProblem & { pag
     const where = first.page === place.page ? `line ${first.line}` : `${first.page}:${first.line}`
     return [{ ...place, text: `decision ${place.id} is used twice (first on ${where})` }]
   })
+}
+
+// The description of a task or a subtask on the progress tracker, like the description of subtask
+// 3.1 [t-5]
+export interface CheckedDescription {
+  readonly name: string
+  readonly links: readonly PageLink[]
+}
+
+// A reference to a task in a description is checked in the same way as on a page. The place of a
+// problem is the description and its line, which the agent writes again with `task describe` or
+// `subtask describe`.
+export function descriptionProblems(
+  descriptions: readonly CheckedDescription[],
+  taskIds: readonly string[],
+): ScratchPadProblem[] {
+  return descriptions.flatMap((description) =>
+    description.links
+      .flatMap((link) =>
+        link.kind === 'task' ? taskReferenceProblems(link.id, link.line, taskIds) : [],
+      )
+      .map((problem) => ({
+        page: `the description of ${description.name}`,
+        line: problem.line,
+        text: problem.text,
+      })),
+  )
 }
 
 export function threadsOnMissingPages(

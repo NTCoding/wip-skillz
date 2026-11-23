@@ -10,6 +10,13 @@ import {
   writeFileInPad,
 } from '../scratch-pad-folder/scratch-pad-folder-fixtures'
 import { checkPages } from './check-commands'
+import {
+  addSubtaskToTracker,
+  addTaskToTracker,
+  describeSubtaskInTracker,
+  describeTaskInTracker,
+} from './progress-tracker-commands'
+import { unservedLinks } from '../item-links/item-links-fixtures'
 
 afterEach(() => {
   removeTemporaryHomes()
@@ -43,6 +50,42 @@ describe('checkPages', () => {
       ].join('\n'),
       problemCount: 1,
     })
+  })
+
+  it('reports a task reference whose id is not the id of a task on the progress tracker', () => {
+    const folder = exportJobScratchPad(temporaryHome())
+    addTaskToTracker(folder, 'Build the export job')
+    writeFileInPad(folder, 'pages/1-retry.md', '# Retry\n\nPart of <task:t-1>, not <task:t-2>.')
+
+    expect(checkPages(folder, ['retry'], undefined).text.split('\n')).toStrictEqual([
+      "pages/1-retry.md:3  the task reference <task:t-2> points to t-2, which isn't a task or a subtask on the progress tracker. Run tasks to list the ids",
+      '1 problem in 1 page',
+    ])
+  })
+
+  it('reports a task reference in the description of a subtask whose id is not on the progress tracker', () => {
+    const folder = exportJobScratchPad(temporaryHome())
+    addTaskToTracker(folder, 'Build the export job')
+    addSubtaskToTracker(folder, 1, 'Retry a failed export')
+    describeSubtaskInTracker(
+      folder,
+      { task: 1, subtask: 1 },
+      '- The [first retry](index.md).\n- The log is <task:t-9>.\n\n:::html file=custom/steps.html\n:::',
+      unservedLinks,
+    )
+
+    expect(checkPages(folder, [], undefined).text.split('\n')[0]).toBe(
+      "the description of subtask 1.1 [t-2]:2  the task reference <task:t-9> points to t-9, which isn't a task or a subtask on the progress tracker. Run tasks to list the ids",
+    )
+  })
+
+  it("doesn't check the descriptions when a page is requested", () => {
+    const folder = exportJobScratchPad(temporaryHome())
+    addTaskToTracker(folder, 'Build the export job')
+    describeTaskInTracker(folder, 1, '- The log is <task:t-9>.', unservedLinks)
+    writeFileInPad(folder, 'pages/1-retry.md', '# Retry\n')
+
+    expect(checkPages(folder, ['retry'], undefined).problemCount).toBe(0)
   })
 
   it('accepts a link to a heading that the server adds to the index page', () => {

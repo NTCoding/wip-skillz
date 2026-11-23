@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 import './margin-lane.css'
 
 // The anchor of an item is the highlight of its thread or else the block with its lines.
@@ -6,12 +6,18 @@ import './margin-lane.css'
 // In a narrow reading column, the lane is replaced by the marker of each item. Only the item
 // whose popup is true is shown then, below its anchor. onClosePopup is called when Nick presses
 // Escape or puts the pointer down outside that item and its marker.
+// In a wide reading column, an item whose behindMarker is true is shown as its marker in the lane
+// too, like the card of a resolved thread. Its marker is placed in the lane like a card. If its
+// popup is true, the item is shown below its anchor over the other cards. If an item goes behind
+// its marker while its popup is true, like the card of a thread that Nick has just resolved,
+// onClosePopup is called and the focus moves to the marker of the item.
 export interface MarginItem {
   readonly key: string
   readonly anchorLines: string | undefined
   readonly content: ReactNode
   readonly marker: ReactNode
   readonly popup: boolean
+  readonly behindMarker?: boolean | undefined
 }
 
 interface MarginLaneProps {
@@ -20,6 +26,9 @@ interface MarginLaneProps {
   readonly onClosePopup?: (() => void) | undefined
 }
 
+// The reading column shows the lane from this width. reading-column.spec.tsx checks that the CSS
+// files use the same width.
+export const wideReadingColumn = 1040
 const gapBetweenItems = 12
 const gapBetweenMarkers = 4
 const offsetAboveAnchor = 12
@@ -91,16 +100,30 @@ function stacked(wanted: readonly WantedTop[], gap: number): Stacked {
     )
 }
 
+function isBehindMarker(element: HTMLElement): boolean {
+  return element.dataset['behindMarker'] === 'true'
+}
+
+// In a wide reading column, the lane stacks the cards together with the markers of the items that
+// are hidden behind their markers. A card starts a little above its anchor, whereas a marker starts
+// at the top of its anchor.
+function wideLaneTops(lane: HTMLElement, scope: Element, laneTop: number): WantedTop[] {
+  const cards = childrenWith(lane, 'data-key')
+    .filter((item) => !isBehindMarker(item))
+    .map((item) => ({ item, top: anchorBoxOf(scope, laneTop, item).top - offsetAboveAnchor }))
+  const markers = childrenWith(lane, 'data-marker')
+    .filter(isBehindMarker)
+    .map((item) => ({ item, top: anchorBoxOf(scope, laneTop, item).top }))
+  return [...cards, ...markers].map(({ item, top }) => ({ item, top: Math.max(0, top) }))
+}
+
 export function layOutMarginLane(lane: HTMLElement, scope: Element): void {
   const laneTop = lane.getBoundingClientRect().top
   const anchored = childrenWith(lane, 'data-key').map((item) => ({
     item,
     box: anchorBoxOf(scope, laneTop, item),
   }))
-  const cards = stacked(
-    anchored.map(({ item, box }) => ({ item, top: Math.max(0, box.top - offsetAboveAnchor) })),
-    gapBetweenItems,
-  )
+  const cards = stacked(wideLaneTops(lane, scope, laneTop), gapBetweenItems)
   for (const { item, top } of cards.placed) {
     item.style.setProperty('--margin-item-top', px(top))
   }
@@ -168,6 +191,30 @@ function scopeOf(lane: HTMLElement): Element {
   return lane.closest('[data-margin-scope]') ?? lane.ownerDocument.body
 }
 
+// The focus moves to the marker without a scroll, because the lane is already laid out by then. The
+// control that Nick clicked in the item is hidden with the item.
+function useCloseItemBehindMarker(
+  lane: HTMLElement | null,
+  items: readonly MarginItem[],
+  onClosePopup: (() => void) | undefined,
+): void {
+  const behindMarker = useRef<ReadonlyMap<string, boolean>>(new Map())
+  useLayoutEffect(() => {
+    const [hidden] = items.filter(
+      (item) =>
+        item.popup && item.behindMarker === true && behindMarker.current.get(item.key) === false,
+    )
+    behindMarker.current = new Map(items.map((item) => [item.key, item.behindMarker === true]))
+    if (lane === null || hidden === undefined || scopeOf(lane).clientWidth < wideReadingColumn) {
+      return
+    }
+    onClosePopup?.()
+    lane
+      .querySelector<HTMLElement>(`:scope > [data-marker="${hidden.key}"] button`)
+      ?.focus({ preventScroll: true })
+  })
+}
+
 export function MarginLane({ label, items, onClosePopup }: MarginLaneProps) {
   const [lane, setLane] = useState<HTMLElement | null>(null)
   useClosePopup(lane, onClosePopup)
@@ -193,6 +240,7 @@ export function MarginLane({ label, items, onClosePopup }: MarginLaneProps) {
     }
     return () => observer.disconnect()
   })
+  useCloseItemBehindMarker(lane, items, onClosePopup)
   return (
     <aside ref={attachLane} className="margin-lane" aria-label={label}>
       {items.flatMap((item) => [
@@ -202,6 +250,7 @@ export function MarginLane({ label, items, onClosePopup }: MarginLaneProps) {
             className="margin-lane__marker"
             data-marker={item.key}
             data-anchor-lines={item.anchorLines}
+            data-behind-marker={item.behindMarker === true}
           >
             {item.marker}
           </div>
@@ -212,6 +261,7 @@ export function MarginLane({ label, items, onClosePopup }: MarginLaneProps) {
           data-key={item.key}
           data-anchor-lines={item.anchorLines}
           data-popup={item.popup}
+          data-behind-marker={item.behindMarker === true}
         >
           {item.content}
         </div>,
