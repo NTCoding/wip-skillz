@@ -2,13 +2,13 @@
 // temporary folder. A branch can then be tried without touching the real scratch pads or the
 // real server. Ctrl+C stops the server and removes the temporary folder.
 // Usage: pnpm try [<folder>] [--port <port>]
-import { execFileSync, spawn } from 'node:child_process'
+import { spawn } from 'node:child_process'
 import { cpSync, existsSync, mkdirSync, mkdtempSync, rmSync } from 'node:fs'
 import { createServer } from 'node:net'
 import { homedir, tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { backup, DatabaseSync } from 'node:sqlite'
-import { addFeatureExamples, createExampleScratchPad } from './example-scratch-pad.mjs'
+import { addFeatureExamples, createExampleScratchPad, toolRunner } from './example-scratch-pad.mjs'
 
 const tool = resolve('dist/scratch-pad')
 const defaultPort = 4800
@@ -84,8 +84,7 @@ async function copyScratchPad(folder, home) {
 function toolIn(home) {
   const environment = { ...process.env, SCRATCH_PADS_HOME: home }
   delete environment.SCRATCH_PAD
-  return (...words) =>
-    execFileSync(process.execPath, [tool, ...words], { env: environment, encoding: 'utf8' })
+  return toolRunner(tool, environment)
 }
 
 async function serverIsListening(port) {

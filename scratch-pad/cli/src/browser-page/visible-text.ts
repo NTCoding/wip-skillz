@@ -43,11 +43,17 @@ const tagsWithoutPageText = new Set([
   'TEXTAREA',
 ])
 
+// A reference to a task is left out, because the server doesn't know the number and the title of
+// the task that the browser shows. TaskLink marks the reference with data-task-reference.
 function textPiecesOf(node: Node): TextPiece[] {
   if (node instanceof Text) {
     return [node]
   }
-  if (!(node instanceof Element) || tagsWithoutPageText.has(node.tagName)) {
+  if (
+    !(node instanceof Element) ||
+    tagsWithoutPageText.has(node.tagName) ||
+    node.hasAttribute('data-task-reference')
+  ) {
     return []
   }
   const inside = [...node.childNodes].flatMap(textPiecesOf)

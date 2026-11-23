@@ -1,4 +1,5 @@
 .task-list {
+  container-type: inline-size;
   margin: var(--space-0);
   padding: var(--space-0);
   border: var(--hairline) solid var(--line);
@@ -9,16 +10,66 @@
   line-height: var(--lh-md);
 }
 
-.task-list__task {
-  display: grid;
-  grid-template-columns: var(--space-7xl) minmax(0, 1fr) auto;
-  align-items: baseline;
-  gap: var(--space-3xl);
-  padding: var(--cell-padding-y) var(--cell-padding-x);
+.task-list__item {
+  margin: var(--space-0);
 }
 
-.task-list__task + .task-list__task {
+.task-list__item + .task-list__item,
+.task-list__subtasks > .task-list__task {
   border-top: var(--hairline) solid var(--line-soft);
+}
+
+.task-list__task {
+  display: grid;
+  grid-template-columns: var(--tree-chevron-size) var(--space-7xl) minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: var(--space-xl);
+  margin: var(--space-0);
+  padding: var(--cell-padding-y) var(--cell-padding-x);
+  font-size: inherit;
+  line-height: inherit;
+}
+
+/* The number of a subtask starts under the title of its task. */
+.task-list__task--subtask {
+  grid-template-columns: var(--space-7xl) minmax(0, 1fr) auto;
+  padding-left: calc(
+    var(--cell-padding-x) + var(--tree-chevron-size) + var(--space-7xl) + var(--space-xl) * 2
+  );
+}
+
+.task-list__subtasks {
+  margin: var(--space-0);
+  padding: var(--space-0);
+  list-style: none;
+}
+
+.task-list__chevron {
+  align-self: center;
+  display: grid;
+  place-items: center;
+  width: var(--tree-chevron-size);
+  height: var(--tree-chevron-size);
+  padding: var(--space-0);
+  border: 0;
+  border-radius: var(--r-pill);
+  background: none;
+}
+
+button.task-list__chevron {
+  cursor: pointer;
+}
+
+button.task-list__chevron:hover {
+  background: var(--tint);
+}
+
+.task-list__chevron .icon {
+  color: var(--icon);
+}
+
+.task-list__chevron[aria-expanded='true'] .icon {
+  transform: rotate(90deg);
 }
 
 .task-list__number {
@@ -27,21 +78,22 @@
 }
 
 .task-list__state {
-  padding: var(--space-2xs) var(--space-lg);
-  border-radius: var(--r-pill);
-  background: var(--tint);
-  color: var(--state-todo);
-  font-size: var(--fs-xs);
-  line-height: var(--lh-xs);
-  font-weight: var(--fw-medium);
-  white-space: nowrap;
+  display: flex;
 }
 
-.task-list__task[data-state='in-progress'] .task-list__state {
-  color: var(--state-doing);
-}
+/* In a narrow list, the state is shown under the title so that the title keeps the width of the row. */
+@container (width < 480px) {
+  .task-list__task {
+    grid-template-columns: var(--tree-chevron-size) auto minmax(0, 1fr);
+    row-gap: var(--space-xs);
+  }
 
-.task-list__task[data-state='done'] .task-list__state {
-  background: var(--accent-pale);
-  color: var(--state-done);
+  .task-list__task--subtask {
+    grid-template-columns: auto minmax(0, 1fr);
+    padding-left: calc(var(--cell-padding-x) + var(--tree-chevron-size) + var(--space-xl));
+  }
+
+  .task-list__state {
+    grid-column: -2;
+  }
 }

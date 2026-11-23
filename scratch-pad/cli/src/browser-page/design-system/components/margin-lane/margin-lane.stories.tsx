@@ -64,3 +64,49 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const TwoCardsBesideOneBlock: Story = {}
+
+export const ResolvedThreadBehindItsMarker: Story = {
+  args: {
+    items: [
+      {
+        key: 'c-4',
+        anchorLines: '3-3',
+        content: (
+          <MarginCard label="Comment c-4" name="c-4" kind="comment" active={false}>
+            <p>Does the job handle the shops one after another?</p>
+          </MarginCard>
+        ),
+        marker: (
+          <MarginMarker
+            label="Comment c-4"
+            kind="comment"
+            messages={4}
+            open={false}
+            onClick={() => undefined}
+          />
+        ),
+        popup: false,
+        behindMarker: true,
+      },
+      {
+        key: 'c-1',
+        anchorLines: '5-5',
+        content: (
+          <MarginCard label="Comment c-1" name="c-1" kind="comment" active={false}>
+            <p>Is one file per shop enough?</p>
+          </MarginCard>
+        ),
+        marker: (
+          <MarginMarker
+            label="Comment c-1"
+            kind="comment"
+            messages={1}
+            open={false}
+            onClick={() => undefined}
+          />
+        ),
+        popup: false,
+      },
+    ],
+  },
+}

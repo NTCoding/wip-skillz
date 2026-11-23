@@ -42,10 +42,11 @@ export function scrollTargetOf(
   // shownPage is the page that is shown, like pages/retry-limit.md.
   shownPage: string | undefined,
   cardsRead: boolean,
-  improvementsRead: boolean,
+  // Whether the improvements or the progress tracker are read, which a link can point into
+  viewRead: boolean,
 ): string | undefined {
-  if (route.kind === 'improvements') {
-    if (!improvementsRead) {
+  if (route.kind === 'improvements' || route.kind === 'progress-tracker') {
+    if (!viewRead) {
       return undefined
     }
     return route.section === undefined ? route.kind : `${route.kind}#${route.section}`

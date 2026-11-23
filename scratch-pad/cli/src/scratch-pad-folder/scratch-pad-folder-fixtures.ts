@@ -76,6 +76,17 @@ export function runSqlOnPadDb(folder: ScratchPadFolder, sql: string): void {
   }
 }
 
+// The table tasks before version 5 added the description and version 6 added the ids and the
+// subtasks
+export const tasksTableOfVersion4 = `
+DROP TABLE tasks;
+CREATE TABLE tasks (
+  number INTEGER PRIMARY KEY CHECK (number >= 1),
+  title TEXT NOT NULL,
+  state TEXT NOT NULL
+) STRICT;
+`
+
 export function damageTableOfPadDb(folder: ScratchPadFolder, table: string): void {
   const db = new DatabaseSync(join(folder.path, 'pad.db'))
   const pages = db

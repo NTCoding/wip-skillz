@@ -17,6 +17,7 @@ function contextFor(page: ViewedPage, overrides: Partial<PageElementContext> = {
     page,
     onNavigate: () => undefined,
     loadPreview: () => Promise.resolve(undefined),
+    findTask: () => undefined,
     onAnswerDecision: () => Promise.resolve(),
     onCommentOnBlock: () => undefined,
     answersOnThisPage: new Map(),

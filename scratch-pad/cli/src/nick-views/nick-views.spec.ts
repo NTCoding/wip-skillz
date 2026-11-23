@@ -3,7 +3,6 @@ import { join } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
 import { replyToThread } from '../agent-commands/thread-commands'
 import { logDecisionFromChat } from '../agent-commands/decision-log-commands'
-import { addTaskToTracker } from '../agent-commands/progress-tracker-commands'
 import { nickAnswersDecision, nickComments, nickResolves } from '../nick-actions/nick-actions'
 import { unservedLinks } from '../item-links/item-links-fixtures'
 import { UnknownPageError } from '../pages/page-markdown'
@@ -23,13 +22,7 @@ import {
   writeInvoiceDecisionsPage,
   writeRetryChoicesPage,
 } from './nick-views-fixtures'
-import {
-  decisionLogOf,
-  pageSummaries,
-  progressTrackerOf,
-  threadsOfPage,
-  viewPage,
-} from './nick-views'
+import { decisionLogOf, pageSummaries, threadsOfPage, viewPage } from './nick-views'
 
 const time = '2026-03-14T09:30:00.000Z'
 
@@ -348,19 +341,6 @@ describe('threadsOfPage', () => {
       threadsOfPage(folder, 'board-edge.md').map((thread) => [thread.id, thread.position?.kind]),
     ).toStrictEqual([['c-1', 'detached']])
     expect(threadsOfPage(folder, 'queue.md')).toStrictEqual([])
-  })
-})
-
-describe('progressTrackerOf', () => {
-  it('returns the title, the goal and the tasks of the progress tracker', () => {
-    const folder = exportJobScratchPad(temporaryHome())
-    addTaskToTracker(folder, 'Export the invoices')
-
-    expect(progressTrackerOf(folder)).toStrictEqual({
-      title: 'Export job',
-      goal: undefined,
-      tasks: [{ number: 1, title: 'Export the invoices', state: 'to-do' }],
-    })
   })
 })
 

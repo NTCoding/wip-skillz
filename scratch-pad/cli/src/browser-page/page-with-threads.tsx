@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode, type RefObject } from 'react'
+import { useMemo, useRef, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import {
   type Answer,
@@ -37,8 +37,11 @@ import { changedSectionItems, usePageMarks, type ReadMarkActions } from './chang
 import { answeredDecisions, pageElements, parsedPageBody } from './page-elements'
 import { type PageAddress } from './current-section'
 import { type NewThread } from './scratch-pad-connection'
-import { selectedBlockText, type BlockSelection, type SelectedBlockText } from './selected-block'
+import { type BlockSelection } from './selected-block'
+import { useSelectionTools } from './selection-tools-state'
 import { highlightedTexts, type TextHighlight } from './text-highlights'
+import { type ResolvedThreads } from './resolved-threads'
+import { withTaskChips } from './task-references'
 import { placeThreads, type PlacedThread } from './thread-anchors'
 
 export interface PageActions extends QueuedItemActions, ReadMarkActions {
@@ -68,6 +71,9 @@ interface PageWithThreadsProps {
   // Whether Nick has read the page and which sections have changed since he read it. The export
   // doesn't have any read marks.
   readonly readMark?: PageReadMark | undefined
+  readonly resolvedThreads: ResolvedThreads
+  // The chips under the title for the tasks that the page is part of
+  readonly taskChips?: ReactNode
 }
 
 interface Draft {
@@ -105,36 +111,6 @@ export function withPostedThreads(
     (thread) => !loaded.some((each) => each.id === thread.id),
   )
   return [...shown, ...added]
-}
-
-function useSelectionTools(
-  pageText: RefObject<HTMLElement | null>,
-  tools: RefObject<HTMLDivElement | null>,
-): [SelectedBlockText | undefined, (selection: SelectedBlockText | undefined) => void] {
-  const [selected, setSelected] = useState<SelectedBlockText | undefined>(undefined)
-  useEffect(() => {
-    const update = (event: MouseEvent | KeyboardEvent): void => {
-      const insideTools = event.target instanceof Node && tools.current?.contains(event.target)
-      const selecting = event instanceof MouseEvent || event.shiftKey || event.key === 'Shift'
-      if (!insideTools && selecting) {
-        setSelected(selectedBlockText(document.getSelection(), pageText.current))
-      }
-    }
-    const hideOnEscape = (event: KeyboardEvent): void => {
-      if (event.key === 'Escape') {
-        setSelected(undefined)
-      }
-    }
-    document.addEventListener('mouseup', update)
-    document.addEventListener('keyup', update)
-    document.addEventListener('keydown', hideOnEscape)
-    return () => {
-      document.removeEventListener('mouseup', update)
-      document.removeEventListener('keyup', update)
-      document.removeEventListener('keydown', hideOnEscape)
-    }
-  }, [pageText, tools])
-  return [selected, setSelected]
 }
 
 function highlightsOf(
@@ -227,8 +203,13 @@ export function PageWithThreads(props: PageWithThreadsProps) {
       ),
     [body, props.outbox, page.page],
   )
+  // Only Nick's own resolve returns a resolved thread. In a wide reading column, the card of that
+  // thread is hidden behind its marker afterwards.
   const remember = (thread: Thread): void => {
     setPosted((current) => new Map([...current, [thread.id, thread]]))
+    if (thread.waitsFor === 'nobody') {
+      props.resolvedThreads.resolvedByNick(thread)
+    }
   }
   const startDraft = (kind: ThreadKindName, selection: BlockSelection): void => {
     setDraft({ kind, selection })
@@ -309,6 +290,7 @@ export function PageWithThreads(props: PageWithThreadsProps) {
       />
     ),
     popup: draft === undefined && thread.id === active,
+    behindMarker: props.resolvedThreads.behindMarker(thread),
   }))
   const queuedItems: MarginItem[] =
     actions === undefined
@@ -396,7 +378,7 @@ export function PageWithThreads(props: PageWithThreadsProps) {
           elementContext,
           body,
           highlighted,
-          readMarks.marks,
+          withTaskChips(readMarks.marks, props.taskChips),
           new Set(decisions.map((decision) => decision.id)),
         )}
       </ReadingColumn>

@@ -1,7 +1,6 @@
 // Starts the built tool with an invented scratch pad and takes screenshots of
 // the browser page and of the gallery with headless Chrome.
 // Usage: node scripts/browser-page-screenshots.mjs <output folder>
-import { execFileSync } from 'node:child_process'
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, unlinkSync, writeFileSync } from 'node:fs'
 import { createServer } from 'node:http'
 import { tmpdir } from 'node:os'
@@ -13,6 +12,7 @@ import {
   indexPage,
   invoiceTemplatePage,
   retryLimitPage,
+  toolRunner,
 } from './example-scratch-pad.mjs'
 
 const chrome = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
@@ -20,13 +20,10 @@ const tool = resolve('dist/scratch-pad')
 const output = resolve(process.argv[2] ?? 'screenshots')
 const home = mkdtempSync(join(tmpdir(), 'scratch-pad-screens-'))
 const environment = { ...process.env, SCRATCH_PADS_HOME: home }
+const run = toolRunner(tool, environment)
 const pad = createExampleScratchPad(run, home)
 environment.SCRATCH_PAD = pad
 const checks = {}
-
-function run(...words) {
-  return execFileSync(process.execPath, [tool, ...words], { env: environment, encoding: 'utf8' })
-}
 
 function freePort() {
   return new Promise((resolvePort) => {

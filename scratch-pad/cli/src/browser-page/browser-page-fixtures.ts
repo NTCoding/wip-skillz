@@ -6,7 +6,6 @@ import {
   type PadChange,
   type PageReadMark,
   type SectionHash,
-  type ProgressTracker,
   type Thread,
   type ViewedPage,
 } from './api-responses'
@@ -15,6 +14,7 @@ import { type NarrowWindow } from './sidebar-state'
 import { servedAddresses } from './browser-route'
 import { fakeOutbox } from './outbox-fixtures'
 import { pageSummaries } from './page-summary-fixtures'
+import { progressTracker } from './tracker-fixtures'
 import {
   type ChangeListeners,
   type NewThread,
@@ -22,6 +22,7 @@ import {
 } from './scratch-pad-connection'
 
 export { pageSummaries } from './page-summary-fixtures'
+export { progressTracker } from './tracker-fixtures'
 
 export const exportPad = '2026-11-20-invoice-export'
 
@@ -146,15 +147,6 @@ const firstRetryPage: ViewedPage = {
   ],
   links: [],
   decisions: [],
-}
-
-export const progressTracker: ProgressTracker = {
-  title: 'Invoice export',
-  goal: 'Ship the invoice export job.',
-  tasks: [
-    { number: 1, title: 'Design the export job', state: 'done' },
-    { number: 2, title: 'Write the invoice template', state: 'in-progress' },
-  ],
 }
 
 export const decisionLog: DecisionLogEntry[] = [

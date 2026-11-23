@@ -82,7 +82,7 @@ export function PadSidebar(props: PadSidebarProps) {
       views={
         <>
           <SidebarLink
-            href={addresses.progressTrackerHref}
+            href={addresses.progressTrackerHref()}
             icon="progress-tracker"
             title="Progress tracker"
             current={props.view === 'progress-tracker'}

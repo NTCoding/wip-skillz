@@ -1,0 +1,25 @@
+.task-chips {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  margin: var(--space-0);
+  padding: var(--space-0);
+  list-style: none;
+  font-family: var(--font-ui);
+  font-size: var(--fs-sm);
+  line-height: var(--lh-sm);
+}
+
+.task-chips__chip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-md);
+  margin: var(--space-0);
+  font-size: inherit;
+  line-height: inherit;
+}
+
+.task-chips__label {
+  color: var(--text-2);
+}

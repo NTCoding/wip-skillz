@@ -34,6 +34,15 @@ describe('routeOf', () => {
     expect(routeOf({ pathname: '/pad/progress-tracker', hash: '' })).toStrictEqual({
       kind: 'progress-tracker',
       pad: 'pad',
+      section: undefined,
+    })
+  })
+
+  it('returns the progress tracker and the task when the hash of the address names a task', () => {
+    expect(routeOf({ pathname: '/pad/progress-tracker', hash: '#t-2' })).toStrictEqual({
+      kind: 'progress-tracker',
+      pad: 'pad',
+      section: 't-2',
     })
   })
 
@@ -123,10 +132,11 @@ describe('servedAddresses', () => {
 
   it('returns the paths of the server and loads the frame of an html block from the server when the page is served', () => {
     expect(addresses.pageHref('retry-limit.md', 'wait')).toBe('/pad/retry-limit.md#wait')
-    expect([addresses.progressTrackerHref, addresses.decisionLogHref]).toStrictEqual([
-      '/pad/progress-tracker',
-      '/pad/decisions',
-    ])
+    expect([
+      addresses.progressTrackerHref(),
+      addresses.progressTrackerHref('t-2'),
+      addresses.decisionLogHref,
+    ]).toStrictEqual(['/pad/progress-tracker', '/pad/progress-tracker#t-2', '/pad/decisions'])
     expect(addresses.improvementsHref('improvement-1')).toBe('/pad/improvements#improvement-1')
     expect(addresses.htmlBlockFrame).toBe('server')
   })
@@ -151,10 +161,16 @@ describe('exportedAddresses', () => {
     )
     expect(addresses.pageHref('index.md')).toBe('#/index.md')
     expect([
-      addresses.progressTrackerHref,
+      addresses.progressTrackerHref(),
+      addresses.progressTrackerHref('t-2'),
       addresses.decisionLogHref,
       addresses.inboxOutboxHref,
-    ]).toStrictEqual(['#/progress-tracker', '#/decisions', '#/inbox-outbox'])
+    ]).toStrictEqual([
+      '#/progress-tracker',
+      '#/progress-tracker/t-2',
+      '#/decisions',
+      '#/inbox-outbox',
+    ])
     expect([
       addresses.improvementsHref(),
       addresses.improvementsHref('improvement-1'),
@@ -189,7 +205,11 @@ describe('exportedAddresses', () => {
     expect(addresses.routeOf({ pathname: exportPath, hash: '#/progress-tracker' })).toStrictEqual({
       kind: 'progress-tracker',
       pad: 'pad',
+      section: undefined,
     })
+    expect(
+      addresses.routeOf({ pathname: exportPath, hash: '#/progress-tracker/t-2' }),
+    ).toStrictEqual({ kind: 'progress-tracker', pad: 'pad', section: 't-2' })
     expect(addresses.routeOf({ pathname: exportPath, hash: '#/decisions' })).toStrictEqual({
       kind: 'decision-log',
       pad: 'pad',

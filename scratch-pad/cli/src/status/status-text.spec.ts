@@ -42,7 +42,7 @@ describe('statusText', () => {
       [
         '2026-03-14-export-job · /pads/2026-03-14-export-job',
         `in the browser: ${exportJobAddress}`,
-        'task 2 of 3: Task about retry 2',
+        '[t-2] task 2 of 3: Task about retry 2',
         `link: ${exportJobAddress}progress-tracker`,
         'waiting for the agent: 1 comment, 1 decision, 2 grammar notes',
         'waiting for Nick: 1 reply',
@@ -60,7 +60,7 @@ describe('statusText', () => {
 
     expect(lines.slice(1, 4)).toStrictEqual([
       missingLinksText,
-      'task 2 of 3: Task about retry 2',
+      '[t-2] task 2 of 3: Task about retry 2',
       'waiting for the agent: nothing',
     ])
   })

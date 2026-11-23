@@ -28,7 +28,11 @@ export type BrowserRoute =
       readonly file: string
       readonly section: string | undefined
     }
-  | { readonly kind: 'progress-tracker'; readonly pad: string }
+  | {
+      readonly kind: 'progress-tracker'
+      readonly pad: string
+      readonly section: string | undefined
+    }
   | { readonly kind: 'decision-log'; readonly pad: string }
   | { readonly kind: 'inbox-outbox'; readonly pad: string }
   | { readonly kind: 'improvements'; readonly pad: string; readonly section: string | undefined }
@@ -47,8 +51,9 @@ function decoded(part: string): string {
 }
 
 function routeFrom(pad: string, file: string, section: string): BrowserRoute {
+  const sectionOrNone = section === '' ? undefined : section
   if (file === progressTrackerPath) {
-    return { kind: 'progress-tracker', pad }
+    return { kind: 'progress-tracker', pad, section: sectionOrNone }
   }
   if (file === decisionLogPath) {
     return { kind: 'decision-log', pad }
@@ -56,7 +61,6 @@ function routeFrom(pad: string, file: string, section: string): BrowserRoute {
   if (file === inboxOutboxPath) {
     return { kind: 'inbox-outbox', pad }
   }
-  const sectionOrNone = section === '' ? undefined : section
   if (file === improvementsPath) {
     return { kind: 'improvements', pad, section: sectionOrNone }
   }
@@ -75,7 +79,7 @@ export function routeOf(location: BrowserLocation): BrowserRoute {
 export interface PadAddresses {
   readonly routeOf: (location: BrowserLocation) => BrowserRoute
   readonly pageHref: (file: string, section?: string) => string
-  readonly progressTrackerHref: string
+  readonly progressTrackerHref: (section?: string) => string
   readonly decisionLogHref: string
   readonly improvementsHref: (section?: string) => string
   readonly inboxOutboxHref: string
@@ -86,7 +90,7 @@ export function servedAddresses(pad: string): PadAddresses {
   return {
     routeOf,
     pageHref: (file, section) => pageHref(pad, file, section),
-    progressTrackerHref: progressTrackerHref(pad),
+    progressTrackerHref: (section) => progressTrackerHref(pad, section),
     decisionLogHref: decisionLogHref(pad),
     improvementsHref: (section) => improvementsHref(pad, section),
     inboxOutboxHref: inboxOutboxHref(pad),
@@ -100,7 +104,7 @@ export function exportedAddresses(pad: string): PadAddresses {
   return {
     routeOf: (location) => exportedRouteOf(pad, location.hash),
     pageHref: (file, section) => exportedHref(file, section),
-    progressTrackerHref: `#/${progressTrackerPath}`,
+    progressTrackerHref: (section) => exportedHref(progressTrackerPath, section),
     decisionLogHref: `#/${decisionLogPath}`,
     improvementsHref: (section) => exportedHref(improvementsPath, section),
     inboxOutboxHref: `#/${inboxOutboxPath}`,

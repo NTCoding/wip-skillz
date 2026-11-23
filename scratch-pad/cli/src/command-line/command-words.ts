@@ -1,9 +1,21 @@
 import { parseArgs } from 'node:util'
 import { mainAgentTypes } from '../agent-inbox/agent-inbox'
 import { itemTypes, type ItemType } from '../items/item-id'
+import { type SubtaskNumber } from '../progress-tracker/progress-tracker'
+import { type Placement } from '../progress-tracker/task-moves'
 import { ScratchPadError } from '../scratch-pad-error'
 
-export const optionNames = ['pad', 'type', 'all', 'port', 'quiet', 'timeout', 'out'] as const
+export const optionNames = [
+  'pad',
+  'type',
+  'all',
+  'port',
+  'quiet',
+  'timeout',
+  'out',
+  'before',
+  'after',
+] as const
 export type OptionName = (typeof optionNames)[number]
 
 const knownOptions: readonly string[] = [...optionNames, 'help']
@@ -16,8 +28,12 @@ const parserOptions = {
   quiet: { type: 'string' },
   timeout: { type: 'string' },
   out: { type: 'string' },
+  before: { type: 'string' },
+  after: { type: 'string' },
   help: { type: 'boolean' },
 } as const
+
+const subtaskPattern = /^([1-9]\d*)\.([1-9]\d*)$/
 
 type StartsText = (wordsBefore: readonly string[]) => boolean
 
@@ -29,6 +45,8 @@ export interface CommandOptions {
   readonly quiet: string | undefined
   readonly timeout: string | undefined
   readonly out: string | undefined
+  readonly before: string | undefined
+  readonly after: string | undefined
 }
 
 export interface CommandWords {
@@ -60,7 +78,33 @@ export class MissingArgumentError extends ScratchPadError {
 
 export class InvalidTaskNumberError extends ScratchPadError {
   constructor(text: string, usage: string) {
-    super(`"${text}" isn't a task number. Usage: scratch-pad ${usage}`)
+    super(
+      subtaskPattern.test(text)
+        ? `"${text}" is the number of a subtask. Run the subtask command for a subtask, like "scratch-pad subtask show ${text}". Usage: scratch-pad ${usage}`
+        : `"${text}" isn't a task number. Usage: scratch-pad ${usage}`,
+    )
+  }
+}
+
+export class InvalidSubtaskNumberError extends ScratchPadError {
+  constructor(text: string, usage: string) {
+    super(
+      `"${text}" isn't a subtask number. A subtask number starts with the number of its task, like 2.1. Usage: scratch-pad ${usage}`,
+    )
+  }
+}
+
+export class SubtaskOfSubtaskError extends ScratchPadError {
+  constructor(text: string) {
+    super(
+      `"${text}" is the number of a subtask, but a subtask can't have subtasks. Add the subtask to task ${text.split('.')[0]} instead.`,
+    )
+  }
+}
+
+export class PlacementError extends ScratchPadError {
+  constructor(usage: string) {
+    super(`Pass either --before <number> or --after <number>. Usage: scratch-pad ${usage}`)
   }
 }
 
@@ -110,6 +154,8 @@ export function parseCommandWords(argv: readonly string[], startsText: StartsTex
       quiet: textOption(values, 'quiet'),
       timeout: textOption(values, 'timeout'),
       out: textOption(values, 'out'),
+      before: textOption(values, 'before'),
+      after: textOption(values, 'after'),
     },
     givenOptions: optionNames.filter((name) => values[name] !== undefined),
     help: flagOption(values, 'help'),
@@ -150,8 +196,53 @@ function positiveNumber(text: string, invalid: () => ScratchPadError): number {
 }
 
 export function taskNumber(words: readonly string[], index: number, usage: string): number {
+  return taskNumberFrom(requiredWord(words, index, 'task number', usage), usage)
+}
+
+export function subtaskNumber(
+  words: readonly string[],
+  index: number,
+  usage: string,
+): SubtaskNumber {
+  return subtaskNumberFrom(requiredWord(words, index, 'subtask number', usage), usage)
+}
+
+// The task that a new subtask is added to. It can't be a subtask, because a subtask can't have
+// subtasks.
+export function parentTaskNumber(words: readonly string[], index: number, usage: string): number {
   const text = requiredWord(words, index, 'task number', usage)
+  if (subtaskPattern.test(text)) {
+    throw new SubtaskOfSubtaskError(text)
+  }
+  return taskNumber(words, index, usage)
+}
+
+// Where a moved task or subtask goes. Exactly one of --before and --after is given.
+export function placementOf<N>(
+  options: CommandOptions,
+  usage: string,
+  parse: (text: string) => N,
+): Placement<N> {
+  const { before, after } = options
+  if (before !== undefined && after === undefined) {
+    return { side: 'before', target: parse(before) }
+  }
+  if (after !== undefined && before === undefined) {
+    return { side: 'after', target: parse(after) }
+  }
+  throw new PlacementError(usage)
+}
+
+export function taskNumberFrom(text: string, usage: string): number {
   return positiveNumber(text, () => new InvalidTaskNumberError(text, usage))
+}
+
+export function subtaskNumberFrom(text: string, usage: string): SubtaskNumber {
+  const match = subtaskPattern.exec(text)
+  if (match === null) {
+    throw new InvalidSubtaskNumberError(text, usage)
+  }
+  return { task: Number(match[1]), subtask: Number(match[2]) }
 }
 
 export function improvementNumber(words: readonly string[], index: number, usage: string): number {

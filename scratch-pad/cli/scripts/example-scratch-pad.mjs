@@ -1,8 +1,47 @@
 // The invented scratch pad that pnpm try and the screenshots of the browser page show. It contains
 // an example of every feature that Nick checks on the browser page.
-import { readFileSync, utimesSync, writeFileSync } from 'node:fs'
+import { execFileSync } from 'node:child_process'
+import {
+  closeSync,
+  mkdtempSync,
+  openSync,
+  readFileSync,
+  rmSync,
+  utimesSync,
+  writeFileSync,
+} from 'node:fs'
+import { tmpdir } from 'node:os'
 import { basename, join } from 'node:path'
 import { DatabaseSync } from 'node:sqlite'
+
+// Returns a function that runs the built tool `tool` with the words it's passed, as the agent does,
+// and returns what the tool printed. If the last argument is { input }, the tool reads the input
+// from standard input, like a heredoc. The tool only reads standard input from a file or a pipe,
+// but Node connects a child process to a socket. That's why the input is written to a file first.
+export function toolRunner(tool, environment) {
+  return (...words) => {
+    const last = words.at(-1)
+    if (typeof last !== 'object') {
+      return execFileSync(process.execPath, [tool, ...words], {
+        env: environment,
+        encoding: 'utf8',
+      })
+    }
+    const folder = mkdtempSync(join(tmpdir(), 'scratch-pad-input-'))
+    writeFileSync(join(folder, 'input.md'), last.input)
+    const input = openSync(join(folder, 'input.md'), 'r')
+    try {
+      return execFileSync(process.execPath, [tool, ...words.slice(0, -1)], {
+        env: environment,
+        encoding: 'utf8',
+        stdio: [input, 'pipe', 'inherit'],
+      })
+    } finally {
+      closeSync(input)
+      rmSync(folder, { recursive: true, force: true })
+    }
+  }
+}
 
 export const indexPage = `# Invoice export
 
@@ -346,6 +385,98 @@ pick: proposal, because a shop expects its file in the morning.
       demo.writtenAgo('c-1', 30 * minute)
       demo.savedAgo('2.1-wait-between-retries.md', 2 * 60 * minute)
     },
+  },
+  {
+    feature:
+      'A resolved comment with 4 messages, which is shown as its marker in the margin above the card of the open comment c-1',
+    add: async (demo) => {
+      await demo.comment('comment', '1-how-the-job-runs.md', {
+        selectedText: 'handles every shop in 3 steps',
+        message: 'Does the job handle the shops one after another or all at the same time?',
+      })
+      demo.agent('reply', 'c-4', 'One after another, so a slow shop delays the shops after it.')
+      await demo.post('threads/c-4/replies', {
+        message: 'Can a slow shop make the job run past the morning?',
+      })
+      demo.agent(
+        'reply',
+        'c-4',
+        'No. Each shop has a limit of 10 minutes. The job moves on to the next shop once the limit is reached.',
+      )
+      await demo.post('threads/c-4/resolve', {})
+    },
+  },
+  {
+    feature:
+      "The descriptions of the first 2 tasks below the list of tasks on the progress tracker, whose titles link to them. The last task doesn't have a description.",
+    add: async (demo) => {
+      demo.agent('task', 'describe', '1', {
+        input: `- The job runs once a night in 3 steps, which are listed in [how the job runs](how-the-job-runs.md#the-steps).
+- A slow shop can make an upload fail. [The retry limit](retry-limit.md) explains when the job tries a shop again.
+- Nick has decided to raise the retry limit to 8 in [the decision about the retry limit](how-the-job-runs.md#will-the-export-job-retry-8-times).
+`,
+      })
+      demo.agent('task', 'describe', '2', {
+        input: `- Every shop uses the same template, which is described in [the invoice template](invoice-template.md).
+- A guest without a company doesn't have a tax number, so [the tax number](invoice-template.md#tax-number) is left out.
+- The export copies the number of each invoice without changing it, as explained in [the invoice numbers](invoice-numbers.md).
+`,
+      })
+    },
+  },
+  {
+    feature:
+      'Task 4 "Build the export job" with 3 subtasks in mixed states. Its chevron on the progress tracker shows 4.1 done, 4.2 in progress and 4.3 to do. The description of subtask 4.1 is in a collapsed section inside the collapsed section of task 4.',
+    add: async (demo) => {
+      demo.agent('task', 'add', 'Build the export job')
+      demo.agent('subtask', 'add', '4', 'Retry a failed export')
+      demo.agent('subtask', 'add', '4', 'Log each retry')
+      demo.agent('subtask', 'add', '4', 'Alert the team after the last retry')
+      demo.agent('subtask', 'start', '4.1')
+      demo.agent('subtask', 'done', '4.1')
+      demo.agent('subtask', 'describe', '4.1', {
+        input: `- A failed shop is tried again after a wait, which is explained in [the wait between retries](wait-between-retries.md#will-the-wait-stop-at-10-minutes).
+- Each retry is one line of the log, which is the next subtask <task:t-6>.
+`,
+      })
+    },
+  },
+  {
+    feature:
+      'Task 2 "Agree the retry limit with Jo", which was added as task 5 and then moved before the invoice template. The tasks after it were numbered again, so the export job is task 5 with the subtasks 5.1 to 5.3.',
+    add: async (demo) => {
+      demo.agent('task', 'add', 'Agree the retry limit with Jo')
+      demo.agent('task', 'move', '5', '--before', '2')
+    },
+  },
+  {
+    feature:
+      'The chips "Part of task" at the top of the retry limit and of each page below it, like the first retry. Task 1 and task 4 "Check the retry limit" both link to the retry limit, so each of those pages shows 2 chips. Task 1 also links to a heading of how the job runs, which doesn\'t count.',
+    add: async (demo) => {
+      demo.agent('task', 'describe', '4', {
+        input: `- The job retries a failed shop 5 times, which is explained in [the retry limit](retry-limit.md).
+`,
+      })
+    },
+  },
+  {
+    feature:
+      'A task reference on the new page invoice numbers, which shows the current number and title of the task "3 Write the invoice template" as a link to the task on the progress tracker. The task was task 2 when the reference was written.',
+    add: async (demo) => {
+      demo.changePage(
+        '3.1-invoice-numbers.md',
+        (markdown) => `${markdown}
+The template that shows the numbers is built in <task:t-2>.
+`,
+      )
+    },
+  },
+  {
+    feature:
+      'The title of the tab, which switches to "(3) Waiting for you · Invoice export" for 3 seconds every 15 seconds while Nick looks at another tab or another app. The count is the count on the Inbox button.',
+    // The decisions and the reply that the examples above add already wait for Nick. That's why
+    // this example doesn't need to add anything.
+    add: async () => {},
   },
 ]
 

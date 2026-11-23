@@ -13,6 +13,7 @@ import {
   type ThreadOfPad,
   type ViewedPage,
 } from './api-responses'
+import { useBlinkingTabTitle } from './blinking-tab-title'
 import { breadcrumbOf } from './breadcrumb'
 import { scrollTargetOf, useBrowserNavigation, useScrollOnNavigation } from './browser-navigation'
 import { fileOfPage, type BrowserRoute, type PadAddresses } from './browser-route'
@@ -45,8 +46,10 @@ import { type SavedSettings } from './saved-settings'
 import { PageWithThreads, type PageActions } from './page-with-threads'
 import { useOutboxEdits } from './queued-items'
 import { readMarkOf } from './read-marks'
+import { useResolvedThreads, type ResolvedThreads } from './resolved-threads'
 import { type ScratchPadReading, type ScratchPadWriting } from './scratch-pad-connection'
 import { useSidebarState, type NarrowWindow } from './sidebar-state'
+import { taskChipsOn, taskFinder, type FindTask } from './task-references'
 import { TopBarActions } from './top-bar-actions'
 import { DecisionLogView, ImprovementsView, LoadingView, ProgressTrackerView } from './pad-views'
 
@@ -77,6 +80,7 @@ interface PageContext {
     file: string,
     section: string | undefined,
   ) => Promise<PreviewContent | undefined>
+  readonly findTask: FindTask
 }
 
 interface RouteViewProps {
@@ -95,6 +99,7 @@ interface RouteViewProps {
   readonly pageContext: PageContext
   readonly actions: PageActions | undefined
   readonly navigations: number
+  readonly resolvedThreads: ResolvedThreads
 }
 
 function isMissing(pages: LoadedValue<PageSummary[]>, file: string): boolean {
@@ -145,7 +150,12 @@ function RouteView(props: RouteViewProps) {
   const { route, tracker, log, page, threads, pageContext, actions } = props
   if (route.kind === 'progress-tracker') {
     return tracker.status === 'loaded' ? (
-      <ProgressTrackerView tracker={tracker.value} />
+      <ProgressTrackerView
+        tracker={tracker.value}
+        context={pageContext}
+        openSection={route.section}
+        navigations={props.navigations}
+      />
     ) : (
       <LoadingView loaded={tracker} />
     )
@@ -194,6 +204,8 @@ function RouteView(props: RouteViewProps) {
       actions={actions}
       address={{ section: route.section, navigations: props.navigations }}
       readMark={props.readMark}
+      resolvedThreads={props.resolvedThreads}
+      taskChips={taskChipsOn(props.tracker, props.pages, page.value.page, pageContext)}
       end={
         route.file === 'index.md' ? (
           <>
@@ -293,6 +305,7 @@ export function ScratchPadApp(props: ScratchPadAppProps) {
   const padTitle = loadedOr(tracker, undefined)?.title ?? pad
   useInboxNotifications(props.notifications, padTitle, inbox)
   const address = { section: route.kind === 'page' ? route.section : undefined, navigations }
+  const resolvedThreads = useResolvedThreads(loadedOr(threads, []))
   const currentSection = useCurrentSection(
     sectionsOf(viewedPage).map((heading) => heading.id),
     address,
@@ -301,13 +314,14 @@ export function ScratchPadApp(props: ScratchPadAppProps) {
   // scrolls once both are loaded.
   const cards = cardsShownOn(route, page, pages, { onPage: [threads, loadedOutbox], inbox })
   useScrollOnNavigation(
-    scrollTargetOf(route, cards.page, cards.cardsRead, improvements.status !== 'loading'),
+    scrollTargetOf(
+      route,
+      cards.page,
+      cards.cardsRead,
+      (route.kind === 'progress-tracker' ? tracker : improvements).status !== 'loading',
+    ),
     navigations,
   )
-  useEffect(() => {
-    document.title = tabTitleOf(viewedPage?.title, padTitle)
-  }, [viewedPage?.title, padTitle])
-
   const loadPreview = useCallback(
     async (target: string, section: string | undefined) =>
       pagePreview(await connection.page(target), padTitle, section),
@@ -328,9 +342,11 @@ export function ScratchPadApp(props: ScratchPadAppProps) {
     pageList,
     readMarks,
   )
+  useBlinkingTabTitle(tabTitleOf(viewedPage?.title, padTitle), padTitle, inboxEntries)
   const queuedEntries = outboxEntries(addresses, outbox.items, pageList, threadsOfPad)
   const breadcrumb = breadcrumbOf(route, viewedPage, pageList, addresses)
   const readMark = route.kind === 'page' ? readMarkOf(readMarks, `pages/${route.file}`) : undefined
+  const findTask = taskFinder(loadedOr(tracker, undefined))
 
   return (
     <AppFrame
@@ -389,9 +405,10 @@ export function ScratchPadApp(props: ScratchPadAppProps) {
         inboxEntries={inboxEntries}
         threadsOfPad={threadsOfPad}
         readMark={readMark}
-        pageContext={{ addresses, onNavigate: navigate, loadPreview }}
+        pageContext={{ addresses, onNavigate: navigate, loadPreview, findTask }}
         actions={actions}
         navigations={navigations}
+        resolvedThreads={resolvedThreads}
       />
       {viewedPage !== undefined && (
         <PageOutline

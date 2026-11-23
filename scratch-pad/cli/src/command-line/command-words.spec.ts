@@ -3,19 +3,26 @@ import {
   InvalidImprovementNumberError,
   InvalidPortError,
   InvalidSecondsError,
+  InvalidSubtaskNumberError,
   InvalidTaskNumberError,
   MissingArgumentError,
   OptionValueError,
+  PlacementError,
+  SubtaskOfSubtaskError,
   UnknownItemTypeError,
   UnknownOptionError,
   improvementNumber,
   inboxTypes,
   milliseconds,
+  parentTaskNumber,
   parseCommandWords,
+  placementOf,
   portNumber,
   requiredWord,
   restOfWords,
+  subtaskNumber,
   taskNumber,
+  taskNumberFrom,
 } from './command-words'
 
 const noText = () => false
@@ -36,6 +43,8 @@ describe('parseCommandWords', () => {
         quiet: undefined,
         timeout: undefined,
         out: undefined,
+        before: undefined,
+        after: undefined,
       },
       givenOptions: ['pad', 'type', 'all'],
       help: false,
@@ -53,6 +62,8 @@ describe('parseCommandWords', () => {
         quiet: undefined,
         timeout: undefined,
         out: undefined,
+        before: undefined,
+        after: undefined,
       },
       givenOptions: [],
       help: false,
@@ -89,6 +100,8 @@ describe('parseCommandWords', () => {
         quiet: undefined,
         timeout: undefined,
         out: undefined,
+        before: undefined,
+        after: undefined,
       },
       givenOptions: [],
       help: false,
@@ -108,6 +121,8 @@ describe('parseCommandWords', () => {
         quiet: undefined,
         timeout: undefined,
         out: undefined,
+        before: undefined,
+        after: undefined,
       },
       givenOptions: [],
       help: false,
@@ -135,6 +150,8 @@ describe('parseCommandWords', () => {
         quiet: undefined,
         timeout: undefined,
         out: undefined,
+        before: undefined,
+        after: undefined,
       },
       givenOptions: ['pad'],
       help: false,
@@ -203,7 +220,7 @@ describe('taskNumber', () => {
     expect(taskNumber(['12'], 0, 'task done <number>')).toBe(12)
   })
 
-  it.each(['0', '1.5', 'two', '-1'])(
+  it.each(['0', '1.5.1', 'two', '-1'])(
     'throws InvalidTaskNumberError when the number is %s',
     (text) => {
       expect(() => taskNumber([text], 0, 'task done <number>')).toThrow(InvalidTaskNumberError)
@@ -212,6 +229,83 @@ describe('taskNumber', () => {
       )
     },
   )
+})
+
+describe('taskNumber of a subtask', () => {
+  it('throws InvalidTaskNumberError that points to the subtask commands when the number is a subtask number', () => {
+    expect(() => taskNumber(['2.1'], 0, 'task start <number>')).toThrow(
+      '"2.1" is the number of a subtask. Run the subtask command for a subtask, like "scratch-pad subtask show 2.1". Usage: scratch-pad task start <number>',
+    )
+  })
+})
+
+describe('subtaskNumber', () => {
+  const usage = 'subtask done <number>'
+
+  it('returns the number of the task and the number of the subtask', () => {
+    expect(subtaskNumber(['12.3'], 0, usage)).toStrictEqual({ task: 12, subtask: 3 })
+  })
+
+  it.each(['2', '2.0', '2.1.1', 'two'])(
+    'throws InvalidSubtaskNumberError when the number is %s',
+    (text) => {
+      expect(() => subtaskNumber([text], 0, usage)).toThrow(InvalidSubtaskNumberError)
+      expect(() => subtaskNumber([text], 0, usage)).toThrow(
+        `"${text}" isn't a subtask number. A subtask number starts with the number of its task, like 2.1. Usage: scratch-pad ${usage}`,
+      )
+    },
+  )
+
+  it('throws MissingArgumentError when the number is missing', () => {
+    expect(() => subtaskNumber([], 0, usage)).toThrow(
+      `The subtask number is missing. Usage: scratch-pad ${usage}`,
+    )
+  })
+})
+
+describe('parentTaskNumber', () => {
+  const usage = 'subtask add <task number> <title>'
+
+  it('returns the number of the task', () => {
+    expect(parentTaskNumber(['2', 'Retry'], 0, usage)).toBe(2)
+  })
+
+  it('throws SubtaskOfSubtaskError when the number is a subtask number', () => {
+    expect(() => parentTaskNumber(['2.1'], 0, usage)).toThrow(SubtaskOfSubtaskError)
+    expect(() => parentTaskNumber(['2.1'], 0, usage)).toThrow(
+      `"2.1" is the number of a subtask, but a subtask can't have subtasks. Add the subtask to task 2 instead.`,
+    )
+  })
+})
+
+describe('placementOf', () => {
+  const usage = 'task move <number> --before|--after <number>'
+  const options = parseCommandWords([], noText).options
+  const parse = (text: string) => taskNumberFrom(text, usage)
+
+  it('returns before the target when --before is given', () => {
+    expect(placementOf({ ...options, before: '2' }, usage, parse)).toStrictEqual({
+      side: 'before',
+      target: 2,
+    })
+  })
+
+  it('returns after the target when --after is given', () => {
+    expect(placementOf({ ...options, after: '3' }, usage, parse)).toStrictEqual({
+      side: 'after',
+      target: 3,
+    })
+  })
+
+  it.each([
+    ['neither', {}],
+    ['both', { before: '1', after: '2' }],
+  ])('throws PlacementError when %s of the options is given', (_, given) => {
+    expect(() => placementOf({ ...options, ...given }, usage, parse)).toThrow(PlacementError)
+    expect(() => placementOf({ ...options, ...given }, usage, parse)).toThrow(
+      `Pass either --before <number> or --after <number>. Usage: scratch-pad ${usage}`,
+    )
+  })
 })
 
 describe('improvementNumber', () => {

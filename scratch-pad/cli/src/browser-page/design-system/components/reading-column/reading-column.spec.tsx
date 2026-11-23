@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { render, screen } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
+import { wideReadingColumn } from '../margin-lane/margin-lane'
 import { ReadingColumn } from './reading-column'
 import readingColumnCss from './reading-column.css?raw'
 
@@ -41,8 +42,8 @@ describe('ReadingColumn with a margin', () => {
 })
 
 describe('the width where the lane replaces the markers', () => {
-  it('is the same in reading-column.css and in margin-lane.css', () => {
-    const query = '@container reading-column (width >= 1040px)'
+  it('is the same in reading-column.css, in margin-lane.css and in margin-lane.tsx', () => {
+    const query = `@container reading-column (width >= ${wideReadingColumn}px)`
     const marginLaneCss = readFileSync(
       'src/browser-page/design-system/components/margin-lane/margin-lane.css',
       'utf8',

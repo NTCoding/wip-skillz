@@ -155,7 +155,7 @@ describe('the scratch-pad commands', () => {
     await output(['task', 'add', 'Write the retry policy'], environment)
 
     expect(await output(['task', 'start', '1'], environment)).toBe(
-      `task 1 has started: Write the retry policy\n${missingLinksText}\n`,
+      `[t-1] task 1 has started: Write the retry policy\n${missingLinksText}\n`,
     )
   })
 
@@ -164,7 +164,7 @@ describe('the scratch-pad commands', () => {
     await output(['task', 'add', 'Write the retry policy'], environment)
 
     expect(await output(['task', 'done', '1'], environment)).toBe(
-      `task 1 is done: Write the retry policy\nno task is left to do\n${missingLinksText}\n`,
+      `[t-1] task 1 is done: Write the retry policy\nno task is left to do\n${missingLinksText}\n`,
     )
   })
 
@@ -268,7 +268,7 @@ describe('the scratch-pad commands', () => {
     await output(['task', 'add', 'Write the invoice template'], environment)
 
     expect(await output(['tasks'], environment)).toBe(
-      `1  to do  Write the retry policy\n2  to do  Write the invoice template\n${missingLinksText}\n`,
+      `1  [t-1]  to do  Write the retry policy\n2  [t-2]  to do  Write the invoice template\n${missingLinksText}\n`,
     )
   })
 

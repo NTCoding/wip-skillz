@@ -30,6 +30,7 @@ const pageLink = z.discriminatedUnion('kind', [
     page: z.string(),
     headingId: optionalText,
   }),
+  z.object({ kind: z.literal('task'), href: z.string(), id: z.string() }),
   z.object({ kind: z.literal('other'), href: z.string() }),
 ])
 
@@ -50,11 +51,16 @@ export const viewedPageResponse = z.object({
   decisions: z.array(decisionOnPage),
 })
 
-const task = z.object({
-  number: z.number(),
+const subtask = z.object({
+  id: z.string(),
+  number: z.string(),
   title: z.string(),
   state: z.enum(['to-do', 'in-progress', 'done']),
+  html: optionalText,
+  links: z.array(pageLink),
 })
+
+const task = subtask.extend({ number: z.number(), subtasks: z.array(subtask) })
 
 export const progressTrackerResponse = z.object({
   title: z.string(),

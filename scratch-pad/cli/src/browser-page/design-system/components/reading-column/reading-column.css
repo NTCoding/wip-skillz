@@ -109,6 +109,11 @@
   margin-top: var(--gap-h4);
 }
 
+/* A collapsible section, like the description of a task, starts with a heading of level 2. */
+.reading-column__grid > .reading-column__text > details {
+  margin-top: var(--gap-h2);
+}
+
 .reading-column__grid > .reading-column__text > :first-child {
   margin-top: var(--space-0);
 }
