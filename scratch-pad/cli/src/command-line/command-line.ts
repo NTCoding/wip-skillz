@@ -59,7 +59,7 @@ export function helpText(): string {
     '',
     'The scratch pad comes from --pad <folder name or path>, else from SCRATCH_PAD.',
     'The scratch pads are in SCRATCH_PADS_HOME, else in ~/scratchpads.',
-    'An option after the text of new, goal, task add, decide, improve, improvement edit, reply or done is part of the text.',
+    'An option after the text of new, goal, task add, subtask add, decide, improve, improvement edit, reply or done is part of the text.',
   ].join('\n')
 }
 

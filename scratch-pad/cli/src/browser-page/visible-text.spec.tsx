@@ -19,6 +19,7 @@ function renderedArticle(): HTMLElement {
     page,
     onNavigate: () => undefined,
     loadPreview: () => Promise.resolve(undefined),
+    findTask: () => undefined,
     onAnswerDecision: () => Promise.resolve(),
     onCommentOnBlock: () => undefined,
     answersOnThisPage: new Map(),

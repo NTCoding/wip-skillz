@@ -173,13 +173,41 @@ function markEveryPageRead(pad: PadDb, pages: readonly PageMarkdown[]): void {
   pages.forEach(({ page, markdown }) => pad.markPageRead(page, sectionTexts(markdown, page)))
 }
 
+// The description of a task is new in version 5. A task of an existing scratch pad doesn't have a
+// description until the agent writes one with `task describe`.
+const taskDescriptionColumn = `
+ALTER TABLE tasks ADD COLUMN description TEXT;
+`
+
+// Version 6 gives each task an id that never changes, like t-4, and adds the subtasks. A subtask has
+// the id of its task in parent_id. The position of a task is its place among the tasks, and the
+// position of a subtask is its place among the subtasks of its task. A task of an older scratch pad
+// keeps its number as its position and gets the id with the same number.
+const taskIdsAndSubtasks = `
+CREATE TABLE tasks_with_ids (
+  id TEXT PRIMARY KEY CHECK (id GLOB 't-[1-9]*'),
+  parent_id TEXT,
+  position INTEGER NOT NULL CHECK (position >= 1),
+  title TEXT NOT NULL,
+  state TEXT NOT NULL ${oneOf('state', taskStates)},
+  description TEXT,
+  CHECK (parent_id IS NULL OR parent_id <> id)
+) STRICT;
+INSERT INTO tasks_with_ids (id, parent_id, position, title, state, description)
+  SELECT 't-' || number, NULL, number, title, state, description FROM tasks;
+DROP TABLE tasks;
+ALTER TABLE tasks_with_ids RENAME TO tasks;
+`
+
 export const padSchema: PadSchema = {
-  version: 4,
+  version: 6,
   firstTables: firstPadTables,
   migrations: [
     { version: 2, sql: improvementsTable },
     { version: 3, sql: outboxTable },
     { version: 4, sql: readMarksTables, fill: markEveryPageRead },
+    { version: 5, sql: taskDescriptionColumn },
+    { version: 6, sql: taskIdsAndSubtasks },
   ],
 }
 

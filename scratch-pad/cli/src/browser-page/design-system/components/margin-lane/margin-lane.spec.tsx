@@ -130,6 +130,36 @@ describe('layOutMarginLane', () => {
     ])
   })
 
+  it('places the marker of an item that is hidden behind its marker in the lane like a card, rather than the item itself', () => {
+    const scope = document.createElement('div')
+    scope.innerHTML = [
+      '<p data-lines="3-3">The export job retries 5 times.</p>',
+      '<p data-lines="5-5">The job writes one file per shop.</p>',
+      '<aside>',
+      '<span data-marker="c-4" data-anchor-lines="3-3" data-behind-marker="true"></span>',
+      '<div data-key="c-4" data-anchor-lines="3-3" data-behind-marker="true"></div>',
+      '<span data-marker="c-1" data-anchor-lines="5-5" data-behind-marker="false"></span>',
+      '<div data-key="c-1" data-anchor-lines="5-5" data-behind-marker="false"></div>',
+      '</aside>',
+    ].join('')
+    const lane = scope.querySelector('aside') ?? scope
+    placeAt(lane, 100)
+    placeAt(scope.querySelector('[data-lines="3-3"]') ?? scope, 200)
+    placeAt(scope.querySelector('[data-lines="5-5"]') ?? scope, 260)
+    const [hiddenMarker, hiddenCard, marker, card] = [...lane.children]
+    placeAt(hiddenMarker ?? lane, 0, 26)
+    placeAt(hiddenCard ?? lane, 0, 220)
+    placeAt(marker ?? lane, 0, 26)
+    placeAt(card ?? lane, 0, 80)
+    layOutMarginLane(lane, scope)
+    expect(
+      [...lane.children].map((child) =>
+        child instanceof HTMLElement ? child.style.getPropertyValue('--margin-item-top') : '',
+      ),
+    ).toStrictEqual(['100px', '', '', '148px'])
+    expect(lane.style.getPropertyValue('--margin-lane-height')).toBe('228px')
+  })
+
   it('makes the lane 0 pixels tall when the lane doesn’t have any items', () => {
     const lane = document.createElement('aside')
     layOutMarginLane(lane, document.createElement('div'))
@@ -177,6 +207,89 @@ describe('MarginLane', () => {
     )
     const lane = screen.getByRole('complementary', { name: 'Comments and notes' })
     expect(lane.children).toHaveLength(1)
+  })
+
+  it('closes the popup of an item and moves the focus to its marker when the item goes behind its marker in a wide reading column', () => {
+    vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockReturnValue(1200)
+    const onClosePopup = vi.fn<() => void>()
+    const lane = (behindMarker: boolean, close: (() => void) | undefined) => (
+      <MarginLane
+        label="Comments and notes"
+        items={[
+          {
+            key: 'c-1',
+            anchorLines: '3-3',
+            content: <button type="button">Resolve c-1</button>,
+            marker: <button type="button">Comment c-1</button>,
+            popup: true,
+            behindMarker,
+          },
+        ]}
+        onClosePopup={close}
+      />
+    )
+    const { rerender } = render(lane(false, onClosePopup))
+    rerender(lane(true, onClosePopup))
+    expect(onClosePopup).toHaveBeenCalledTimes(1)
+    expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Comment c-1' }))
+    rerender(lane(false, undefined))
+    screen.getByRole('button', { name: 'Resolve c-1' }).focus()
+    rerender(lane(true, undefined))
+    expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Comment c-1' }))
+  })
+
+  it('leaves the popup of an item open when the item goes behind its marker in a narrow reading column or is behind its marker from the start', () => {
+    const onClosePopup = vi.fn<() => void>()
+    const lane = (key: string, behindMarker: boolean) => (
+      <MarginLane
+        label="Comments and notes"
+        items={[
+          {
+            key,
+            anchorLines: '3-3',
+            content: <p>Is 5 retries enough?</p>,
+            marker: <button type="button">Comment {key}</button>,
+            popup: true,
+            behindMarker,
+          },
+        ]}
+        onClosePopup={onClosePopup}
+      />
+    )
+    const { rerender } = render(lane('c-1', false))
+    rerender(lane('c-1', true))
+    vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockReturnValue(1200)
+    rerender(lane('c-4', true))
+    expect(onClosePopup).not.toHaveBeenCalled()
+  })
+
+  it('marks an item and its marker when the item is hidden behind its marker', () => {
+    render(
+      <MarginLane
+        label="Comments and notes"
+        items={[
+          {
+            key: 'c-4',
+            anchorLines: '3-3',
+            content: <p>Does the job handle the shops one after another?</p>,
+            marker: <button type="button">Comment c-4</button>,
+            popup: false,
+            behindMarker: true,
+          },
+          {
+            key: 'c-1',
+            anchorLines: '5-5',
+            content: <p>Is 5 retries enough?</p>,
+            marker: <button type="button">Comment c-1</button>,
+            popup: false,
+          },
+        ]}
+      />,
+    )
+    const lane = screen.getByRole('complementary', { name: 'Comments and notes' })
+    expect(
+      [...lane.children].map((child) => child.getAttribute('data-behind-marker')),
+    ).toStrictEqual(['true', 'true', 'false', 'false'])
   })
 
   it('looks for the anchors inside the closest margin scope when the lane has one', () => {

@@ -1,0 +1,62 @@
+import { type ProgressTracker } from './api-responses'
+
+function pageLink(href: string, page: string, headingId?: string) {
+  return { kind: 'page' as const, href, page, headingId }
+}
+
+// Task 2 has 2 subtasks. The description of task 1 links to the first retry, which is page 2.1.1.
+// The description of task 3 links to the retry limit, which is page 2 above the first retry. The
+// description of subtask 2.1 links to the invoice template.
+export const progressTracker: ProgressTracker = {
+  title: 'Invoice export',
+  goal: 'Ship the invoice export job.',
+  tasks: [
+    {
+      id: 't-1',
+      number: 1,
+      title: 'Design the export job',
+      state: 'done',
+      html: '<ul>\n<li>The first retry waits 30 seconds, which is explained in <a href="first-retry.md">the first retry</a>.</li>\n</ul>\n',
+      links: [pageLink('first-retry.md', 'pages/first-retry.md')],
+      subtasks: [],
+    },
+    {
+      id: 't-2',
+      number: 2,
+      title: 'Write the invoice template',
+      state: 'in-progress',
+      html: undefined,
+      links: [],
+      subtasks: [
+        {
+          id: 't-4',
+          number: '2.1',
+          title: 'Show the tax number',
+          state: 'done',
+          html: '<p>The tax number is on <a href="invoice-template.md">the invoice template</a>.</p>\n',
+          links: [pageLink('invoice-template.md', 'pages/invoice-template.md')],
+        },
+        {
+          id: 't-5',
+          number: '2.2',
+          title: 'Show the bank details',
+          state: 'in-progress',
+          html: undefined,
+          links: [],
+        },
+      ],
+    },
+    {
+      id: 't-3',
+      number: 3,
+      title: 'Check the retry limit',
+      state: 'to-do',
+      html: '<p>The limit is on <a href="retry-limit.md">the retry limit</a> and <a href="invoice-template.md#the-logo">the logo</a> waits.</p>\n',
+      links: [
+        pageLink('retry-limit.md', 'pages/retry-limit.md'),
+        pageLink('invoice-template.md#the-logo', 'pages/invoice-template.md', 'the-logo'),
+      ],
+      subtasks: [],
+    },
+  ],
+}

@@ -55,4 +55,27 @@
   .margin-lane__marker {
     display: none;
   }
+
+  /* An item that is hidden behind its marker only shows its marker, which is placed in the lane
+     like a card. The item is shown below its anchor while its popup is true, like in a narrow
+     reading column. */
+  .margin-lane__marker[data-behind-marker='true'] {
+    display: block;
+    top: var(--margin-item-top, 0);
+    left: var(--space-0);
+  }
+
+  .margin-lane__item[data-behind-marker='true'] {
+    display: none;
+  }
+
+  .margin-lane__item[data-behind-marker='true'][data-popup='true'] {
+    --margin-card-shadow: var(--shadow-lg);
+
+    display: block;
+    top: var(--margin-popup-top, 0);
+    left: auto;
+    z-index: 15;
+    width: min(var(--margin-popup-w), 100%);
+  }
 }

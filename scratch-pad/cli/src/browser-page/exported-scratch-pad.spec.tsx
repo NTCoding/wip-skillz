@@ -123,7 +123,7 @@ describe('ScratchPadApp in an export', () => {
   it('goes to another page and keeps the address in the hash when the reader clicks a page in the sidebar', async () => {
     renderExport()
     const sidebar = await screen.findByRole('navigation', { name: 'Pages of the scratch pad' })
-    await userEvent.click(within(sidebar).getByRole('link', { name: 'Invoice template' }))
+    await userEvent.click(await within(sidebar).findByRole('link', { name: 'Invoice template' }))
     await screen.findByRole('heading', { level: 1, name: 'Invoice template' })
     expect(`${window.location.pathname}${window.location.hash}`).toBe(
       `${exportPath}#/invoice-template.md`,
@@ -201,6 +201,33 @@ describe('ScratchPadApp in an export', () => {
     expect(screen.getByRole('link', { name: 'Improvements' }).getAttribute('href')).toBe(
       '#/improvements',
     )
+  })
+
+  it('shows the description of a task below the list of tasks in the export', async () => {
+    renderExport('#/progress-tracker/t-1')
+    await screen.findByRole('heading', { level: 1, name: 'Progress tracker' })
+    expect(screen.getByRole('link', { name: 'Design the export job' }).getAttribute('href')).toBe(
+      '#/progress-tracker/t-1',
+    )
+    expect(screen.getByRole('heading', { level: 2, name: '1. Design the export job' }).id).toBe(
+      't-1',
+    )
+    expect(screen.getByRole('link', { name: 'the first retry' }).getAttribute('href')).toBe(
+      '#/first-retry.md',
+    )
+  })
+
+  it('shows the chips of the tasks that a page is part of in the export', async () => {
+    renderExport('#/first-retry.md')
+    await screen.findByRole('heading', { level: 1, name: 'First retry' })
+    expect(
+      within(screen.getByRole('list', { name: 'Tasks' }))
+        .getAllByRole('link')
+        .map((link) => [link.textContent, link.getAttribute('href')]),
+    ).toStrictEqual([
+      ['1 Design the export job', '#/progress-tracker/t-1'],
+      ['3 Check the retry limit', '#/progress-tracker/t-3'],
+    ])
   })
 
   it('doesn’t offer to comment on a selection when the export is opened', async () => {

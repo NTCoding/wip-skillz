@@ -11,6 +11,8 @@ import {
 import { type ScratchPadFolder } from '../scratch-pad-folder/scratch-pad-folder'
 import { commentAndGrammarNoteAndDecision } from './agent-commands-fixtures'
 import { ExportNotWrittenError, exportScratchPad } from './export-commands'
+import { addTaskToTracker, describeTaskInTracker } from './progress-tracker-commands'
+import { unservedLinks } from '../item-links/item-links-fixtures'
 
 const bundle = { script: 'startBrowserPage()', stylesheet: '.page{color:var(--text)}' }
 
@@ -68,6 +70,25 @@ describe('exportScratchPad', () => {
     )
 
     expect(data.improvements.notes.map((note) => note.id)).toStrictEqual(['g-1'])
+  })
+
+  it('writes the HTML of the description of each task in the data of the export', () => {
+    const folder = scratchPadWithTwoPages()
+    addTaskToTracker(folder, 'Write the retry policy')
+    describeTaskInTracker(
+      folder,
+      1,
+      '- The limit is on [the policy](retry-policy.md).',
+      unservedLinks,
+    )
+    exportScratchPad(folder, { out: undefined, bundle })
+    const data = exportedPadData.parse(
+      exportedData(readFileSync(join(folder.path, 'export.html'), 'utf8')),
+    )
+
+    expect(data.progressTracker.tasks.map((task) => task.html)).toStrictEqual([
+      '<ul data-lines="1-1">\n<li>The limit is on <a href="retry-policy.md">the policy</a>.</li>\n</ul>\n',
+    ])
   })
 
   it('writes the file that --out names and creates its folder when the folder doesn’t exist', () => {

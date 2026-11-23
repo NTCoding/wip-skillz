@@ -33,6 +33,11 @@ export function progressTrackerLink(links: ItemLinks): string | undefined {
   return linkTo(links, progressTrackerHref(links.pad))
 }
 
+// The anchor of a task or a subtask on the progress tracker is its id, like t-4.
+export function taskLink(links: ItemLinks, id: string): string | undefined {
+  return linkTo(links, progressTrackerHref(links.pad, id))
+}
+
 export function decisionLogLink(links: ItemLinks): string | undefined {
   return linkTo(links, decisionLogHref(links.pad))
 }

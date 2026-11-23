@@ -3,19 +3,12 @@ import { readAgentInbox, scratchPadStatus } from '../agent-commands/inbox-comman
 import { logDecisionFromChat } from '../agent-commands/decision-log-commands'
 import { exportScratchPad } from '../agent-commands/export-commands'
 import { listPages, outlinePage } from '../agent-commands/page-commands'
-import {
-  addTaskToTracker,
-  finishTaskInTracker,
-  listTasks,
-  setGoalOfScratchPad,
-  startTaskInTracker,
-} from '../agent-commands/progress-tracker-commands'
+import { setGoalOfScratchPad } from '../agent-commands/progress-tracker-commands'
 import { finishItem, replyToThread, showItem } from '../agent-commands/thread-commands'
 import { waitForAgentInbox } from '../agent-commands/wait-commands'
 import { browserPageBundle } from '../local-server/browser-page-bundle'
 import { toolBuild } from '../local-server/tool-build'
-import { padLink, progressTrackerLink, textWithLink } from '../item-links/item-links'
-import { type ScratchPadFolder } from '../scratch-pad-folder/scratch-pad-folder'
+import { padLink, textWithLink } from '../item-links/item-links'
 import { proseCheckFrom } from '../prose-check/prose-check'
 import { createScratchPad } from '../scratch-pads-home/scratch-pads-home'
 import { scratchPadCreatedText } from '../scratch-pads-home/scratch-pads-home-text'
@@ -26,15 +19,9 @@ import {
 } from '../server-process/server-process'
 import { servingText, startedServerText, stoppedServerText } from '../server-process/server-text'
 import { linksOf, pad, type CommandInput, type ScratchPadCommand } from './command-input'
-import {
-  inboxTypes,
-  milliseconds,
-  portNumber,
-  requiredWord,
-  restOfWords,
-  taskNumber,
-} from './command-words'
+import { inboxTypes, milliseconds, portNumber, requiredWord, restOfWords } from './command-words'
 import { improvementCommands } from './improvement-commands'
+import { taskCommands, withTrackerLink } from './task-commands'
 
 const defaultPort = 4747
 const checkMilliseconds = 250
@@ -49,16 +36,6 @@ const waitReminder = 'Run `wait` in the background before you end your turn.'
 
 function withWaitReminder(text: string): string {
   return `${text}\n${waitReminder}`
-}
-
-async function withTrackerLink(
-  input: CommandInput,
-  change: (folder: ScratchPadFolder) => string,
-): Promise<string> {
-  const folder = input.folder()
-  const text = change(folder)
-  const links = await linksOf(input, folder)
-  return textWithLink(links, text, progressTrackerLink(links))
 }
 
 export const scratchPadCommands: ReadonlyMap<string, ScratchPadCommand> = new Map([
@@ -272,52 +249,7 @@ export const scratchPadCommands: ReadonlyMap<string, ScratchPadCommand> = new Ma
         ),
     },
   ],
-  [
-    'tasks',
-    {
-      usage: 'tasks',
-      summary: 'list every task with its number, state and title',
-      options: pad,
-      run: (input: CommandInput) => withTrackerLink(input, listTasks),
-    },
-  ],
-  [
-    'task add',
-    {
-      usage: 'task add <title>',
-      summary: 'add a task to the progress tracker',
-      options: pad,
-      wordsBeforeText: 0,
-      run: (input: CommandInput) =>
-        withTrackerLink(input, (folder) =>
-          addTaskToTracker(folder, restOfWords(input.words, 0, 'title', input.usage)),
-        ),
-    },
-  ],
-  [
-    'task start',
-    {
-      usage: 'task start <number>',
-      summary: 'start a task',
-      options: pad,
-      run: (input: CommandInput) =>
-        withTrackerLink(input, (folder) =>
-          startTaskInTracker(folder, taskNumber(input.words, 0, input.usage)),
-        ),
-    },
-  ],
-  [
-    'task done',
-    {
-      usage: 'task done <number>',
-      summary: 'finish a task and start the next task that is to do',
-      options: pad,
-      run: (input: CommandInput) =>
-        withTrackerLink(input, (folder) =>
-          finishTaskInTracker(folder, taskNumber(input.words, 0, input.usage)),
-        ),
-    },
-  ],
+  ...taskCommands,
   [
     'decide',
     {

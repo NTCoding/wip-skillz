@@ -16,7 +16,14 @@ const exportJob = checkedPage('pages/export-job.md', ['# Export job', '', '## Re
 
 function problemsOfInvoicePage(markdown: readonly string[], answeredDecisions: string[] = []) {
   const pages = [checkedPage('pages/invoice-template.md', markdown), exportJob]
-  return pageCheckProblems(pages, [], ['pages/invoice-template.md'], answeredDecisions, () => [])
+  return pageCheckProblems(
+    pages,
+    [],
+    ['pages/invoice-template.md'],
+    answeredDecisions,
+    ['t-1', 't-4'],
+    () => [],
+  )
 }
 
 const decision = (id: string): string[] => [
@@ -31,6 +38,30 @@ const decision = (id: string): string[] => [
 ]
 
 describe('pageCheckProblems', () => {
+  it("doesn't report a task reference whose id is on the progress tracker", () => {
+    expect(problemsOfInvoicePage(['Intro', '', 'This is part of <task:t-4>.'])).toStrictEqual([])
+  })
+
+  it("reports a task reference whose id isn't on the progress tracker", () => {
+    expect(problemsOfInvoicePage(['Intro', '', 'See <task:t-9>.'])).toStrictEqual([
+      {
+        page: 'pages/invoice-template.md',
+        line: 3,
+        text: "the task reference <task:t-9> points to t-9, which isn't a task or a subtask on the progress tracker. Run tasks to list the ids",
+      },
+    ])
+  })
+
+  it("reports a task reference that doesn't have the id of a task", () => {
+    expect(problemsOfInvoicePage(['See <task:4>.'])).toStrictEqual([
+      {
+        page: 'pages/invoice-template.md',
+        line: 1,
+        text: "<task:4> isn't a task reference. Write the id of the task or the subtask, like <task:t-4>",
+      },
+    ])
+  })
+
   it("reports the link when the link points to a page that doesn't exist", () => {
     expect(problemsOfInvoicePage(['Intro', '', 'See [the queue](queue.md).'])).toStrictEqual([
       {
@@ -182,15 +213,15 @@ describe('pageCheckProblems', () => {
       checkedPage('pages/invoice-template.md', ['Intro', '', ...decision('d-2')]),
     ]
 
-    expect(pageCheckProblems(pages, [], ['pages/invoice-template.md'], [], () => [])).toStrictEqual(
-      [
-        {
-          page: 'pages/invoice-template.md',
-          line: 5,
-          text: 'decision d-2 is used twice (first on pages/export-job.md:3)',
-        },
-      ],
-    )
+    expect(
+      pageCheckProblems(pages, [], ['pages/invoice-template.md'], [], [], () => []),
+    ).toStrictEqual([
+      {
+        page: 'pages/invoice-template.md',
+        line: 5,
+        text: 'decision d-2 is used twice (first on pages/export-job.md:3)',
+      },
+    ])
   })
 
   it('reports the problems of the checked pages only when one page is checked', () => {
@@ -200,7 +231,7 @@ describe('pageCheckProblems', () => {
     ]
 
     expect(
-      pageCheckProblems(pages, [], ['pages/invoice-template.md'], [], () => []).map(
+      pageCheckProblems(pages, [], ['pages/invoice-template.md'], [], [], () => []).map(
         (problem) => problem.page,
       ),
     ).toStrictEqual(['pages/invoice-template.md'])
@@ -212,7 +243,7 @@ describe('pageCheckProblems', () => {
     ]
 
     expect(
-      pageCheckProblems(pages, [], ['pages/invoice-template.md'], [], (checked) => [
+      pageCheckProblems(pages, [], ['pages/invoice-template.md'], [], [], (checked) => [
         `${checked.file} is too long`,
       ]).map((problem) => problem.line),
     ).toStrictEqual([1, 3, undefined])
@@ -232,6 +263,7 @@ describe('pageCheckProblems on the numbers of the pages', () => {
       pages,
       pageFiles,
       pages.map((page) => page.page),
+      [],
       [],
       () => [],
     )

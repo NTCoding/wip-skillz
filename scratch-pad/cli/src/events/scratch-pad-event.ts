@@ -22,8 +22,10 @@ export const eventKinds = [
   'section-read',
   'goal-set',
   'task-added',
+  'task-described',
   'task-started',
   'task-done',
+  'task-moved',
 ] as const
 export type EventKind = (typeof eventKinds)[number]
 

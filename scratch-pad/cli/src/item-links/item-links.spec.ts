@@ -9,6 +9,7 @@ import {
   pageLink,
   progressTrackerLink,
   serverOrigin,
+  taskLink,
   textWithLink,
   withLinksNote,
 } from './item-links'
@@ -61,6 +62,10 @@ describe('the links of the views', () => {
 
   it('returns the address of an improvement on the improvements', () => {
     expect(improvementLink(servedLinks, 3)).toBe(`${exportJobAddress}improvements#improvement-3`)
+  })
+
+  it('returns the address of a task on the progress tracker with the id of the task as its anchor', () => {
+    expect(taskLink(servedLinks, 't-4')).toBe(`${exportJobAddress}progress-tracker#t-4`)
   })
 
   it('returns the address of the improvements without an anchor', () => {

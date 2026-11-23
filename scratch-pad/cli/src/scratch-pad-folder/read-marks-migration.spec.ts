@@ -5,6 +5,7 @@ import {
   exportJobScratchPad,
   removeTemporaryHomes,
   runSqlOnPadDb,
+  tasksTableOfVersion4,
   temporaryHome,
   writeFileInPad,
 } from './scratch-pad-folder-fixtures'
@@ -29,12 +30,12 @@ describe('the read marks of a scratch pad', () => {
     expect(folder.read((pad) => pad.readReadMarks())).toStrictEqual({ pages: [], sections: [] })
   })
 
-  it('marks every page and section as read when a scratch pad of version 3 is migrated to version 4', () => {
+  it('marks every page and section as read when a scratch pad of version 3 is migrated to version 6', () => {
     const folder = exportJobScratchPad(temporaryHome())
     writeFileInPad(folder, 'pages/1-retry-limit.md', '# Retry limit\n\n## The default\n\n5.\n')
     runSqlOnPadDb(
       folder,
-      'DROP TABLE read_sections; DROP TABLE read_pages; PRAGMA user_version = 3',
+      `DROP TABLE read_sections; DROP TABLE read_pages; ${tasksTableOfVersion4} PRAGMA user_version = 3`,
     )
 
     const marks = folder.read((pad) => pad.readReadMarks())
@@ -44,6 +45,6 @@ describe('the read marks of a scratch pad', () => {
       ['pages/index.md', 'retry-policy'],
       ['pages/retry-limit.md', 'the-default'],
     ])
-    expect(pragma(folder, 'user_version')).toBe(4)
+    expect(pragma(folder, 'user_version')).toBe(6)
   })
 })

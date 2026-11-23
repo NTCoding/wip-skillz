@@ -92,6 +92,33 @@ $ scratch-pad task start --pad 2026-11-21-invoice-export 1
 
 `task done <n>` finishes a task and starts the next task that's still to do.
 
+Keep the tasks as close as possible to the order they'll be worked on so that Nick can read the tracker from top to bottom as the journey of the scratch pad. If a new task belongs to a task that's already on the tracker, add it under that task with `subtask add`. Otherwise add it with `task add`, then move it to its place with `task move`:
+
+```text
+$ scratch-pad task add --pad 2026-11-21-invoice-export "Agree the retry limit with Jo"
+$ scratch-pad task move --pad 2026-11-21-invoice-export 4 --before 2
+```
+
+The progress tracker is where Nick goes to find out what a task is about and what has been done on it. So the description of each task is a short overview, in your own words, of the key points of the task. Each key point is a signpost to the page where Nick can read the detail. The detail itself never belongs in the description.
+
+Write the description with `task describe` when you add the task. Keep the description up to date while the task moves on. These guidelines are a sensible default:
+
+- Write only the bullet points that are needed by a reader. The maximum is 5, but it isn't a target. A single bullet is often enough.
+- If the steps of a task are all listed on one page, write 1 bullet that links to that page, because the page already structures the content for the reader. For example, the description of "Fix the export job" only needs this bullet: "The export job fails for 3 shops. [Fix the export job](fix-the-export-job.md) lists the 3 fixes and their states."
+- Each bullet tells Nick one key point, like the problem, the solution options or the explanation of a key point. Then it links to the page where that key point is explained.
+- Change a bullet when something significant happens on the task, like a new page that proposes options. Leave the bullets alone when the content only evolves, like a 4th and 5th solution on a page of options.
+
+This is an example:
+
+```text
+$ scratch-pad task describe --pad 2026-11-21-invoice-export 1 <<'EOF'
+- The job writes one CSV file per shop every night. [How the job runs](how-the-job-runs.md) shows the 3 steps.
+- A slow shop can make an upload fail. [The retry limit](retry-limit.md) proposes 8 retries rather than 5.
+EOF
+```
+
+When you mention a task in a page or in a description, write its id, like `<task:t-4>`, rather than its number or its title. The page shows the reference as a link that contains the current number and title of the task, like "2.1 Retry a failed export". The number of a task changes when a task is moved, but its id never changes. `tasks` lists the id of every task.
+
 ## Write the pages
 
 Each page is a Markdown file in the scratch pad's `pages` folder. The first page is `pages/index.md`. You edit the files with your normal tools and the page in the browser changes as soon as you save a file.
