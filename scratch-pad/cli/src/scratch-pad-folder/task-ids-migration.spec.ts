@@ -38,6 +38,7 @@ describe('the ids of the tasks', () => {
         title: 'Design the export job',
         state: 'done',
         description: '- The job runs every night.',
+        assignment: undefined,
         subtasks: [],
       },
       {
@@ -46,6 +47,7 @@ describe('the ids of the tasks', () => {
         title: 'Build the export job',
         state: 'in-progress',
         description: undefined,
+        assignment: undefined,
         subtasks: [],
       },
     ])

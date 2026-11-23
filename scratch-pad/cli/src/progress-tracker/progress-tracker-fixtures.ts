@@ -10,6 +10,7 @@ export function trackerWithTasks(states: readonly TaskState[]): ProgressTracker 
       title: `Task about retry ${index + 1}`,
       state,
       description: undefined,
+      assignment: undefined,
       subtasks: [],
     })),
   }
@@ -25,6 +26,7 @@ export function trackerWithSubtasks(states: readonly [TaskState, TaskState]): Pr
     title,
     state,
     description: undefined,
+    assignment: undefined,
   })
   const plain = trackerWithTasks(['to-do', 'to-do', 'to-do'])
   return {

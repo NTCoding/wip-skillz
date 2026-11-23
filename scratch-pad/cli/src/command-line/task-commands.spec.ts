@@ -160,3 +160,219 @@ describe('the commands for subtasks and moves', () => {
     )
   })
 })
+
+describe('the commands that assign a task or a subtask to Nick', () => {
+  const doAndWhy = [
+    '--do',
+    'Run the migration on staging',
+    '--why',
+    "The agent can't reach staging",
+  ]
+
+  async function environmentWithAssignedTask() {
+    const environment = environmentWithScratchPad()
+    await output(['task', 'add', 'Design the export job'], environment)
+    await output(['task', 'add', 'Migrate the orders'], environment)
+    await output(
+      ['task', 'assign', '--pad', environment.SCRATCH_PAD, '2', ...doAndWhy],
+      environment,
+    )
+    return environment
+  }
+
+  it('task assign prints the assigned task and tasks marks it as assigned to Nick', async () => {
+    const environment = environmentWithScratchPad()
+    await output(['task', 'add', 'Migrate the orders'], environment)
+
+    expect(await output(['task', 'assign', '1', ...doAndWhy], environment)).toBe(
+      `[t-1] task 1 is assigned to Nick: Migrate the orders\n${missingLinksText}\n`,
+    )
+    expect(await output(['tasks'], environment)).toBe(
+      `1  [t-1]  to do  Migrate the orders · assigned to Nick\n${missingLinksText}\n`,
+    )
+  })
+
+  it('task show prints what Nick has to do and why the agent cannot do it', async () => {
+    const environment = await environmentWithAssignedTask()
+
+    expect(await output(['task', 'show', '2'], environment)).toBe(
+      [
+        '[t-2] task 2 is to do: Migrate the orders',
+        'assigned to Nick:',
+        '  do:  Run the migration on staging',
+        "  why: The agent can't reach staging",
+        "there isn't any description yet (write one with task describe)",
+        missingLinksText,
+        '',
+      ].join('\n'),
+    )
+  })
+
+  it('task assign prints an error when the --do option is missing', async () => {
+    const environment = await environmentWithAssignedTask()
+
+    expect(await output(['task', 'assign', '1', '--why', 'It needs SQL'], environment)).toBe(
+      'The --do option is missing. Usage: scratch-pad task assign <number> --do <text> --why <text>\n',
+    )
+  })
+
+  it('subtask assign prints an error when the --why option is missing', async () => {
+    const environment = await environmentWithAssignedTask()
+    await output(['subtask', 'add', '2', 'Check the orders table'], environment)
+
+    expect(await output(['subtask', 'assign', '2.1', '--do', 'Check it'], environment)).toBe(
+      'The --why option is missing. Usage: scratch-pad subtask assign <number> --do <text> --why <text>\n',
+    )
+  })
+
+  it('task assign prints an error and keeps the task when the text of an option is not in quotes', async () => {
+    const environment = environmentWithScratchPad()
+    await output(['task', 'add', 'Migrate the orders'], environment)
+    const unquoted = ['--do', 'Run', 'the', 'migration', '--why', 'needs', 'creds']
+
+    expect(await runScratchPad(['task', 'assign', '1', ...unquoted], environment)).toStrictEqual({
+      exitCode: 1,
+      stdout: '',
+      stderr:
+        '"the migration creds" isn\'t the number or the text of an option. Put the text of --do and --why in quotes, like --do "Run the migration on staging". Usage: scratch-pad task assign <number> --do <text> --why <text>\n',
+    })
+    expect(await output(['tasks'], environment)).toBe(
+      `1  [t-1]  to do  Migrate the orders\n${missingLinksText}\n`,
+    )
+  })
+
+  it('subtask assign prints an error when another word follows the number', async () => {
+    const environment = await environmentWithAssignedTask()
+    await output(['subtask', 'add', '2', 'Check the orders table'], environment)
+
+    expect(await output(['subtask', 'assign', '2.1', 'now', ...doAndWhy], environment)).toBe(
+      '"now" isn\'t the number or the text of an option. Put the text of --do and --why in quotes, like --do "Run the migration on staging". Usage: scratch-pad subtask assign <number> --do <text> --why <text>\n',
+    )
+  })
+
+  it('task move keeps the assignment of the moved task and of the subtasks that are numbered again', async () => {
+    const environment = await environmentWithAssignedTask()
+    await output(['subtask', 'add', '1', 'Write the schema'], environment)
+    await output(['subtask', 'assign', '1.1', ...doAndWhy], environment)
+    await output(['task', 'move', '2', '--before', '1'], environment)
+
+    expect(await output(['tasks'], environment)).toBe(
+      [
+        '1    [t-2]  to do  Migrate the orders · assigned to Nick',
+        '2    [t-1]  to do  Design the export job',
+        '2.1  [t-3]  to do  Write the schema · assigned to Nick',
+        missingLinksText,
+        '',
+      ].join('\n'),
+    )
+  })
+
+  it('subtask move keeps the assignment of the moved subtask', async () => {
+    const environment = await environmentWithAssignedTask()
+    await output(['subtask', 'add', '1', 'Write the schema'], environment)
+    await output(['subtask', 'add', '1', 'Write the job'], environment)
+    await output(['subtask', 'assign', '1.2', ...doAndWhy], environment)
+    await output(['subtask', 'move', '1.2', '--before', '1.1'], environment)
+
+    expect(await output(['tasks'], environment)).toBe(
+      [
+        '1    [t-1]  to do  Design the export job',
+        '1.1  [t-4]  to do  Write the job · assigned to Nick',
+        '1.2  [t-3]  to do  Write the schema',
+        '2    [t-2]  to do  Migrate the orders · assigned to Nick',
+        missingLinksText,
+        '',
+      ].join('\n'),
+    )
+  })
+
+  it('subtask add under an assigned task asks which subtasks Nick has to do', async () => {
+    const environment = await environmentWithAssignedTask()
+
+    expect(await output(['subtask', 'add', '2', 'Run the migration on staging'], environment)).toBe(
+      [
+        '[t-3] subtask 2.1 added: Run the migration on staging',
+        missingLinksText,
+        'Task 2 is assigned to Nick and now has subtasks.',
+        'Which subtasks does Nick have to do?',
+        'Run "subtask assign <number> --do ... --why ..." for each one.',
+        'The current assignment of task 2, which you can reuse:',
+        '  do:  Run the migration on staging',
+        "  why: The agent can't reach staging",
+        '',
+      ].join('\n'),
+    )
+  })
+
+  it('task assign prints the subtasks of a task that has subtasks', async () => {
+    const environment = await environmentWithAssignedTask()
+    await output(['subtask', 'add', '2', 'Run the migration on staging'], environment)
+    await output(['subtask', 'add', '2', 'Check the orders table'], environment)
+
+    expect(await runScratchPad(['task', 'assign', '2', ...doAndWhy], environment)).toStrictEqual({
+      exitCode: 1,
+      stdout: '',
+      stderr: [
+        "Task 2 has subtasks so it can't be assigned as a whole.",
+        'Which of its subtasks does Nick have to do?',
+        '  2.1  [t-3]  to do  Run the migration on staging',
+        '  2.2  [t-4]  to do  Check the orders table',
+        'Run "subtask assign <number> --do ... --why ..." for each one.',
+        '',
+      ].join('\n'),
+    })
+  })
+
+  it('task unassign removes the assignment so that the problem of the task with subtasks is fixed', async () => {
+    const environment = await environmentWithAssignedTask()
+    await output(['subtask', 'add', '2', 'Check the orders table'], environment)
+
+    expect(await output(['task', 'unassign', '2'], environment)).toBe(
+      `[t-2] task 2 isn't assigned to Nick any more: Migrate the orders\n${missingLinksText}\n`,
+    )
+    expect(await output(['check'], environment)).toBe("there aren't any problems in 1 page\n")
+  })
+
+  it('subtask unassign removes the assignment of the subtask', async () => {
+    const environment = await environmentWithAssignedTask()
+    await output(['subtask', 'add', '2', 'Check the orders table'], environment)
+    await output(['subtask', 'assign', '2.1', ...doAndWhy], environment)
+
+    expect(await output(['subtask', 'unassign', '2.1'], environment)).toBe(
+      `[t-3] subtask 2.1 isn't assigned to Nick any more: Check the orders table\n${missingLinksText}\n`,
+    )
+  })
+
+  it('task unassign prints an error when the task is not assigned to Nick', async () => {
+    const environment = await environmentWithAssignedTask()
+
+    expect(await runScratchPad(['task', 'unassign', '1'], environment)).toStrictEqual({
+      exitCode: 1,
+      stdout: '',
+      stderr: "Task 1 isn't assigned to Nick so there is nothing to remove.\n",
+    })
+  })
+
+  it('check reports the assigned task with subtasks until one of its subtasks is assigned', async () => {
+    const environment = await environmentWithAssignedTask()
+    await output(['subtask', 'add', '2', 'Run the migration on staging'], environment)
+    const before = await output(['check'], environment)
+
+    expect(await output(['subtask', 'assign', '2.1', ...doAndWhy], environment)).toBe(
+      [
+        '[t-3] subtask 2.1 is assigned to Nick: Run the migration on staging',
+        "[t-2] task 2 isn't assigned to Nick any more, because subtask 2.1 is assigned to him now: Migrate the orders",
+        missingLinksText,
+        '',
+      ].join('\n'),
+    )
+    expect([before, await output(['check'], environment)]).toStrictEqual([
+      [
+        'the progress tracker  task 2 [t-2] is assigned to Nick but has subtasks. Run subtask assign for each subtask that Nick has to do',
+        '1 problem in 1 page',
+        '',
+      ].join('\n'),
+      "there aren't any problems in 1 page\n",
+    ])
+  })
+})

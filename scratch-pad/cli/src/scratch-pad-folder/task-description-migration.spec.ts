@@ -24,7 +24,7 @@ afterEach(() => {
 })
 
 describe('the descriptions of the tasks', () => {
-  it('keeps the tasks of version 4 without a description when pad.db is migrated to version 6', () => {
+  it('keeps the tasks of version 4 without a description when pad.db is migrated to version 7', () => {
     const folder = exportJobScratchPad(temporaryHome())
     runSqlOnPadDb(
       folder,
@@ -40,9 +40,10 @@ describe('the descriptions of the tasks', () => {
         title: 'Write the retry policy',
         state: 'to-do',
         description: undefined,
+        assignment: undefined,
         subtasks: [],
       },
     ])
-    expect(pragma(folder, 'user_version')).toBe(6)
+    expect(pragma(folder, 'user_version')).toBe(7)
   })
 })

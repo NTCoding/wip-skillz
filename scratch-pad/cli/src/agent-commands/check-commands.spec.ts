@@ -13,6 +13,7 @@ import { checkPages } from './check-commands'
 import {
   addSubtaskToTracker,
   addTaskToTracker,
+  assignTaskInTracker,
   describeSubtaskInTracker,
   describeTaskInTracker,
 } from './progress-tracker-commands'
@@ -66,7 +67,7 @@ describe('checkPages', () => {
   it('reports a task reference in the description of a subtask whose id is not on the progress tracker', () => {
     const folder = exportJobScratchPad(temporaryHome())
     addTaskToTracker(folder, 'Build the export job')
-    addSubtaskToTracker(folder, 1, 'Retry a failed export')
+    addSubtaskToTracker(folder, 1, 'Retry a failed export', unservedLinks)
     describeSubtaskInTracker(
       folder,
       { task: 1, subtask: 1 },
@@ -86,6 +87,22 @@ describe('checkPages', () => {
     writeFileInPad(folder, 'pages/1-retry.md', '# Retry\n')
 
     expect(checkPages(folder, ['retry'], undefined).problemCount).toBe(0)
+  })
+
+  it('reports an assigned task with subtasks only when no page is requested', () => {
+    const folder = exportJobScratchPad(temporaryHome())
+    addTaskToTracker(folder, 'Migrate the orders')
+    assignTaskInTracker(folder, 1, { do: 'Run it', why: 'It needs SQL' }, unservedLinks)
+    addSubtaskToTracker(folder, 1, 'Run the migration', unservedLinks)
+    writeFileInPad(folder, 'pages/1-retry.md', '# Retry\n')
+
+    expect([
+      checkPages(folder, [], undefined).text.split('\n')[0],
+      checkPages(folder, ['retry'], undefined).problemCount,
+    ]).toStrictEqual([
+      'the progress tracker  task 1 [t-1] is assigned to Nick but has subtasks. Run subtask assign for each subtask that Nick has to do',
+      0,
+    ])
   })
 
   it('accepts a link to a heading that the server adds to the index page', () => {

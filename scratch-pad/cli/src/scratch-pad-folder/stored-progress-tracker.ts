@@ -1,10 +1,13 @@
 import { type DatabaseSync } from 'node:sqlite'
 import {
+  assignees,
   ordered,
   taskStates,
+  type Assignment,
   type ProgressTracker,
   type Subtask,
   type Task,
+  type TrackerItem,
 } from '../progress-tracker/progress-tracker'
 import { BrokenPadDbError } from './pad-db-errors'
 import { readSavedValues, type SavedValues } from './saved-values'
@@ -29,7 +32,9 @@ export class StoredProgressTracker {
       this.db,
       this.padName,
       'tasks',
-      'SELECT id, parent_id, position, title, state, description FROM tasks ORDER BY position',
+      `SELECT id, parent_id, position, title, state, description, assignee, assignment_do,
+         assignment_why
+       FROM tasks ORDER BY position`,
     )
     const subtasksOf = (id: string): Subtask[] =>
       rows
@@ -62,20 +67,26 @@ export class StoredProgressTracker {
       .run(tracker.title, tracker.goal ?? null)
     this.db.prepare('DELETE FROM tasks').run()
     const insertTask = this.db.prepare(
-      'INSERT INTO tasks (id, parent_id, position, title, state, description) VALUES (?, ?, ?, ?, ?, ?)',
+      `INSERT INTO tasks (id, parent_id, position, title, state, description, assignee,
+         assignment_do, assignment_why)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     )
-    tracker.tasks.forEach((task, index) => {
-      insertTask.run(task.id, null, index + 1, task.title, task.state, task.description ?? null)
-      task.subtasks.forEach((subtask, position) =>
-        insertTask.run(
-          subtask.id,
-          task.id,
-          position + 1,
-          subtask.title,
-          subtask.state,
-          subtask.description ?? null,
-        ),
+    const insert = (item: TrackerItem, parentId: string | null, position: number): void => {
+      insertTask.run(
+        item.id,
+        parentId,
+        position,
+        item.title,
+        item.state,
+        item.description ?? null,
+        item.assignment?.assignee ?? null,
+        item.assignment?.do ?? null,
+        item.assignment?.why ?? null,
       )
+    }
+    tracker.tasks.forEach((task, index) => {
+      insert(task, null, index + 1)
+      task.subtasks.forEach((subtask, position) => insert(subtask, task.id, position + 1))
     })
   }
 }
@@ -86,5 +97,16 @@ function fieldsOf(row: SavedValues) {
     title: row.text('title'),
     state: row.oneOf('state', taskStates),
     description: row.optionalText('description'),
+    assignment: assignmentOf(row),
   }
+}
+
+function assignmentOf(row: SavedValues): Assignment | undefined {
+  return row.optionalText('assignee') === undefined
+    ? undefined
+    : {
+        assignee: row.oneOf('assignee', assignees),
+        do: row.text('assignment_do'),
+        why: row.text('assignment_why'),
+      }
 }

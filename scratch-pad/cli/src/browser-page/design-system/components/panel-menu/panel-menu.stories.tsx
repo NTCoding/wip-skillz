@@ -1,5 +1,8 @@
 import { type Meta, type StoryObj } from '@storybook/react-vite'
+import { userEvent, within } from 'storybook/test'
 import { PanelMenu, type PanelMenuItem } from './panel-menu'
+
+class StoppedServerError extends Error {}
 
 const items: PanelMenuItem[] = [
   {
@@ -82,6 +85,52 @@ const decision: PanelMenuItem = {
   linkLabel: undefined,
 }
 
+// A subtask that Nick can mark as done and a task with subtasks that is still assigned to Nick.
+// The state of the task follows its subtasks so it doesn't have a button.
+const tasks: PanelMenuItem[] = [
+  {
+    key: 't-8',
+    href: '/2026-11-20-invoice-export/progress-tracker#t-8',
+    kind: 'task',
+    heading: 'Run the first export against production',
+    where: 'Progress tracker',
+    quote: undefined,
+    last: undefined,
+    time: undefined,
+    shownTime: undefined,
+    context: undefined,
+    task: {
+      id: 't-8',
+      number: '4.2',
+      state: 'in-progress',
+      summary:
+        'Run the export job by hand against the production accounting system and watch it until the summary is printed.',
+      canBeDone: true,
+    },
+    linkLabel: 'Read the full details',
+  },
+  {
+    key: 't-4',
+    href: '/2026-11-20-invoice-export/progress-tracker#t-4',
+    kind: 'task',
+    heading: 'Go live with the export job',
+    where: 'Progress tracker',
+    quote: undefined,
+    last: undefined,
+    time: undefined,
+    shownTime: undefined,
+    context: undefined,
+    task: {
+      id: 't-4',
+      number: '4',
+      state: 'to-do',
+      summary: 'Tell the finance team the day that the export goes live.',
+      canBeDone: false,
+    },
+    linkLabel: 'Read the full details',
+  },
+]
+
 const meta = {
   title: 'Design system/PanelMenu',
   component: PanelMenu,
@@ -113,3 +162,29 @@ export const AReplyAndAQueuedComment: Story = {}
 export const UpdatesToPages: Story = { args: { items: updates } }
 
 export const ADecisionWithItsContext: Story = { args: { items: [decision, ...items] } }
+
+export const TasksAssignedToNick: Story = {
+  args: { items: [decision, ...tasks], onMarkDone: () => Promise.resolve() },
+}
+
+async function markFirstTaskAsDone({ canvasElement }: { readonly canvasElement: HTMLElement }) {
+  const [button] = within(canvasElement).getAllByRole('menuitem', { name: /^Mark as done/ })
+  if (button !== undefined) {
+    await userEvent.click(button)
+  }
+}
+
+// The button ignores a press while the server marks the task as done. The focus stays on the button.
+export const ATaskWhileItIsMarkedAsDone: Story = {
+  args: { items: tasks, onMarkDone: () => new Promise(() => undefined) },
+  play: markFirstTaskAsDone,
+}
+
+export const ATaskThatCantBeMarkedAsDone: Story = {
+  args: {
+    items: tasks,
+    onMarkDone: () =>
+      Promise.reject(new StoppedServerError('The server has stopped. Start it again.')),
+  },
+  play: markFirstTaskAsDone,
+}

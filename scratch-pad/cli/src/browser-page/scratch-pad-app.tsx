@@ -1,10 +1,9 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect } from 'react'
 import {
   type DecisionLogEntry,
   type Improvements,
   type NickInbox,
   type Outbox as LoadedOutbox,
-  type PadChange,
   type PageReadMark,
   type PageSummary,
   type ProgressTracker,
@@ -41,7 +40,7 @@ import { PadSidebar, sectionsOf } from './pad-sidebar'
 import { searchMatchOn, useSearchMatch, type SearchMatch } from './pad-search'
 import { PageOutline } from './page-outline'
 import { fullTreeNodes, pageListEntries, pageOfFileName } from './page-tree'
-import { firstRevisions, pageRevisionOf, revisedAfterReconnect, revisedBy } from './pad-revisions'
+import { pageRevisionOf, usePadRevisions } from './pad-revisions'
 import { pagePreview } from './page-preview'
 import { type SavedSettings } from './saved-settings'
 import { PageWithThreads, type PageActions } from './page-with-threads'
@@ -259,25 +258,7 @@ export function ScratchPadApp(props: ScratchPadAppProps) {
   const { pad, addresses, connection, writing, settings, narrowWindow } = props
   const { route, navigate, replace, navigations } = useBrowserNavigation(addresses.routeOf)
   const { collapsed, changeCollapsed } = useSidebarState(settings, narrowWindow, navigations)
-  const [revisions, setRevisions] = useState(firstRevisions)
-  const [serverStopped, setServerStopped] = useState(false)
-  const changed = useCallback(
-    (change: PadChange) => setRevisions((current) => revisedBy(current, change)),
-    [],
-  )
-  useEffect(
-    () =>
-      connection.onChange({
-        changed,
-        connection: (connected) => {
-          setServerStopped(!connected)
-          if (connected) {
-            setRevisions(revisedAfterReconnect)
-          }
-        },
-      }),
-    [connection, changed],
-  )
+  const { revisions, serverStopped, changed } = usePadRevisions(connection)
 
   const file = route.kind === 'page' ? route.file : 'index.md'
   const pages = useLoadedValue(pad, revisions.pages, connection.pages)
@@ -296,7 +277,7 @@ export function ScratchPadApp(props: ScratchPadAppProps) {
   const threadsOfPad = useThreadsOfPad(connection, route, outbox, revisions.threads)
   const viewedPage = route.kind === 'page' ? loadedOr(page, undefined) : undefined
   const padTitle = loadedOr(tracker, undefined)?.title ?? pad
-  useInboxNotifications(props.notifications, padTitle, inbox)
+  useInboxNotifications(props.notifications, padTitle, inbox, tracker)
   const address = { section: route.kind === 'page' ? route.section : undefined, navigations }
   const resolvedThreads = useResolvedThreads(loadedOr(threads, []))
   const currentSection = useCurrentSection(
@@ -334,6 +315,7 @@ export function ScratchPadApp(props: ScratchPadAppProps) {
     loadedOr(inbox, emptyNickInbox),
     pageList,
     readMarks,
+    loadedOr(tracker, undefined),
   )
   useBlinkingTabTitle(tabTitleOf(viewedPage?.title, padTitle), padTitle, inboxEntries)
   const queuedEntries = outboxEntries(addresses, outbox.items, pageList, threadsOfPad)

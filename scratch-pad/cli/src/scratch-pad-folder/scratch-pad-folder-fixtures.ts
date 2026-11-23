@@ -87,6 +87,20 @@ CREATE TABLE tasks (
 ) STRICT;
 `
 
+// The table tasks before version 7 added the assignments
+export const tasksTableOfVersion6 = `
+DROP TABLE tasks;
+CREATE TABLE tasks (
+  id TEXT PRIMARY KEY CHECK (id GLOB 't-[1-9]*'),
+  parent_id TEXT,
+  position INTEGER NOT NULL CHECK (position >= 1),
+  title TEXT NOT NULL,
+  state TEXT NOT NULL,
+  description TEXT,
+  CHECK (parent_id IS NULL OR parent_id <> id)
+) STRICT;
+`
+
 export function damageTableOfPadDb(folder: ScratchPadFolder, table: string): void {
   const db = new DatabaseSync(join(folder.path, 'pad.db'))
   const pages = db

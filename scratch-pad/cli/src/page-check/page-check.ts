@@ -1,5 +1,7 @@
 import { fileOfPage } from '../browser-page/pad-paths'
 import { pageFileOf, parentNumberOf, type PageFile } from '../pages/page-files'
+import { type ProgressTracker } from '../progress-tracker/progress-tracker'
+import { trackerProblemTexts } from '../progress-tracker/progress-tracker-text'
 import { type PageLink } from '../rendered-page/page-links'
 import { type DecisionBlock } from '../rendered-page/decision-block'
 import { byLine, type PageProblem } from '../rendered-page/page-problem'
@@ -229,6 +231,15 @@ export function descriptionProblems(
         text: problem.text,
       })),
   )
+}
+
+// The place of a problem on the progress tracker is the progress tracker itself.
+export function progressTrackerProblems(tracker: ProgressTracker): ScratchPadProblem[] {
+  return trackerProblemTexts(tracker).map((text) => ({
+    page: 'the progress tracker',
+    line: undefined,
+    text,
+  }))
 }
 
 export function threadsOnMissingPages(

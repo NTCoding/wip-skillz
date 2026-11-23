@@ -256,6 +256,41 @@ Run `wait` in the background before you end your turn.
 
 Don't run `reply` or `decide` for a decision, because a decision can't be replied to and the server has already logged Nick's choice. If Nick has written his own reply and it leaves something open, write the open point as a new question below the old one. Put a new `:::decision` block under the new question.
 
+### Assign a task to Nick
+
+Assign a task or a subtask to Nick only for work that blocks you and that only Nick can do. Never assign work that you could do yourself. These are examples of work that only Nick can do:
+
+- work that needs credentials that you don't have
+- an approval from Nick
+- a command that has to run on Nick's machine
+
+Write what Nick has to do in `--do` and why you can't do the work in `--why`. Put both of them in quotes. This is an example:
+
+```text
+$ scratch-pad task assign --pad 2026-11-21-invoice-export 3 --do "Run the export job on staging for one shop and open the file that it writes." --why "The agent can't log in to staging."
+[t-2] task 3 is assigned to Nick: Ship the export job
+link: http://127.0.0.1:4747/2026-11-21-invoice-export/progress-tracker#t-2
+```
+
+Never assign a whole task that has subtasks. Assign the subtasks that Nick has to do with `subtask assign` instead.
+
+You can always add a subtask, even to a task that is assigned to Nick. In that case `subtask add` prints the question "Which subtasks does Nick have to do?". It also prints the `--do` and `--why` of the task so that you can reuse them for the subtasks that Nick has to do.
+
+`status` and `check` will also report the task as a problem until you've assigned at least one of its subtasks. `status` prints the problem on a line that starts with `problem:`.
+
+If none of the subtasks are Nick's, run `task unassign <number>` to remove the assignment from the task. `subtask unassign <number>` removes the assignment from a subtask in the same way.
+
+### Find out that Nick has done a task
+
+Nick marks a task that is assigned to him as done in the browser. The server then starts the next task in the same way as `task done` does. After that, `wait` and `inbox` will print the task among the decisions. If the server has started a task, the last line of the item will describe that task. This is an example:
+
+```text
+[t-2] task 3 is done: Ship the export job
+  link: http://127.0.0.1:4747/2026-11-21-invoice-export/progress-tracker#t-2
+  Nick marked it as done in the browser.
+  [t-3] task 4 has started: Write the runbook
+```
+
 ### Hand the notes to a subagent
 
 When `wait` or `inbox` prints a line like `1 grammar note waits for a subagent`, start a subagent and give it the prompt below. Replace `2026-11-21-invoice-export` with your scratch pad's folder. If you can't start a subagent, fix the notes yourself once you've replied to the comments.

@@ -1,6 +1,10 @@
-import { useEffect, useRef, useState, type KeyboardEvent, type MouseEvent } from 'react'
+import { useEffect, useId, useRef, useState, type KeyboardEvent, type MouseEvent } from 'react'
+import { createPortal } from 'react-dom'
 import { navigationClick, type Navigate } from '../../navigation-click'
+import { usePendingAction } from '../../pending-action'
+import { Button } from '../button/button'
 import { Icon } from '../icon/icon'
+import { TaskStateLabel, type TaskState } from '../task-state-label/task-state-label'
 import './panel-menu.css'
 
 // A link to a section that Nick should read before he decides. The text is the text of the link in
@@ -17,13 +21,27 @@ export interface DecisionContext {
   readonly links: readonly ContextLink[]
 }
 
-// One item in the menu of the Inbox or of the Outbox. A page item is a new page. A section item
-// is a page whose sections have changed since Nick last read them. A queued item is a comment or a
-// reply in the outbox. Only a decision has a context.
+// A task or a subtask that is assigned to Nick. Its heading is its title.
+export interface AssignedTask {
+  // The id of the task, like t-4
+  readonly id: string
+  // The number of the task. A subtask has a number like 2.1.
+  readonly number: string
+  readonly state: TaskState
+  // The first line of what Nick has to do
+  readonly summary: string
+  // A task with subtasks takes its state from its subtasks. That's why Nick can't mark it as done.
+  readonly canBeDone: boolean
+}
+
+// One item in the menu of the Inbox or of the Outbox. A task item is a task or a subtask that is
+// assigned to Nick. A page item is a new page. A section item is a page whose sections have changed
+// since Nick last read them. A queued item is a comment or a reply in the outbox. Only a decision
+// has a context and only a task item has a task.
 export interface PanelMenuItem {
   readonly key: string
   readonly href: string
-  readonly kind: 'reply' | 'decision' | 'page' | 'section' | 'queued'
+  readonly kind: 'reply' | 'decision' | 'task' | 'page' | 'section' | 'queued'
   readonly heading: string
   readonly where: string
   readonly quote: string | undefined
@@ -31,6 +49,7 @@ export interface PanelMenuItem {
   readonly time: string | undefined
   readonly shownTime: string | undefined
   readonly context: DecisionContext | undefined
+  readonly task?: AssignedTask | undefined
   readonly linkLabel: string | undefined
 }
 
@@ -47,9 +66,56 @@ interface PanelMenuProps {
   // A menu that opens from a menu button focuses its first item. A menu that a disclosure button
   // shows leaves the focus on that button.
   readonly focusFirstItem: boolean
+  // Marks a task item as done. If this is undefined, the menu won't show a button that marks a task
+  // item as done.
+  readonly onMarkDone?: ((id: string) => Promise<void>) | undefined
+  // Moves the focus to the panel that the menu is in. The menu will call it once Nick has marked
+  // the only item of the menu as done, because the menu will be removed together with that item.
+  readonly focusPanel?: (() => void) | undefined
+}
+
+function LinkLabel({ label }: { readonly label: string | undefined }) {
+  return (
+    label !== undefined && (
+      <span className="panel-menu__link">
+        {label}
+        <Icon name="chevron" />
+      </span>
+    )
+  )
+}
+
+// The square mark of a task differs from the round dots of the other items.
+function TaskContent({
+  item,
+  task,
+}: {
+  readonly item: PanelMenuItem
+  readonly task: AssignedTask
+}) {
+  return (
+    <>
+      <span className="panel-menu__dot" data-kind={item.kind} aria-hidden="true" />
+      <span className="panel-menu__main">
+        <span className="panel-menu__head">
+          <span className="panel-menu__what">
+            <span className="panel-menu__number">{task.number}</span> {item.heading}
+          </span>
+          <span className="panel-menu__state">
+            <TaskStateLabel state={task.state} />
+          </span>
+        </span>
+        <span className="panel-menu__summary">{task.summary}</span>
+        <LinkLabel label={item.linkLabel} />
+      </span>
+    </>
+  )
 }
 
 function ItemContent({ item }: { readonly item: PanelMenuItem }) {
+  if (item.task !== undefined) {
+    return <TaskContent item={item} task={item.task} />
+  }
   return (
     <>
       <span className="panel-menu__dot" data-kind={item.kind} aria-hidden="true" />
@@ -74,12 +140,7 @@ function ItemContent({ item }: { readonly item: PanelMenuItem }) {
           <span className="panel-menu__lead">{item.context.lead}</span>
         )}
         {item.last !== undefined && <span className="panel-menu__last">{item.last}</span>}
-        {item.linkLabel !== undefined && (
-          <span className="panel-menu__link">
-            {item.linkLabel}
-            <Icon name="chevron" />
-          </span>
-        )}
+        <LinkLabel label={item.linkLabel} />
       </span>
     </>
   )
@@ -89,15 +150,86 @@ function contextLinksOf(item: PanelMenuItem): readonly ContextLink[] {
   return item.context?.links ?? []
 }
 
-function linkCount(items: readonly PanelMenuItem[]): number {
-  return items.reduce((count, item) => count + 1 + contextLinksOf(item).length, 0)
+// The task of an item that Nick can mark as done in this menu
+function taskToMarkDone(
+  item: PanelMenuItem,
+  onMarkDone: PanelMenuProps['onMarkDone'],
+): AssignedTask | undefined {
+  return onMarkDone !== undefined && item.task?.canBeDone === true ? item.task : undefined
 }
 
-// The arrow keys move the focus through every link of the menu. That's the link of each item and
-// the links in the context of a decision, which come straight after the link of their decision.
-// first is the position of the item's own link among them.
-function withFirstLinks(items: readonly PanelMenuItem[]) {
-  return items.map((item, index) => ({ item, first: linkCount(items.slice(0, index)) }))
+// The links of an item and its button to mark the task as done
+function controlCount(item: PanelMenuItem, onMarkDone: PanelMenuProps['onMarkDone']): number {
+  return 1 + contextLinksOf(item).length + Number(taskToMarkDone(item, onMarkDone) !== undefined)
+}
+
+function linkCount(
+  items: readonly PanelMenuItem[],
+  onMarkDone: PanelMenuProps['onMarkDone'],
+): number {
+  return items.reduce((count, item) => count + controlCount(item, onMarkDone), 0)
+}
+
+// The arrow keys move the focus through every link and every button of the menu. That's the link
+// of each item, the links in the context of a decision and the button that marks a task as done.
+// The links of a context and the button come straight after the link of their item. first is the
+// position of the item's own link among them.
+function withFirstLinks(items: readonly PanelMenuItem[], onMarkDone: PanelMenuProps['onMarkDone']) {
+  return items.map((item, index) => ({
+    item,
+    first: linkCount(items.slice(0, index), onMarkDone),
+  }))
+}
+
+interface DoneButtonProps {
+  readonly item: PanelMenuItem
+  readonly task: AssignedTask
+  readonly onMarkDone: (id: string) => Promise<void>
+  // The focus will be moved away from the button once the task is done, because the item of the
+  // task will be removed from the menu then.
+  readonly onDone: () => void
+  readonly menuItem: {
+    readonly ref: (control: HTMLElement | null) => void
+    readonly tabIndex: number
+  }
+  // The element outside the menu that announces a problem, because a menu can only contain its
+  // items
+  readonly announcer: HTMLElement | null
+}
+
+// The button ignores a press until the server has marked the task as done. Then the item will be
+// removed from the Inbox. If the server can't mark the task as done, the problem will be shown
+// under the button and the focus will stay on the button. The problem that is shown is hidden from
+// a screen reader, which reads the problem out from the announcer instead.
+function DoneButton({ item, task, onMarkDone, onDone, menuItem, announcer }: DoneButtonProps) {
+  const problemId = useId()
+  const action = usePendingAction(async () => {
+    await onMarkDone(task.id)
+    onDone()
+  })
+  return (
+    <div className="panel-menu__actions">
+      <Button
+        size="small"
+        pending={action.pending}
+        label={`Mark as done: ${task.number} ${item.heading}`}
+        describedBy={action.problem === undefined ? undefined : problemId}
+        menuItem={menuItem}
+        onClick={action.run}
+      >
+        <Icon name="check" />
+        Mark as done
+      </Button>
+      {action.problem !== undefined && (
+        <>
+          <p className="panel-menu__problem" id={problemId} aria-hidden="true">
+            {action.problem}
+          </p>
+          {announcer !== null && createPortal(<p role="alert">{action.problem}</p>, announcer)}
+        </>
+      )}
+    </div>
+  )
 }
 
 // The menu is only mounted while its panel is open. That's why the first item is focused each
@@ -112,10 +244,13 @@ export function PanelMenu({
   onChoose,
   onTab,
   focusFirstItem,
+  onMarkDone,
+  focusPanel,
 }: PanelMenuProps) {
   const [chosen, setChosen] = useState(0)
-  const links = useRef<(HTMLAnchorElement | null)[]>([])
-  const lastIndex = linkCount(items) - 1
+  const [announcer, setAnnouncer] = useState<HTMLElement | null>(null)
+  const links = useRef<(HTMLElement | null)[]>([])
+  const lastIndex = linkCount(items, onMarkDone) - 1
   // An item can be removed while the menu is open so the current link is never past the last one.
   const current = Math.min(chosen, lastIndex)
   useEffect(() => {
@@ -145,12 +280,32 @@ export function PanelMenu({
     event.preventDefault()
     focusLink(target)
   }
-  const linkProps = (index: number, href: string) => ({
-    ref: (link: HTMLAnchorElement | null) => {
-      links.current[index] = link
+  const positioned = withFirstLinks(items, onMarkDone)
+  // Once a task is done, the focus will move to the link of the next item. That link will take the
+  // place of the task's link when the task's item is removed, which is why its index will be first.
+  // If the task's item is the last item, the focus will move to the link of the item before. If
+  // it's the only item, the focus will move to the panel.
+  const focusAfterDone = (position: number, first: number) => (): void => {
+    const next = positioned[position + 1]
+    const before = positioned[position - 1]
+    if (next !== undefined) {
+      setChosen(first)
+      links.current[next.first]?.focus()
+    } else if (before === undefined) {
+      focusPanel?.()
+    } else {
+      focusLink(before.first)
+    }
+  }
+  const menuItemProps = (index: number) => ({
+    ref: (control: HTMLElement | null) => {
+      links.current[index] = control
     },
-    role: 'menuitem',
     tabIndex: index === current ? 0 : -1,
+  })
+  const linkProps = (index: number, href: string) => ({
+    ...menuItemProps(index),
+    role: 'menuitem',
     href,
     onClick: (event: MouseEvent<HTMLAnchorElement>) => {
       onChoose()
@@ -158,31 +313,45 @@ export function PanelMenu({
     },
   })
   return (
-    <ul className="panel-menu" id={id} role="menu" aria-labelledby={labelledBy} onKeyDown={move}>
-      {withFirstLinks(items).map(({ item, first }) => {
-        const contextLinks = contextLinksOf(item)
-        return (
-          <li key={item.key} role="none">
-            <a className="panel-menu__item" {...linkProps(first, item.href)}>
-              <ItemContent item={item} />
-            </a>
-            {contextLinks.length > 0 && (
-              <ol className="panel-menu__context" role="group" aria-label="Context">
-                {contextLinks.map((link, linkIndex) => (
-                  <li key={`${String(linkIndex)} ${link.href}`} role="none">
-                    <a
-                      className="panel-menu__context-link"
-                      {...linkProps(first + 1 + linkIndex, link.href)}
-                    >
-                      {link.text}
-                    </a>
-                  </li>
-                ))}
-              </ol>
-            )}
-          </li>
-        )
-      })}
-    </ul>
+    <>
+      <ul className="panel-menu" id={id} role="menu" aria-labelledby={labelledBy} onKeyDown={move}>
+        {positioned.map(({ item, first }, position) => {
+          const contextLinks = contextLinksOf(item)
+          const task = taskToMarkDone(item, onMarkDone)
+          return (
+            <li key={item.key} role="none">
+              <a className="panel-menu__item" {...linkProps(first, item.href)}>
+                <ItemContent item={item} />
+              </a>
+              {contextLinks.length > 0 && (
+                <ol className="panel-menu__context" role="group" aria-label="Context">
+                  {contextLinks.map((link, linkIndex) => (
+                    <li key={`${String(linkIndex)} ${link.href}`} role="none">
+                      <a
+                        className="panel-menu__context-link"
+                        {...linkProps(first + 1 + linkIndex, link.href)}
+                      >
+                        {link.text}
+                      </a>
+                    </li>
+                  ))}
+                </ol>
+              )}
+              {task !== undefined && onMarkDone !== undefined && (
+                <DoneButton
+                  item={item}
+                  task={task}
+                  onMarkDone={onMarkDone}
+                  onDone={focusAfterDone(position, first)}
+                  menuItem={menuItemProps(first + 1 + contextLinks.length)}
+                  announcer={announcer}
+                />
+              )}
+            </li>
+          )
+        })}
+      </ul>
+      <div ref={setAnnouncer} className="panel-menu__announcer" />
+    </>
   )
 }

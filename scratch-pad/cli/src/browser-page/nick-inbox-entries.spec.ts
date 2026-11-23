@@ -1,10 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { type Thread } from './api-responses'
+import { type ProgressTracker, type Thread } from './api-responses'
 import {
   exportPad,
   exportPadAddresses,
   indexInbox,
   pageSummaries,
+  progressTracker,
   retryQuestion,
 } from './browser-page-fixtures'
 import { nickInboxEntries } from './nick-inbox-entries'
@@ -14,7 +15,7 @@ const noReadMarks = { pages: [] }
 describe('nickInboxEntries', () => {
   it('lists the replies and the open decisions with the newest first, with the page, the quote, the last message and the context', () => {
     expect(
-      nickInboxEntries(exportPadAddresses, indexInbox, pageSummaries, noReadMarks),
+      nickInboxEntries(exportPadAddresses, indexInbox, pageSummaries, noReadMarks, undefined),
     ).toStrictEqual([
       {
         key: 'c-1',
@@ -78,6 +79,7 @@ describe('nickInboxEntries', () => {
       },
       pageSummaries,
       noReadMarks,
+      undefined,
     )
     expect(entries.map((entry) => [entry.key, entry.shownTime])).toStrictEqual([
       ['d-2', '20 Nov, 21:40'],
@@ -101,6 +103,7 @@ describe('nickInboxEntries', () => {
       { threads: [note], decisions: [] },
       pageSummaries,
       noReadMarks,
+      undefined,
     )
     expect([entry?.where, entry?.quote, entry?.last]).toStrictEqual([
       'retry-limit.md',
@@ -127,6 +130,7 @@ describe('nickInboxEntries', () => {
       { threads: [changed], decisions: [] },
       [],
       noReadMarks,
+      undefined,
     )
     expect(entry?.quote).toBe('retries 8 times')
   })
@@ -138,6 +142,7 @@ describe('nickInboxEntries', () => {
       { threads: [detached], decisions: [] },
       [],
       noReadMarks,
+      undefined,
     )
     expect(entry?.quote).toBe('retries 5 times')
   })
@@ -145,7 +150,13 @@ describe('nickInboxEntries', () => {
   it('leaves out a thread without any messages', () => {
     const empty = { ...retryQuestion, messages: [] }
     expect(
-      nickInboxEntries(exportPadAddresses, { threads: [empty], decisions: [] }, [], noReadMarks),
+      nickInboxEntries(
+        exportPadAddresses,
+        { threads: [empty], decisions: [] },
+        [],
+        noReadMarks,
+        undefined,
+      ),
     ).toStrictEqual([])
   })
 
@@ -199,6 +210,7 @@ describe('nickInboxEntries', () => {
           },
         ],
       },
+      undefined,
     )
     expect(
       entries.map((entry) => [
@@ -239,6 +251,80 @@ describe('nickInboxEntries', () => {
       `/${exportPad}/wait-between-retries.md`,
       `/${exportPad}/retry-limit.md#what-counts`,
       `/${exportPad}/first-retry.md`,
+    ])
+  })
+
+  it('lists the tasks and the subtasks that are assigned to Nick and are not done, after the decisions and before the updates to pages', () => {
+    const assignment = {
+      assignee: 'user',
+      do: 'Ask Jo for the retry limit.\nJo is in the office on Mondays.',
+      why: 'Jo only talks to Nick',
+    } as const
+    // Task 2 is still assigned to Nick although it has subtasks. Subtask 2.1 is assigned but done.
+    const tracker: ProgressTracker = {
+      ...progressTracker,
+      tasks: progressTracker.tasks.map((task) => ({
+        ...task,
+        assignment: task.id === 't-1' ? undefined : assignment,
+        subtasks: task.subtasks.map((subtask) => ({ ...subtask, assignment })),
+      })),
+    }
+    const entries = nickInboxEntries(
+      exportPadAddresses,
+      { threads: [], decisions: indexInbox.decisions },
+      pageSummaries,
+      {
+        pages: [
+          {
+            page: 'pages/first-retry.md',
+            state: 'new',
+            changedTime: '2026-11-20T21:10:00.000Z',
+            sections: [],
+            changedSections: [],
+          },
+        ],
+      },
+      tracker,
+    )
+
+    expect(entries.map((entry) => [entry.key, entry.kind, entry.href])).toStrictEqual([
+      ['d-1', 'decision', `/${exportPad}/#d-1`],
+      ['t-2', 'task', `/${exportPad}/progress-tracker#t-2`],
+      ['t-5', 'task', `/${exportPad}/progress-tracker#t-5`],
+      ['t-3', 'task', `/${exportPad}/progress-tracker#t-3`],
+      ['page pages/first-retry.md', 'page', `/${exportPad}/first-retry.md`],
+    ])
+    expect(entries.slice(1, 4).map((entry) => [entry.heading, entry.task])).toStrictEqual([
+      [
+        'Write the invoice template',
+        {
+          id: 't-2',
+          number: '2',
+          state: 'in-progress',
+          summary: 'Ask Jo for the retry limit.',
+          canBeDone: false,
+        },
+      ],
+      [
+        'Show the bank details',
+        {
+          id: 't-5',
+          number: '2.2',
+          state: 'in-progress',
+          summary: 'Ask Jo for the retry limit.',
+          canBeDone: true,
+        },
+      ],
+      [
+        'Check the retry limit',
+        {
+          id: 't-3',
+          number: '3',
+          state: 'to-do',
+          summary: 'Ask Jo for the retry limit.',
+          canBeDone: true,
+        },
+      ],
     ])
   })
 })

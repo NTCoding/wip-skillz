@@ -34,6 +34,10 @@ export function usePageActions(
         await writing.answerDecision(id, page, answer)
         changed({ kind: 'decision', id })
       },
+      markTaskDone: async (id: string) => {
+        await writing.markTaskDone(id)
+        changed({ kind: 'progress-tracker' })
+      },
       editImprovement: async (number: number, edit: ImprovementEdit) => {
         await writing.editImprovement(number, edit)
         changed({ kind: 'improvements' })

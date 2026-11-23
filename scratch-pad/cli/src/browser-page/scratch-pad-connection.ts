@@ -14,6 +14,7 @@ import {
   progressTrackerResponse,
   readMarksResponse,
   searchResponse,
+  taskDoneResponse,
   threadResponse,
   threadsOfPadResponse,
   threadsResponse,
@@ -72,6 +73,8 @@ export interface ScratchPadWriting {
   readonly replyToThread: (id: string, message: string) => Promise<Thread>
   readonly resolveThread: (id: string) => Promise<Thread>
   readonly answerDecision: (id: string, page: string, answer: Answer) => Promise<void>
+  // Nick marks a task or a subtask that is assigned to him as done.
+  readonly markTaskDone: (id: string) => Promise<void>
   readonly editImprovement: (number: number, edit: ImprovementEdit) => Promise<void>
   readonly deleteImprovement: (number: number) => Promise<void>
   readonly queueComment: (thread: NewThread) => Promise<void>
@@ -197,6 +200,14 @@ export function scratchPadConnection(pad: string, network: BrowserNetwork): Scra
         `${api}/decisions/${encodeURIComponent(id)}`,
         decisionAnswerResponse,
         postOf({ page, ...answer }),
+      )
+    },
+    markTaskDone: async (id) => {
+      await readJson(
+        network,
+        `${api}/tasks/${encodeURIComponent(id)}/done`,
+        taskDoneResponse,
+        postOf({}),
       )
     },
     editImprovement: async (number, edit) => {

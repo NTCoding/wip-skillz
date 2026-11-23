@@ -1,4 +1,6 @@
+import { useCallback, useEffect, useState } from 'react'
 import { type PadChange } from './api-responses'
+import { type ScratchPadReading } from './scratch-pad-connection'
 
 interface PadRevisions {
   readonly pages: number
@@ -13,7 +15,7 @@ interface PadRevisions {
   readonly readMarks: number
 }
 
-export const firstRevisions: PadRevisions = {
+const firstRevisions: PadRevisions = {
   pages: 0,
   page: {},
   decisions: 0,
@@ -26,7 +28,7 @@ export const firstRevisions: PadRevisions = {
   readMarks: 0,
 }
 
-export function revisedBy(revisions: PadRevisions, change: PadChange): PadRevisions {
+function revisedBy(revisions: PadRevisions, change: PadChange): PadRevisions {
   switch (change.kind) {
     case 'page':
       return {
@@ -66,7 +68,7 @@ export function revisedBy(revisions: PadRevisions, change: PadChange): PadRevisi
   }
 }
 
-export function revisedAfterReconnect(revisions: PadRevisions): PadRevisions {
+function revisedAfterReconnect(revisions: PadRevisions): PadRevisions {
   return {
     ...revisions,
     pages: revisions.pages + 1,
@@ -83,4 +85,27 @@ export function revisedAfterReconnect(revisions: PadRevisions): PadRevisions {
 
 export function pageRevisionOf(revisions: PadRevisions, file: string): number {
   return (revisions.page[`pages/${file}`] ?? 0) + revisions.decisions
+}
+
+export function usePadRevisions(connection: ScratchPadReading) {
+  const [revisions, setRevisions] = useState(firstRevisions)
+  const [serverStopped, setServerStopped] = useState(false)
+  const changed = useCallback(
+    (change: PadChange) => setRevisions((current) => revisedBy(current, change)),
+    [],
+  )
+  useEffect(
+    () =>
+      connection.onChange({
+        changed,
+        connection: (connected) => {
+          setServerStopped(!connected)
+          if (connected) {
+            setRevisions(revisedAfterReconnect)
+          }
+        },
+      }),
+    [connection, changed],
+  )
+  return { revisions, serverStopped, changed }
 }

@@ -1,6 +1,6 @@
 import { decisionSources } from '../decisions/decision-log'
 import { itemTypes } from '../items/item-id'
-import { taskStates } from '../progress-tracker/progress-tracker'
+import { assignees, taskStates } from '../progress-tracker/progress-tracker'
 import { sectionTexts } from '../read-marks/read-marks'
 import { authors, threadTypes, waitingParties } from '../threads/thread'
 import { type PadDb } from './pad-db'
@@ -23,6 +23,19 @@ export const padTables = [
 function oneOf(column: string, values: readonly string[]): string {
   const quoted = values.map((value) => "'" + value + "'").join(', ')
   return `CHECK (${column} IN (${quoted}))`
+}
+
+// The code points that String.prototype.trim removes, which are the whitespace and the line breaks
+// of JavaScript. The domain trims them before it checks that a text isn't empty.
+const trimmedCodePoints = [
+  0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x20, 0xa0, 0x1680, 0x2000, 0x2001, 0x2002, 0x2003, 0x2004, 0x2005,
+  0x2006, 0x2007, 0x2008, 0x2009, 0x200a, 0x2028, 0x2029, 0x202f, 0x205f, 0x3000, 0xfeff,
+]
+
+// The trim of SQLite only removes spaces by default. It's passed the same characters as the domain
+// trims so that the check fails for a text like a single line break too.
+function notEmpty(column: string): string {
+  return `CHECK (trim(${column}, char(${trimmedCodePoints.join(', ')})) <> '')`
 }
 
 const firstPadTables = `
@@ -199,8 +212,32 @@ DROP TABLE tasks;
 ALTER TABLE tasks_with_ids RENAME TO tasks;
 `
 
+// Version 7 adds the assignment of a task or a subtask to Nick. The only assignee is user, who is
+// Nick. An assigned task has what Nick has to do in assignment_do and why the agent can't do it in
+// assignment_why. Neither of them can be empty. A task of an older scratch pad isn't assigned.
+const taskAssignments = `
+CREATE TABLE tasks_with_assignments (
+  id TEXT PRIMARY KEY CHECK (id GLOB 't-[1-9]*'),
+  parent_id TEXT,
+  position INTEGER NOT NULL CHECK (position >= 1),
+  title TEXT NOT NULL,
+  state TEXT NOT NULL ${oneOf('state', taskStates)},
+  description TEXT,
+  assignee TEXT ${oneOf('assignee', assignees)},
+  assignment_do TEXT ${notEmpty('assignment_do')},
+  assignment_why TEXT ${notEmpty('assignment_why')},
+  CHECK (parent_id IS NULL OR parent_id <> id),
+  CHECK ((assignee IS NULL) = (assignment_do IS NULL)),
+  CHECK ((assignee IS NULL) = (assignment_why IS NULL))
+) STRICT;
+INSERT INTO tasks_with_assignments (id, parent_id, position, title, state, description)
+  SELECT id, parent_id, position, title, state, description FROM tasks;
+DROP TABLE tasks;
+ALTER TABLE tasks_with_assignments RENAME TO tasks;
+`
+
 export const padSchema: PadSchema = {
-  version: 6,
+  version: 7,
   firstTables: firstPadTables,
   migrations: [
     { version: 2, sql: improvementsTable },
@@ -208,6 +245,7 @@ export const padSchema: PadSchema = {
     { version: 4, sql: readMarksTables, fill: markEveryPageRead },
     { version: 5, sql: taskDescriptionColumn },
     { version: 6, sql: taskIdsAndSubtasks },
+    { version: 7, sql: taskAssignments },
   ],
 }
 

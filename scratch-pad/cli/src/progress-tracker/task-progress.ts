@@ -131,6 +131,9 @@ function nextToDo(
   tracker: ProgressTracker,
   siblings: readonly TrackerItem[],
 ): TrackerItem | undefined {
-  const toDo = workItems(tracker).filter((item) => item.state === 'to-do')
+  // The agent can't do the work that is assigned to Nick so it never starts it.
+  const toDo = workItems(tracker).filter(
+    (item) => item.state === 'to-do' && item.assignment === undefined,
+  )
   return toDo.find((item) => siblings.some((sibling) => sibling.id === item.id)) ?? toDo[0]
 }

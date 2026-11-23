@@ -6,6 +6,7 @@ import {
   nickDeletesImprovement,
   nickEditsImprovement,
   nickEditsQueuedItem,
+  nickFinishesTask,
   nickMarksPageRead,
   nickMarksPageUnread,
   nickMarksSectionRead,
@@ -218,6 +219,9 @@ const routes: readonly Route[] = [
     json({
       decision: nickAnswersDecisionBlock(folder, id, answerRequestFrom(bodyOf(request))),
     }),
+  ),
+  padRoute('POST', '/tasks/([^/]+)/done', (folder, _request, id) =>
+    json({ task: nickFinishesTask(folder, id) }),
   ),
   padRoute('POST', '/improvements/([0-9]+)', (folder, request, number) =>
     json({

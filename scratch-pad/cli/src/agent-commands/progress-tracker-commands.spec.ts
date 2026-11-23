@@ -11,6 +11,8 @@ import {
 import {
   addSubtaskToTracker,
   addTaskToTracker,
+  assignSubtaskInTracker,
+  assignTaskInTracker,
   describeSubtaskInTracker,
   describeTaskInTracker,
   finishSubtaskInTracker,
@@ -111,6 +113,7 @@ describe('addTaskToTracker', () => {
         title: 'Write the retry policy',
         state: 'to-do',
         description: undefined,
+        assignment: undefined,
         subtasks: [],
       },
     ])
@@ -244,15 +247,20 @@ describe('showTask', () => {
 // 2.1 Show the tax number (t-3) and 2.2 Show the bank details (t-4).
 function scratchPadWithSubtasks() {
   const folder = scratchPadWithTwoTasks()
-  addSubtaskToTracker(folder, 2, 'Show the tax number')
-  addSubtaskToTracker(folder, 2, 'Show the bank details')
+  addSubtaskToTracker(folder, 2, 'Show the tax number', unservedLinks)
+  addSubtaskToTracker(folder, 2, 'Show the bank details', unservedLinks)
   return folder
 }
 
 describe('addSubtaskToTracker', () => {
-  it('prints the added subtask with its id and its number', () => {
-    expect(addSubtaskToTracker(scratchPadWithTwoTasks(), 2, 'Show the tax number')).toBe(
-      '[t-3] subtask 2.1 added: Show the tax number',
+  it('prints the added subtask with its id and its number and then the link to the progress tracker', () => {
+    expect(
+      addSubtaskToTracker(scratchPadWithTwoTasks(), 2, 'Show the tax number', servedLinks),
+    ).toBe(
+      [
+        '[t-3] subtask 2.1 added: Show the tax number',
+        `link: ${exportJobAddress}progress-tracker`,
+      ].join('\n'),
     )
   })
 
@@ -260,10 +268,11 @@ describe('addSubtaskToTracker', () => {
     const folder = scratchPadWithTwoTasks()
     startTaskInTracker(folder, 2)
 
-    expect(addSubtaskToTracker(folder, 2, 'Show the tax number')).toBe(
+    expect(addSubtaskToTracker(folder, 2, 'Show the tax number', unservedLinks)).toBe(
       [
         '[t-3] subtask 2.1 added: Show the tax number',
         '[t-3] subtask 2.1 is in progress, because its task was in progress: Show the tax number',
+        missingLinksText,
       ].join('\n'),
     )
   })
@@ -361,5 +370,65 @@ describe('moveSubtaskInTracker', () => {
     )
 
     expect(text.split('\n')[0]).toBe('[t-4] subtask 2.2 is now subtask 2.1: Show the bank details')
+  })
+})
+
+describe('the assignments to Nick', () => {
+  const migration = { do: 'Run the migration on staging', why: "The agent can't reach staging" }
+
+  it('prints the assigned task and the link to the task on the progress tracker', () => {
+    expect(assignTaskInTracker(scratchPadWithTwoTasks(), 2, migration, servedLinks)).toBe(
+      [
+        '[t-2] task 2 is assigned to Nick: Write the invoice template',
+        `link: ${exportJobAddress}progress-tracker#t-2`,
+      ].join('\n'),
+    )
+  })
+
+  it('saves the assignment and appends a task-assigned event that refers to the subtask', () => {
+    const folder = scratchPadWithSubtasks()
+
+    assignSubtaskInTracker(folder, { task: 2, subtask: 2 }, migration, unservedLinks)
+
+    expect(
+      folder.read((pad) => pad.readProgressTracker().tasks[1]?.subtasks[1]?.assignment),
+    ).toStrictEqual({ assignee: 'user', ...migration })
+    expect(folder.read((pad) => pad.readEvents()).at(-1)).toMatchObject({
+      kind: 'task-assigned',
+      item: 't-4',
+    })
+  })
+
+  it('asks which subtasks Nick has to do after the link when a subtask is added to an assigned task', () => {
+    const folder = scratchPadWithTwoTasks()
+    assignTaskInTracker(folder, 2, migration, unservedLinks)
+
+    expect(addSubtaskToTracker(folder, 2, 'Run the migration', servedLinks)).toBe(
+      [
+        '[t-3] subtask 2.1 added: Run the migration',
+        `link: ${exportJobAddress}progress-tracker`,
+        'Task 2 is assigned to Nick and now has subtasks.',
+        'Which subtasks does Nick have to do?',
+        'Run "subtask assign <number> --do ... --why ..." for each one.',
+        'The current assignment of task 2, which you can reuse:',
+        '  do:  Run the migration on staging',
+        "  why: The agent can't reach staging",
+      ].join('\n'),
+    )
+  })
+
+  it('removes the saved assignment of the task when one of its subtasks is assigned', () => {
+    const folder = scratchPadWithTwoTasks()
+    assignTaskInTracker(folder, 2, migration, unservedLinks)
+    addSubtaskToTracker(folder, 2, 'Run the migration', unservedLinks)
+
+    expect(assignSubtaskInTracker(folder, { task: 2, subtask: 1 }, migration, unservedLinks)).toBe(
+      [
+        '[t-3] subtask 2.1 is assigned to Nick: Run the migration',
+        "[t-2] task 2 isn't assigned to Nick any more, because subtask 2.1 is assigned to him now: Write the invoice template",
+        missingLinksText,
+      ].join('\n'),
+    )
+    expect(folder.read((pad) => pad.readProgressTracker().tasks[1]?.assignment)).toBeUndefined()
   })
 })

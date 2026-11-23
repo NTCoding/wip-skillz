@@ -32,7 +32,18 @@
   background: var(--button-primary-hover);
 }
 
-.button:disabled {
+/* A small button is shown inside an item of a list, like the button that marks a task as done in
+   the Inbox. */
+.button--small {
+  gap: var(--space-xs);
+  height: auto;
+  padding: var(--space-2xs) var(--space-lg);
+  font-size: var(--fs-sm);
+  line-height: var(--lh-sm);
+}
+
+.button:disabled,
+.button[aria-disabled='true'] {
   cursor: not-allowed;
   opacity: 0.5;
 }

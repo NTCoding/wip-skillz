@@ -20,6 +20,17 @@ import {
   type QueuedItem,
 } from '../outbox/outbox'
 import { findPage } from '../pages/page-markdown'
+import {
+  isSubtask,
+  itemNameFirst,
+  itemWithId,
+  type ProgressTracker,
+  type Subtask,
+  type SubtaskNumber,
+  type Task,
+  type TrackerItem,
+} from '../progress-tracker/progress-tracker'
+import { finishSubtask, finishTask } from '../progress-tracker/task-progress'
 import { findSection, sectionTexts, type SectionHash } from '../read-marks/read-marks'
 import { pageBlocksOf } from '../rendered-page/page-blocks'
 import { ScratchPadError } from '../scratch-pad-error'
@@ -46,6 +57,24 @@ export class AnchorOutsidePageError extends ScratchPadError {
   constructor(anchor: Anchor, page: string, lineCount: number) {
     super(
       `Lines ${anchor.firstLine}-${anchor.lastLine} aren't in ${page}, which has ${lineCount} lines. Reload the page and select the text again.`,
+    )
+  }
+}
+
+// Nick can only mark the tasks that are assigned to him as done. The agent marks every other task
+// as done.
+export class UnassignedTaskDoneError extends ScratchPadError {
+  constructor(item: TrackerItem) {
+    super(`${itemNameFirst(item)} isn't assigned to you so only the agent can mark it as done.`)
+  }
+}
+
+// The Inbox can still show the button of a task that the agent has split into subtasks since the
+// Inbox was loaded. The state of that task follows its subtasks now.
+export class SplitTaskDoneError extends ScratchPadError {
+  constructor(task: Task) {
+    super(
+      `The agent has split task ${task.number} into subtasks and will tell you which of them are yours.`,
     )
   }
 }
@@ -139,6 +168,50 @@ export function nickAnswersDecision(
     pad.appendEvent({ time, kind: 'decision-answered', by: 'nick', item: decision.id })
     return decision
   })
+}
+
+// Nick marks a task or a subtask that is assigned to him as done in the browser. It's finished in
+// the same way as with \`task done\` or \`subtask done\` so the next task is started too. The start
+// is recorded straight after the task-done event so that the agent's inbox prints the task that
+// was started together with Nick's task. The agent's inbox prints Nick's task once.
+// A task that is already done, like after a click in another tab, is what Nick wanted. That's why
+// it's returned without recording anything.
+export function nickFinishesTask(folder: ScratchPadFolder, id: string): TrackerItem {
+  const time = new Date().toISOString()
+  return folder.change((pad) => {
+    const tracker = pad.readProgressTracker()
+    const item = itemNickCanFinish(tracker, id)
+    if (item.state === 'done') {
+      return item
+    }
+    const finish = isSubtask(item)
+      ? finishSubtask(tracker, subtaskNumberOf(item))
+      : finishTask(tracker, item.number)
+    pad.writeProgressTracker(finish.tracker)
+    pad.appendEvent({ time, kind: 'task-done', by: 'nick', item: id })
+    if (finish.started !== undefined) {
+      pad.appendEvent({ time, kind: 'task-started', by: 'nick', item: finish.started.id })
+    }
+    return finish.finished
+  })
+}
+
+function itemNickCanFinish(tracker: ProgressTracker, id: string): TrackerItem {
+  const item = itemWithId(tracker, id)
+  if (item.assignment === undefined) {
+    throw new UnassignedTaskDoneError(item)
+  }
+  if (!isSubtask(item) && item.subtasks.length > 0) {
+    throw new SplitTaskDoneError(item)
+  }
+  return item
+}
+
+// The number of a subtask, like 2.1, is made of the number of its task and the position of the
+// subtask in that task.
+function subtaskNumberOf(subtask: Subtask): SubtaskNumber {
+  const [task, position] = subtask.number.split('.')
+  return { task: Number(task), subtask: Number(position) }
 }
 
 export function nickEditsImprovement(

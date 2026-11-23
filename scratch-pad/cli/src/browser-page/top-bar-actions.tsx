@@ -57,7 +57,11 @@ export function TopBarActions({
           {search !== undefined && (
             <PadSearch search={search} pages={props.pages} onOpen={props.onOpenSearchMatch} />
           )}
-          <Inbox entries={props.inboxEntries} onNavigate={props.onNavigate} />
+          <Inbox
+            entries={props.inboxEntries}
+            onNavigate={props.onNavigate}
+            onMarkDone={actions.markTaskDone}
+          />
           <Outbox
             count={props.outboxCount}
             entries={props.outboxEntries}

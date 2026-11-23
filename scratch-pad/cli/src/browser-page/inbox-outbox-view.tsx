@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { type PageSummary, type QueuedItem, type Thread, type ThreadOfPad } from './api-responses'
 import { fileOfPage, type PadAddresses } from './browser-route'
 import {
+  answerCountOf,
   FilterPills,
   ItemList,
   Notice,
@@ -35,6 +36,7 @@ const entryLinks: Readonly<Record<InboxEntry['kind'], string>> = {
   section: 'Open the page',
   reply: 'Open the thread',
   decision: 'Open the decision',
+  task: 'Open the task',
 }
 
 const entryQuotes: Readonly<Record<InboxEntry['kind'], ItemRow['quoteKind']>> = {
@@ -42,6 +44,7 @@ const entryQuotes: Readonly<Record<InboxEntry['kind'], ItemRow['quoteKind']>> = 
   section: 'text',
   reply: 'text',
   decision: 'decision',
+  task: 'description',
 }
 
 interface InboxOutboxViewProps {
@@ -63,12 +66,15 @@ function useNow(): number {
   return now
 }
 
+// The kind of a task row is the number and title of the task. Its quote is the first line of what
+// Nick has to do.
 function entryRow(entry: InboxEntry): ItemRow {
+  const { task } = entry
   return {
     key: entry.key,
-    kind: entry.heading,
+    kind: task === undefined ? entry.heading : `${task.number} ${entry.heading}`,
     where: entry.where,
-    quote: entry.quote,
+    quote: task === undefined ? entry.quote : task.summary,
     quoteKind: entryQuotes[entry.kind],
     last: entry.last,
     time: entry.time,
@@ -168,17 +174,15 @@ function rowsByStatus(props: InboxOutboxViewProps, now: number): Record<Status, 
   }
 }
 
-// The count of "Waiting for you" only includes the replies and the decisions, like the count on the
-// Inbox button, because an update to a page doesn't need an answer. The updates to pages are still
-// listed under "Waiting for you". The count of "All" is the sum of the other counts.
+// The count of "Waiting for you" is the count on the Inbox button. It leaves out the updates to
+// pages, because an update to a page doesn't need an answer. The updates to pages are still listed
+// under "Waiting for you". The count of "All" is the sum of the other counts.
 function countsOf(
   rows: Record<Status, ItemRow[]>,
   props: InboxOutboxViewProps,
 ): Record<Status, number> {
   return {
-    'waiting-for-nick': props.inboxEntries.filter(
-      (entry) => entry.kind === 'reply' || entry.kind === 'decision',
-    ).length,
+    'waiting-for-nick': answerCountOf(props.inboxEntries),
     'waiting-for-agent': rows['waiting-for-agent'].length,
     outbox: rows.outbox.length,
     resolved: rows.resolved.length,

@@ -134,7 +134,15 @@ describe('a new page', () => {
 
     expect(
       screen.getAllByRole('menuitem').map((item) => item.textContent?.slice(0, 10)),
-    ).toStrictEqual(['The agent ', 'A decision', 'The invoic', 'The retry ', 'A new page'])
+    ).toStrictEqual([
+      'The agent ',
+      'A decision',
+      'The invoic',
+      'The retry ',
+      '2.2 Show t',
+      'Mark as do',
+      'A new page',
+    ])
   })
 })
 
@@ -172,7 +180,7 @@ describe('a changed section', () => {
     await waitFor(() =>
       expect(screen.queryByRole('region', { name: 'Retry limit has changed' })).toBeNull(),
     )
-    await userEvent.click(screen.getByRole('button', { name: 'Inbox: 2 items wait for you' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Inbox: 3 items wait for you' }))
     expect([
       document.querySelectorAll('[data-changed-section]').length,
       within(sidebar()).queryByRole('img', { name: 'Changed' }),

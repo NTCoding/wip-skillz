@@ -197,8 +197,8 @@ describe('helpText', () => {
     expect(helpText().split('\n').slice(0, 4)).toStrictEqual([
       'usage: scratch-pad <command> [--pad <folder>]',
       '',
-      '  new <topic>                                      create a scratch pad with an index page and a progress tracker',
-      '  start [--port <port>]                            start the server of every scratch pad in the background and print the address',
+      '  new <topic>                                       create a scratch pad with an index page and a progress tracker',
+      '  start [--port <port>]                             start the server of every scratch pad in the background and print the address',
     ])
   })
 })

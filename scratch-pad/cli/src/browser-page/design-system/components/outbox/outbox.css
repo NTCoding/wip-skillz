@@ -2,6 +2,7 @@
   display: flex;
   flex-direction: column;
   width: var(--inbox-w);
+  max-width: 100%;
   max-height: calc(100vh - var(--top-bar-h) - var(--space-8xl));
   padding: var(--space-md);
 }

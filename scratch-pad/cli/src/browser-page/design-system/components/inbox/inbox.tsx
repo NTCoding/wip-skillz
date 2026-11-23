@@ -1,18 +1,19 @@
 import { useId, useState } from 'react'
 import { type Navigate } from '../../navigation-click'
 import { Icon } from '../icon/icon'
-import { PanelMenu, type DecisionContext } from '../panel-menu/panel-menu'
+import { PanelMenu, type AssignedTask, type DecisionContext } from '../panel-menu/panel-menu'
 import { TopBarPanel, type TopBarPanelControls } from '../top-bar-panel/top-bar-panel'
 import './inbox.css'
 
 export interface InboxEntry {
   readonly key: string
   readonly href: string
-  // A reply and a decision need an answer from Nick. A page entry is a new page and a section
-  // entry is a page whose sections have changed since Nick read them. The Inbox shows the page
-  // and section entries as updates to pages, below the entries that need an answer. Their quote is
-  // undefined, apart from the description of a new page.
-  readonly kind: 'reply' | 'decision' | 'page' | 'section'
+  // A reply and a decision need an answer from Nick. A task entry is a task or a subtask that is
+  // assigned to Nick, which he has to do. A page entry is a new page and a section entry is a page
+  // whose sections have changed since Nick read them. The Inbox shows the page and section entries
+  // as updates to pages, below the entries that need an answer. Their quote is undefined, apart
+  // from the description of a new page.
+  readonly kind: 'reply' | 'decision' | 'task' | 'page' | 'section'
   // What happened, like "The agent replied". The heading of a section entry is the page, like
   // "Updates to Invoice template".
   readonly heading: string
@@ -25,6 +26,8 @@ export interface InboxEntry {
   readonly shownTime: string | undefined
   // Only a decision has a context. It's undefined if the agent hasn't written one.
   readonly context: DecisionContext | undefined
+  // Only a task entry has a task. The heading of a task entry is the title of the task.
+  readonly task?: AssignedTask | undefined
 }
 
 interface InboxProps {
@@ -32,10 +35,14 @@ interface InboxProps {
   // list.
   readonly entries: readonly InboxEntry[]
   readonly onNavigate: Navigate
+  // Marks a task entry as done. If this is undefined, the task entries won't have a button that
+  // marks them as done.
+  readonly onMarkDone?: ((id: string) => Promise<void>) | undefined
 }
 
+// A task that is assigned to Nick waits for him like a reply or a decision does.
 function needsAnswer(entry: InboxEntry): boolean {
-  return entry.kind === 'reply' || entry.kind === 'decision'
+  return entry.kind === 'reply' || entry.kind === 'decision' || entry.kind === 'task'
 }
 
 // The count on the Inbox button. The blinking title of the tab shows the same count.
@@ -52,7 +59,10 @@ function countText(answers: number, updates: number): string {
 }
 
 function menuItems(entries: readonly InboxEntry[]) {
-  return entries.map((entry) => ({ ...entry, linkLabel: undefined }))
+  return entries.map((entry) => ({
+    ...entry,
+    linkLabel: entry.kind === 'task' ? 'Read the full details' : undefined,
+  }))
 }
 
 interface InboxMenuProps extends InboxProps {
@@ -62,7 +72,7 @@ interface InboxMenuProps extends InboxProps {
 // The updates to pages are collapsed each time the Inbox opens. When there are updates, Tab will
 // move the focus from the entries that need an answer to the button of the updates. The focus
 // stays on that button when Nick opens the updates, as in the disclosure pattern of WAI-ARIA.
-function InboxMenu({ entries, onNavigate, controls }: InboxMenuProps) {
+function InboxMenu({ entries, onNavigate, onMarkDone, controls }: InboxMenuProps) {
   const id = useId()
   const [updatesOpen, setUpdatesOpen] = useState(false)
   const answers = entries.filter((entry) => needsAnswer(entry))
@@ -83,6 +93,8 @@ function InboxMenu({ entries, onNavigate, controls }: InboxMenuProps) {
           onChoose={controls.close}
           onTab={updates.length === 0 ? controls.closeAndFocusButton : undefined}
           focusFirstItem={true}
+          onMarkDone={onMarkDone}
+          focusPanel={controls.focusPanel}
         />
       )}
       {updates.length > 0 && (

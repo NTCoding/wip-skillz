@@ -9,6 +9,19 @@ export const stateTexts: Readonly<Record<TaskState, string>> = {
   done: 'done',
 }
 
+// The user is Nick, who is the only person that a task or a subtask can be assigned to.
+export const assignees = ['user'] as const
+export type Assignee = (typeof assignees)[number]
+
+// A task or a subtask that Nick has to do himself, because the agent can't do it
+export interface Assignment {
+  readonly assignee: Assignee
+  // What Nick has to do
+  readonly do: string
+  // Why the agent can't do it
+  readonly why: string
+}
+
 interface TaskFields {
   // The id of a task never changes, whereas its number changes when a task is moved. An id is never
   // used again, like t-4.
@@ -17,6 +30,8 @@ interface TaskFields {
   readonly state: TaskState
   // The overview of the task in Markdown, which the agent writes with `task describe`
   readonly description: string | undefined
+  // The agent assigns a task or a subtask to Nick with `task assign` or `subtask assign`.
+  readonly assignment: Assignment | undefined
 }
 
 export interface Subtask extends TaskFields {
@@ -49,9 +64,10 @@ export interface ChangedItem<T extends TrackerItem> {
   readonly item: T
 }
 
-interface ItemChange {
+export interface ItemChange {
   readonly state?: TaskState
   readonly description?: string
+  readonly assignment?: Assignment | undefined
 }
 
 export class EmptyGoalError extends ScratchPadError {
@@ -120,6 +136,7 @@ export function addTask(tracker: ProgressTracker, title: string): ChangedItem<Ta
     title: titleOf(title),
     state: 'to-do',
     description: undefined,
+    assignment: undefined,
     subtasks: [],
   }
   return { tracker: { ...tracker, tasks: [...tracker.tasks, task] }, item: task }
@@ -133,6 +150,8 @@ export function addSubtask(
   taskNumber: number,
   title: string,
 ): ChangedItem<Subtask> {
+  // An assigned task can have subtasks too. The task stays assigned until the agent assigns one of
+  // its subtasks so that the assignment doesn't disappear from Nick's Inbox.
   const task = findTask(tracker, taskNumber)
   const first = task.subtasks.length === 0
   const subtask: Subtask = {
@@ -141,6 +160,7 @@ export function addSubtask(
     title: titleOf(title),
     state: first && task.state === 'in-progress' ? 'in-progress' : 'to-do',
     description: undefined,
+    assignment: undefined,
   }
   const withSubtask = ordered({
     ...tracker,
@@ -209,6 +229,12 @@ export function subtaskNumberText(number: SubtaskNumber): string {
 // The tasks and their subtasks in the order of the tracker. Each task comes before its subtasks.
 export function trackerItems(tracker: ProgressTracker): TrackerItem[] {
   return tracker.tasks.flatMap((task) => [task, ...task.subtasks])
+}
+
+// A task that was assigned before the agent added its subtasks. The task stays assigned until the
+// agent assigns one of its subtasks.
+export function assignedTasksWithSubtasks(tracker: ProgressTracker): Task[] {
+  return tracker.tasks.filter((task) => task.assignment !== undefined && task.subtasks.length > 0)
 }
 
 export function isSubtask(item: TrackerItem): item is Subtask {

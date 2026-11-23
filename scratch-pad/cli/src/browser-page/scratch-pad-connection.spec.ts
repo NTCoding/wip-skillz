@@ -14,24 +14,7 @@ import {
   scratchPadConnection,
   type BrowserNetwork,
 } from './scratch-pad-connection'
-
-function jsonResponse(body: unknown, status = 200): Response {
-  return new Response(JSON.stringify(body), { status })
-}
-
-function networkReturning(response: Response): BrowserNetwork & {
-  readonly fetched: string[]
-} {
-  const fetched: string[] = []
-  return {
-    fetched,
-    fetch: (url) => {
-      fetched.push(url)
-      return Promise.resolve(response)
-    },
-    openChangeStream: () => ({ addEventListener: () => undefined, close: () => undefined }),
-  }
-}
+import { jsonResponse, networkReturning, networkWith } from './scratch-pad-connection-fixtures'
 
 const api = `/api/scratch-pads/${exportPad}`
 
@@ -198,24 +181,6 @@ describe('scratchPadConnection', () => {
   })
 })
 
-interface SentRequest {
-  readonly url: string
-  readonly method: string | undefined
-  readonly body: string | undefined
-}
-
-function networkWith(body: unknown): BrowserNetwork & { readonly sent: SentRequest[] } {
-  const sent: SentRequest[] = []
-  return {
-    sent,
-    fetch: (url, request) => {
-      sent.push({ url, method: request?.method, body: request?.body })
-      return Promise.resolve(jsonResponse(body))
-    },
-    openChangeStream: () => ({ addEventListener: () => undefined, close: () => undefined }),
-  }
-}
-
 const storedThread = { ...retryQuestion, outcome: null }
 const threadWithoutPosition = { ...storedThread, anchor: null, position: null }
 
@@ -285,6 +250,14 @@ describe('scratchPadConnection for threads and decisions', () => {
         method: 'POST',
         body: '{"page":"pages/index.md","choice":"proposal"}',
       },
+    ])
+  })
+
+  it('posts to the address of a task when Nick marks the task as done', async () => {
+    const network = networkWith({ task: { id: 't-5' } })
+    await scratchPadConnection(exportPad, network).markTaskDone('t-5')
+    expect(network.sent).toStrictEqual([
+      { url: `${api}/tasks/t-5/done`, method: 'POST', body: '{}' },
     ])
   })
 
