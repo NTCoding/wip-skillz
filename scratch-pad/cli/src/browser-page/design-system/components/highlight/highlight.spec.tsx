@@ -14,4 +14,15 @@ describe('Highlight', () => {
     expect(mark.getAttribute('data-highlight')).toBe('c-1 g-2')
     expect(mark.getAttribute('data-active')).toBe('true')
   })
+
+  it('marks the text as a search match without any thread when Nick has opened a result of the search', () => {
+    render(
+      <Highlight threads={[]} kind="search" active={false}>
+        retry
+      </Highlight>,
+    )
+    const mark = screen.getByText('retry')
+    expect(mark.getAttribute('data-kind')).toBe('search')
+    expect(mark.getAttribute('data-highlight')).toBe('')
+  })
 })

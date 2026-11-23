@@ -13,7 +13,7 @@ import {
   type ThreadOfPad,
   type ViewedPage,
 } from './api-responses'
-import { useBlinkingTabTitle } from './blinking-tab-title'
+import { tabTitleOf, useBlinkingTabTitle } from './blinking-tab-title'
 import { breadcrumbOf } from './breadcrumb'
 import { scrollTargetOf, useBrowserNavigation, useScrollOnNavigation } from './browser-navigation'
 import { fileOfPage, type BrowserRoute, type PadAddresses } from './browser-route'
@@ -38,6 +38,7 @@ import { nickInboxEntries } from './nick-inbox-entries'
 import { outboxEntries } from './outbox-entries'
 import { usePageActions } from './page-actions'
 import { PadSidebar, sectionsOf } from './pad-sidebar'
+import { searchMatchOn, useSearchMatch, type SearchMatch } from './pad-search'
 import { PageOutline } from './page-outline'
 import { fullTreeNodes, pageListEntries, pageOfFileName } from './page-tree'
 import { firstRevisions, pageRevisionOf, revisedAfterReconnect, revisedBy } from './pad-revisions'
@@ -47,10 +48,14 @@ import { PageWithThreads, type PageActions } from './page-with-threads'
 import { useOutboxEdits } from './queued-items'
 import { readMarkOf } from './read-marks'
 import { useResolvedThreads, type ResolvedThreads } from './resolved-threads'
-import { type ScratchPadReading, type ScratchPadWriting } from './scratch-pad-connection'
+import {
+  type ScratchPadReading,
+  type ScratchPadSearch,
+  type ScratchPadWriting,
+} from './scratch-pad-connection'
 import { useSidebarState, type NarrowWindow } from './sidebar-state'
 import { taskChipsOn, taskFinder, type FindTask } from './task-references'
-import { TopBarActions } from './top-bar-actions'
+import { pageActionOf, TopBarActions } from './top-bar-actions'
 import { DecisionLogView, ImprovementsView, LoadingView, ProgressTrackerView } from './pad-views'
 
 interface ScratchPadAppProps {
@@ -62,6 +67,7 @@ interface ScratchPadAppProps {
   readonly narrowWindow: NarrowWindow
   // The export and a browser without the Notification API don't have any desktop notifications.
   readonly notifications?: DesktopNotifications | undefined
+  readonly search?: ScratchPadSearch['search'] | undefined
 }
 
 const emptyNickInbox: NickInbox = { threads: [], decisions: [] }
@@ -100,6 +106,7 @@ interface RouteViewProps {
   readonly actions: PageActions | undefined
   readonly navigations: number
   readonly resolvedThreads: ResolvedThreads
+  readonly searchMatch: SearchMatch | undefined
 }
 
 function isMissing(pages: LoadedValue<PageSummary[]>, file: string): boolean {
@@ -206,6 +213,7 @@ function RouteView(props: RouteViewProps) {
       readMark={props.readMark}
       resolvedThreads={props.resolvedThreads}
       taskChips={taskChipsOn(props.tracker, props.pages, page.value.page, pageContext)}
+      searchMatch={searchMatchOn(props.searchMatch, page.value.page)}
       end={
         route.file === 'index.md' ? (
           <>
@@ -226,21 +234,6 @@ function RouteView(props: RouteViewProps) {
   ) : (
     <LoadingView loaded={page} />
   )
-}
-
-// The button after the name of the current page marks a new page as read and a read page as unread.
-function pageActionOf(actions: PageActions | undefined, mark: PageReadMark | undefined) {
-  if (actions === undefined || mark === undefined) {
-    return undefined
-  }
-  const file = fileOfPage(mark.page)
-  return mark.state === 'new'
-    ? { label: 'Mark as read', onClick: () => actions.markPageRead(file, mark.sections) }
-    : { label: 'Mark as unread', onClick: () => actions.markPageUnread(file) }
-}
-
-function tabTitleOf(pageTitle: string | undefined, padTitle: string): string {
-  return pageTitle === undefined || pageTitle === padTitle ? padTitle : `${pageTitle} · ${padTitle}`
 }
 
 // The Inbox / Outbox view shows every thread of the scratch pad. The Outbox in the top bar needs
@@ -348,6 +341,7 @@ export function ScratchPadApp(props: ScratchPadAppProps) {
   const breadcrumb = breadcrumbOf(route, viewedPage, pageList, addresses)
   const readMark = route.kind === 'page' ? readMarkOf(readMarks, `pages/${route.file}`) : undefined
   const findTask = taskFinder(loadedOr(tracker, undefined))
+  const [searchMatch, openSearchMatch] = useSearchMatch(navigate, addresses.pageHref)
 
   return (
     <AppFrame
@@ -367,6 +361,9 @@ export function ScratchPadApp(props: ScratchPadAppProps) {
               serverStopped={serverStopped}
               actions={actions}
               notifications={props.notifications}
+              search={props.search}
+              pages={pageList}
+              onOpenSearchMatch={openSearchMatch}
               inboxEntries={inboxEntries}
               outboxCount={outbox.items.length}
               outboxEntries={queuedEntries}
@@ -410,6 +407,7 @@ export function ScratchPadApp(props: ScratchPadAppProps) {
         actions={actions}
         navigations={navigations}
         resolvedThreads={resolvedThreads}
+        searchMatch={searchMatch}
       />
       {viewedPage !== undefined && (
         <PageOutline

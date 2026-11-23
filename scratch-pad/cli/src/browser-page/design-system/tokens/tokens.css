@@ -26,6 +26,7 @@
   --fs-h4: 17px;
   --fs-preview-title: 17px;
   --fs-sidebar-title: 17px;
+  --fs-command-palette-query: 17px;
   --fs-decision: 18px;
   --fs-body: 20px;
   --fs-h3: 20px;
@@ -125,6 +126,7 @@
   --tint-strong: rgb(0 0 0 / 9%);
   --scrim: rgb(0 0 0 / 55%);
   --scrim-sidebar: rgb(255 255 255 / 60%);
+  --scrim-command-palette: rgb(0 0 0 / 30%);
   --outline-bar: rgb(0 0 0 / 14%);
   --selection: rgb(26 137 23 / 20%);
 
@@ -188,6 +190,7 @@
   --highlight-comment: #e0f0e0;
   --highlight-comment-active: #bfe3be;
   --highlight-comment-line: #1a8917;
+  --highlight-search: #fff59d;
   --highlight-grammar: rgb(125 85 181 / 9%);
   --highlight-grammar-active: rgb(125 85 181 / 22%);
   --highlight-grammar-line: rgb(125 85 181 / 85%);
@@ -246,6 +249,7 @@
   --shadow-card-comment: 0 0 0 1.5px var(--highlight-comment-line), 0 6px 22px rgb(0 0 0 / 10%);
   --shadow-card-grammar: 0 0 0 1.5px var(--grammar-ink), 0 6px 22px rgb(0 0 0 / 10%);
   --shadow-card-improvement: 0 0 0 1.5px var(--improvement-ink), 0 6px 22px rgb(0 0 0 / 10%);
+  --shadow-key: inset 0 0 0 var(--hairline) var(--line), 0 var(--hairline) 0 var(--line);
   --shadow-marker: inset 0 0 0 var(--hairline) var(--line);
   --shadow-mark-changed: 0 0 0 var(--hairline) var(--mark-changed-ring);
 
@@ -299,4 +303,9 @@
   --outline-card-reserve: 132px;
   --outline-indent-3: 22px;
   --outline-indent-4: 34px;
+  --command-palette-w: 660px;
+  --command-palette-field-h: 56px;
+  --command-palette-icon-size: 18px;
+  --command-palette-place-icon-size: 13px;
+  --key-size: 20px;
 }

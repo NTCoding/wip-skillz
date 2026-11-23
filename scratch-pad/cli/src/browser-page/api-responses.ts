@@ -217,6 +217,18 @@ export const improvementEditResponse = z.object({
 
 export const improvementDeleteResponse = z.object({ deleted: z.number() })
 
+// One line of a page that contains the query. The matches are the places of the query in the
+// snippet, which is the part of the line around the first match.
+const searchResult = z.object({
+  page: z.string(),
+  heading: optionalText,
+  headingId: optionalText,
+  snippet: z.string(),
+  matches: z.array(z.object({ start: z.number(), end: z.number() })),
+})
+
+export const searchResponse = z.object({ results: z.array(searchResult) })
+
 export const errorResponse = z.object({ error: z.string() })
 
 export const exportedPadData = z.object({
@@ -255,4 +267,5 @@ export type SectionHash = z.infer<typeof sectionHash>
 export type NickInbox = z.infer<typeof nickInboxResponse>
 export type Outbox = z.infer<typeof outboxResponse>
 export type QueuedItem = z.infer<typeof queuedItem>
+export type SearchResult = z.infer<typeof searchResult>
 export type QueuedComment = Extract<QueuedItem, { kind: 'comment' }>

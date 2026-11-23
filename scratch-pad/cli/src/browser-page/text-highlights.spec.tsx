@@ -123,3 +123,64 @@ describe('highlightedTexts', () => {
     expect(shownBlock([highlight({ blockLines: '9-9' })]).querySelector('mark')).toBeNull()
   })
 })
+
+describe('highlightedTexts for a search match', () => {
+  const page = [
+    '<p data-lines="1-1">The export job retries (5) times.</p>',
+    '<h2 id="retry-limit" data-lines="3-3">Retry limit</h2>',
+    '<p data-lines="5-5">Each <strong>re</strong>try waits. The RETRY limit is 5.</p>',
+    '<div class="decision" data-lines="7-9"><p>Raise the retry limit.</p></div>',
+    '<h2 id="wait" data-lines="11-11">Wait</h2>',
+    '<p data-lines="13-13">The retry waits 30 seconds.</p>',
+  ].join('')
+
+  function searchMarksOf(
+    headingId: string | undefined,
+    query: string,
+    highlights: readonly TextHighlight[] = [],
+  ): (string | undefined)[][] {
+    const body = parsedPageBody(page)
+    const texts = highlightedTexts(body, highlights, { headingId, query })
+    const { container } = render(
+      <div>
+        {[...body.querySelectorAll('h2, p, strong')].flatMap((element) =>
+          [...element.childNodes].map((node) => (
+            <span key={`${element.textContent}-${String(node.textContent)}`}>
+              {texts.get(node) ?? null}
+            </span>
+          )),
+        )}
+      </div>,
+    )
+    return [...container.querySelectorAll('mark')].map((mark) => [
+      mark.textContent ?? undefined,
+      mark.getAttribute('data-kind') ?? undefined,
+      mark.getAttribute('data-highlight') ?? undefined,
+    ])
+  }
+
+  it('highlights every copy of the query from the heading to the next heading but not in a decision', () => {
+    expect(searchMarksOf('retry-limit', 'retry')).toStrictEqual([
+      ['Retry', 'search', ''],
+      ['try', 'search', ''],
+      ['RETRY', 'search', ''],
+      ['re', 'search', ''],
+    ])
+  })
+
+  it('highlights the copies before the first heading when the match doesn’t have a heading id', () => {
+    expect(searchMarksOf(undefined, '(5)')).toStrictEqual([['(5)', 'search', '']])
+  })
+
+  it('doesn’t highlight anything when the heading isn’t on the page any more or the query is only whitespace', () => {
+    expect([searchMarksOf('gone', 'retry'), searchMarksOf('wait', '  ')]).toStrictEqual([[], []])
+  })
+
+  it('shows the search match over the highlight of a thread and keeps the id of the thread', () => {
+    const thread = highlight({ blockLines: '13-13', selectedText: 'retry waits', active: true })
+    expect(searchMarksOf('wait', 'retry', [thread])).toStrictEqual([
+      ['retry', 'search', 'c-1'],
+      [' waits', 'comment', 'c-1'],
+    ])
+  })
+})

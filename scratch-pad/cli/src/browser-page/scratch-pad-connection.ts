@@ -13,6 +13,7 @@ import {
   pagesResponse,
   progressTrackerResponse,
   readMarksResponse,
+  searchResponse,
   taskDoneResponse,
   threadResponse,
   threadsOfPadResponse,
@@ -27,6 +28,7 @@ import {
   type PageSummary,
   type ProgressTracker,
   type ReadMarks,
+  type SearchResult,
   type SectionHash,
   type Thread,
   type ThreadOfPad,
@@ -85,7 +87,12 @@ export interface ScratchPadWriting {
   readonly markSectionRead: (file: string, section: SectionHash) => Promise<void>
 }
 
-export type ScratchPadConnection = ScratchPadReading & ScratchPadWriting
+// The export doesn't have a search, because only the server reads the Markdown of the pages.
+export interface ScratchPadSearch {
+  readonly search: (query: string) => Promise<SearchResult[]>
+}
+
+export type ScratchPadConnection = ScratchPadReading & ScratchPadWriting & ScratchPadSearch
 
 interface ChangeStream {
   readonly addEventListener: (
@@ -177,6 +184,9 @@ export function scratchPadConnection(pad: string, network: BrowserNetwork): Scra
     readMarks: () => readJson(network, `${api}/read-marks`, readMarksResponse),
     threadsOfPad: async () =>
       (await readJson(network, `${api}/threads`, threadsOfPadResponse)).threads,
+    search: async (query) =>
+      (await readJson(network, `${api}/search?query=${encodeURIComponent(query)}`, searchResponse))
+        .results,
     startThread: async (thread) =>
       (await readJson(network, `${api}/threads`, threadResponse, postOf(thread))).thread,
     replyToThread: async (id, message) =>

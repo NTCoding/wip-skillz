@@ -1,0 +1,181 @@
+.command-palette[open] {
+  display: flex;
+  flex-direction: column;
+  width: min(var(--command-palette-w), calc(100% - var(--space-3xl) * 2));
+  max-width: none;
+  max-height: calc(100% - var(--space-9xl) * 2);
+  margin: var(--space-9xl) auto auto;
+  padding: var(--space-0);
+  overflow: hidden;
+  border: 0;
+  border-radius: var(--r-lg);
+  background: var(--surface-raised);
+  box-shadow: var(--shadow-lg);
+  color: var(--text);
+  font-family: var(--font-ui);
+}
+
+.command-palette::backdrop {
+  background: var(--scrim-command-palette);
+}
+
+.command-palette__field {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: var(--space-xl);
+  height: var(--command-palette-field-h);
+  padding: var(--space-0) var(--space-3xl) var(--space-0) var(--space-4xl);
+  border-bottom: var(--hairline) solid var(--line);
+}
+
+.command-palette__field > .icon {
+  width: var(--command-palette-icon-size);
+  height: var(--command-palette-icon-size);
+  color: var(--icon);
+}
+
+.command-palette__query {
+  flex: 1;
+  min-width: 0;
+  padding: var(--space-0);
+  border: 0;
+  outline: none;
+  background: none;
+  color: var(--text);
+  font-family: inherit;
+  font-size: var(--fs-command-palette-query);
+  line-height: var(--lh-md);
+}
+
+.command-palette__problem,
+.command-palette__empty {
+  flex: none;
+  margin: var(--space-0);
+  padding: var(--space-md) var(--space-4xl);
+  border-bottom: var(--hairline) solid var(--line);
+  font-size: var(--fs-sm);
+  line-height: var(--lh-sm);
+}
+
+.command-palette__problem {
+  color: var(--warning-ink);
+}
+
+.command-palette__empty {
+  color: var(--text-2);
+}
+
+.command-palette__results {
+  flex: 0 1 auto;
+  min-height: 0;
+  margin: var(--space-0);
+  padding: var(--space-md);
+  overflow-y: auto;
+  list-style: none;
+}
+
+.command-palette__results:empty {
+  display: none;
+}
+
+.command-palette__result {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xl);
+  padding: var(--space-md) var(--space-xl);
+  border-radius: var(--r-md);
+  cursor: pointer;
+}
+
+.command-palette__result[aria-selected='true'] {
+  background: var(--tint-strong);
+}
+
+.command-palette__text {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2xs);
+  min-width: 0;
+}
+
+.command-palette__place {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  min-width: 0;
+  color: var(--text-2);
+  font-size: var(--fs-xs);
+  line-height: var(--lh-xs);
+}
+
+.command-palette__place > .icon {
+  width: var(--command-palette-place-icon-size);
+  height: var(--command-palette-place-icon-size);
+}
+
+.command-palette__place-text,
+.command-palette__snippet {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.command-palette__snippet {
+  color: var(--text);
+  font-size: var(--fs-ui);
+  line-height: var(--lh-ui);
+}
+
+.command-palette__match {
+  padding: var(--space-2xs) var(--space-0);
+  border-radius: var(--r-xs);
+  background: var(--highlight-search);
+  color: inherit;
+}
+
+.command-palette__enter {
+  flex: none;
+  visibility: hidden;
+  color: var(--text-2);
+  font-size: var(--fs-xs);
+}
+
+.command-palette__result[aria-selected='true'] > .command-palette__enter {
+  visibility: visible;
+}
+
+.command-palette__keys {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3xl);
+  padding: var(--space-lg) var(--space-4xl);
+  border-top: var(--hairline) solid var(--line);
+  background: var(--surface-soft);
+  color: var(--text-2);
+  font-size: var(--fs-xs);
+  line-height: var(--lh-xs);
+}
+
+.command-palette__hint {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
+.command-palette__key {
+  display: inline-grid;
+  place-items: center;
+  min-width: var(--key-size);
+  height: var(--key-size);
+  padding: var(--space-0) var(--space-xs);
+  border-radius: var(--r-xs);
+  background: var(--surface-raised);
+  box-shadow: var(--shadow-key);
+  color: var(--text-nav);
+  font-family: var(--font-ui);
+  font-size: var(--fs-2xs);
+  line-height: var(--lh-tight);
+}
