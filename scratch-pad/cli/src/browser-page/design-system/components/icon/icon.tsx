@@ -22,6 +22,7 @@ const paths = {
   'full-size': 'M9.5 2.5h4v4M6.5 13.5h-4v-4M13.5 2.5l-4.5 4.5M2.5 13.5l4.5-4.5',
   page: 'M4.5 2.5h5l2.5 2.5v8.5h-7.5zM9.5 2.5v2.5h2.5',
   'progress-tracker': 'M2.5 4.5h1M2.5 8h1M2.5 11.5h1M6 4.5h7.5M6 8h7.5M6 11.5h7.5',
+  search: 'M11.5 7a4.5 4.5 0 1 1-9 0a4.5 4.5 0 0 1 9 0zM10.3 10.3l3.2 3.2',
   sent: 'M2.5 7.5l11-5-4.5 11-2-4.5zM7 9l6.5-6.5',
   'sidebar-collapse': 'M2.5 3.5h11v9h-11zM6 3.5v9M10.5 6.5L9 8l1.5 1.5',
   'sidebar-expand': 'M2.5 3.5h11v9h-11zM6 3.5v9M9 6.5L10.5 8 9 9.5',

@@ -19,3 +19,5 @@ export const ActiveComment: Story = { args: { active: true } }
 export const GrammarNote: Story = { args: { kind: 'grammar', threads: ['g-1'] } }
 
 export const ImprovementNote: Story = { args: { kind: 'improvement', threads: ['i-1'] } }
+
+export const SearchMatch: Story = { args: { kind: 'search', threads: [] } }

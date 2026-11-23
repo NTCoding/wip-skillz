@@ -37,6 +37,7 @@ import { nickInboxEntries } from './nick-inbox-entries'
 import { outboxEntries } from './outbox-entries'
 import { usePageActions } from './page-actions'
 import { PadSidebar, sectionsOf } from './pad-sidebar'
+import { searchMatchOn, useSearchMatch, type SearchMatch } from './pad-search'
 import { PageOutline } from './page-outline'
 import { fullTreeNodes, pageListEntries, pageOfFileName } from './page-tree'
 import { firstRevisions, pageRevisionOf, revisedAfterReconnect, revisedBy } from './pad-revisions'
@@ -45,7 +46,11 @@ import { type SavedSettings } from './saved-settings'
 import { PageWithThreads, type PageActions } from './page-with-threads'
 import { useOutboxEdits } from './queued-items'
 import { readMarkOf } from './read-marks'
-import { type ScratchPadReading, type ScratchPadWriting } from './scratch-pad-connection'
+import {
+  type ScratchPadReading,
+  type ScratchPadSearch,
+  type ScratchPadWriting,
+} from './scratch-pad-connection'
 import { useSidebarState, type NarrowWindow } from './sidebar-state'
 import { TopBarActions } from './top-bar-actions'
 import { DecisionLogView, ImprovementsView, LoadingView, ProgressTrackerView } from './pad-views'
@@ -59,6 +64,7 @@ interface ScratchPadAppProps {
   readonly narrowWindow: NarrowWindow
   // The export and a browser without the Notification API don't have any desktop notifications.
   readonly notifications?: DesktopNotifications | undefined
+  readonly search?: ScratchPadSearch['search'] | undefined
 }
 
 const emptyNickInbox: NickInbox = { threads: [], decisions: [] }
@@ -95,6 +101,7 @@ interface RouteViewProps {
   readonly pageContext: PageContext
   readonly actions: PageActions | undefined
   readonly navigations: number
+  readonly searchMatch: SearchMatch | undefined
 }
 
 function isMissing(pages: LoadedValue<PageSummary[]>, file: string): boolean {
@@ -194,6 +201,7 @@ function RouteView(props: RouteViewProps) {
       actions={actions}
       address={{ section: route.section, navigations: props.navigations }}
       readMark={props.readMark}
+      searchMatch={searchMatchOn(props.searchMatch, page.value.page)}
       end={
         route.file === 'index.md' ? (
           <>
@@ -331,6 +339,11 @@ export function ScratchPadApp(props: ScratchPadAppProps) {
   const queuedEntries = outboxEntries(addresses, outbox.items, pageList, threadsOfPad)
   const breadcrumb = breadcrumbOf(route, viewedPage, pageList, addresses)
   const readMark = route.kind === 'page' ? readMarkOf(readMarks, `pages/${route.file}`) : undefined
+  const [searchMatch, showSearchMatch] = useSearchMatch()
+  const openSearchMatch = (match: SearchMatch): void => {
+    showSearchMatch(match)
+    navigate(addresses.pageHref(fileOfPage(match.page), match.headingId))
+  }
 
   return (
     <AppFrame
@@ -350,6 +363,9 @@ export function ScratchPadApp(props: ScratchPadAppProps) {
               serverStopped={serverStopped}
               actions={actions}
               notifications={props.notifications}
+              search={props.search}
+              pages={pageList}
+              onOpenSearchMatch={openSearchMatch}
               inboxEntries={inboxEntries}
               outboxCount={outbox.items.length}
               outboxEntries={queuedEntries}
@@ -392,6 +408,7 @@ export function ScratchPadApp(props: ScratchPadAppProps) {
         pageContext={{ addresses, onNavigate: navigate, loadPreview }}
         actions={actions}
         navigations={navigations}
+        searchMatch={searchMatch}
       />
       {viewedPage !== undefined && (
         <PageOutline

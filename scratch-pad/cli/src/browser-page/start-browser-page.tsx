@@ -25,6 +25,7 @@ function servedScratchPad(pad: string) {
     addresses: servedAddresses(pad),
     connection,
     writing: connection,
+    search: connection.search,
     notifications: browserNotifications(),
   }
 }
@@ -34,6 +35,7 @@ function exportedScratchPadOf(pad: string, data: Element) {
     addresses: exportedAddresses(pad),
     connection: exportedScratchPad(String(data.textContent)),
     writing: undefined,
+    search: undefined,
     notifications: undefined,
   }
 }

@@ -69,6 +69,34 @@ describe('scratchPadConnection', () => {
     expect(viewed.decisions).toStrictEqual([{ id: 'd-1', question: undefined, answer: undefined }])
   })
 
+  it('reads the results of the search from the address with the encoded query when Nick searches', async () => {
+    const network = networkReturning(
+      jsonResponse({
+        results: [
+          {
+            page: 'pages/retry-limit.md',
+            heading: null,
+            headingId: null,
+            snippet: 'The retry limit is 5.',
+            matches: [{ start: 4, end: 9 }],
+          },
+        ],
+      }),
+    )
+    await expect(
+      scratchPadConnection(exportPad, network).search('retry & wait'),
+    ).resolves.toStrictEqual([
+      {
+        page: 'pages/retry-limit.md',
+        heading: undefined,
+        headingId: undefined,
+        snippet: 'The retry limit is 5.',
+        matches: [{ start: 4, end: 9 }],
+      },
+    ])
+    expect(network.fetched).toStrictEqual([`${api}/search?query=retry%20%26%20wait`])
+  })
+
   it('reads the progress tracker and the log of decisions when they are asked for', async () => {
     const tracker = scratchPadConnection(exportPad, networkReturning(jsonResponse(progressTracker)))
     const log = scratchPadConnection(

@@ -114,7 +114,7 @@ export interface AnsweredDecision {
   readonly context: readonly string[]
 }
 
-const headingTags = new Set(['H1', 'H2', 'H3', 'H4', 'H5', 'H6'])
+export const headingTags = new Set(['H1', 'H2', 'H3', 'H4', 'H5', 'H6'])
 
 function elementsAbove(element: Element): Element[] {
   const above = element.previousElementSibling

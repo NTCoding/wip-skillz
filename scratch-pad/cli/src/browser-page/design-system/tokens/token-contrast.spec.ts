@@ -116,6 +116,7 @@ const pairs = (
     { text: '--text', background: '--code-inline-bg' },
     { text: '--text', background: '--highlight-comment' },
     { text: '--text', background: '--highlight-comment-active' },
+    { text: '--text', background: '--highlight-search' },
     { text: '--text', background: '--highlight-grammar-active' },
     { text: '--text', background: '--highlight-improvement-active' },
     { text: '--table-head-fg', background: '--table-head-bg' },

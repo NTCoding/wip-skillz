@@ -15,6 +15,7 @@ import { type NarrowWindow } from './sidebar-state'
 import { servedAddresses } from './browser-route'
 import { fakeOutbox } from './outbox-fixtures'
 import { pageSummaries } from './page-summary-fixtures'
+import { retrySearchResults } from './search-fixtures'
 import {
   type ChangeListeners,
   type NewThread,
@@ -22,6 +23,7 @@ import {
 } from './scratch-pad-connection'
 
 export { pageSummaries } from './page-summary-fixtures'
+export { retrySearchResults } from './search-fixtures'
 
 export const exportPad = '2026-11-20-invoice-export'
 
@@ -353,6 +355,7 @@ export function fakeConnection(): FakeConnection {
     },
     threads: (file) => Promise.resolve(threads.get(file) ?? []),
     nickInbox: () => Promise.resolve(indexInbox),
+    search: vi.fn((query: string) => Promise.resolve(query === 'retry' ? retrySearchResults : [])),
     ...fakeActions,
     ...outbox.actions,
     progressTracker: () => Promise.resolve(progressTracker),

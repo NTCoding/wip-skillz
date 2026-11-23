@@ -38,7 +38,7 @@ import { answeredDecisions, pageElements, parsedPageBody } from './page-elements
 import { type PageAddress } from './current-section'
 import { type NewThread } from './scratch-pad-connection'
 import { selectedBlockText, type BlockSelection, type SelectedBlockText } from './selected-block'
-import { highlightedTexts, type TextHighlight } from './text-highlights'
+import { highlightedTexts, type SearchMatchOnPage, type TextHighlight } from './text-highlights'
 import { placeThreads, type PlacedThread } from './thread-anchors'
 
 export interface PageActions extends QueuedItemActions, ReadMarkActions {
@@ -68,6 +68,8 @@ interface PageWithThreadsProps {
   // Whether Nick has read the page and which sections have changed since he read it. The export
   // doesn't have any read marks.
   readonly readMark?: PageReadMark | undefined
+  // The match that Nick has opened from the search, which is highlighted on the page
+  readonly searchMatch?: SearchMatchOnPage | undefined
 }
 
 interface Draft {
@@ -378,7 +380,8 @@ export function PageWithThreads(props: PageWithThreadsProps) {
     toggle,
     problems: readMarks.problems,
   })
-  const highlighted = highlightedTexts(body, highlightsOf(placed, placedQueued, active, draft))
+  const highlights = highlightsOf(placed, placedQueued, active, draft)
+  const highlighted = highlightedTexts(body, highlights, props.searchMatch)
   return (
     <>
       <ReadingColumn

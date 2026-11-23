@@ -294,6 +294,12 @@ const featureExamples = [
     },
   },
   {
+    feature:
+      'The search, where ⌘K and “retry” find a line on most pages, and “limit.md” only finds the address of a link on the index page, which the page scrolls to without a highlight',
+    // The pages of the demo already contain both searches, so this example doesn't change anything.
+    add: () => undefined,
+  },
+  {
     feature: 'A new page, and a read page whose section has changed',
     add: async (demo) => {
       const { pages } = await demo.get('read-marks')

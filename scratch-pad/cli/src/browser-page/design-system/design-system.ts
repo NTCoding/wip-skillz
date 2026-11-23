@@ -6,6 +6,10 @@ export { AppFrame, narrowAppFrameQuery } from './components/app-frame/app-frame'
 export { Button } from './components/button/button'
 export { CodeBlock } from './components/code-block/code-block'
 export {
+  CommandPalette,
+  type CommandPaletteResult,
+} from './components/command-palette/command-palette'
+export {
   DecisionAnswerForm,
   type DecisionAnswer,
 } from './components/decision-answer-form/decision-answer-form'
