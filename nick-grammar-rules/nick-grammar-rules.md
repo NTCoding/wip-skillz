@@ -631,6 +631,18 @@ sentence is true of the thing it describes. A sentence has to pass both.
 
      **Good:** The test that confirms the bug.
 
+- **Possessive determiner in place of the definite article.** When the reader
+  already knows which thing a noun belongs to, a person says "the" in front of
+  the noun. Write "its", "their" or "his" when the owner isn't clear from the
+  sentence, or when the point of the sentence is who owns the thing. A
+  possessive that a person wouldn't say out loud reads as AI writing.
+
+  **Bad:** A reviewer will check the page once it's rendered. Then I'll give
+  you its path.
+
+  **Good:** A reviewer will check the page once it's rendered. Then I'll give
+  you the path.
+
 - **Lexical consistency.** Use one word for one thing in a reply. Once a
   thing is named, keep that name, even when another word means the same. A
   second word for the same thing makes the reader think there are 2 things.
