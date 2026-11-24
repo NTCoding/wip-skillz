@@ -169,9 +169,20 @@ Tell Nick the page's path rather than repeating the walkthrough in the chat.
 
 ## Updating a walkthrough
 
-While Nick reads the page, he'll comment on as many passages as he wants. Each
-comment is saved in his browser as he types. At the end, he'll click **Collect
-all my feedback** on the page and paste the result into a session.
+While Nick reads the page, he selects any text that he wants to comment on,
+such as a sentence or a few lines of code. A **Comment** button then appears
+next to the selection. Nick writes his comment in the card that opens. The
+text that he selected stays highlighted on the page.
+
+Each comment is saved in his browser. He can click a highlight to edit or
+delete its comment. The **Comments** tab lists every comment on the page:
+
+- A click on the title of a comment opens the place of the comment on the
+  page.
+- **Edit** and **Delete** change the comment.
+
+At the end, he'll click **Collect all my feedback** on the page and paste the
+result into a session.
 
 This is often a different session from the one where the walkthrough was
 written. That's why the text he pastes includes everything the session needs:
@@ -179,8 +190,26 @@ written. That's why the text he pastes includes everything the session needs:
 - `Source` is the path of the markdown file.
 - `Page` is the path of the HTML file.
 - `Repository` is the folder to run the renderer from.
-- Each entry has Nick's comment on one passage. The entry starts with the
-  passage's id and title.
+- Each entry is one comment.
+
+An entry looks like this:
+
+```markdown
+### t1p3.b2: 2. `UploadRetryPolicy` stops a 4th upload, under "The export job stops after 3 failed uploads"
+
+The selected text:
+
+> return new UploadRetriesExhausted()
+
+Nick's comment:
+
+> Which caller reads this error?
+```
+
+The heading of the entry is the id of the passage that contains the selected
+text, followed by the passage's title. The id can also point at a whole point,
+such as `t1p3`, or at a `> ⚠️` block, such as `t1p3.w1`. The selected text
+shows the sentence or the line of code that the comment is about.
 
 A passage id such as `t1p3.b2` points at the 2nd `### ` passage under the 3rd
 `## ` heading in the 1st `# ` heading. The ids are described in "The source
@@ -236,7 +265,7 @@ A paragraph, with `Names` in backticks.
 |---|---|
 | a | row |
 
-> ⚠️ A block that needs Nick's attention.
+> ⚠️ **A short title** A block that needs Nick's attention.
 ```
 
 A `context:` line is `<path prefix> = <name of the context> = <name of its
@@ -263,6 +292,20 @@ A `> ⚠️` block isn't a passage. It isn't numbered or listed in the `steps`
 block or the table of contents. A `> ⚠️` block also ends the passage above
 the block. That's why the next line after a `> ⚠️` block in the middle of a
 point is always a `### ` title.
+
+A `> ⚠️` block starts with a short title in bold. The title describes the
+problem that a reviewer needs to know about in a few words. The text after the
+title explains the problem:
+
+```markdown
+> ⚠️ **`UploadRetryPolicy` doesn't have a test** The 3 new branches of
+> `UploadRetryPolicy.isExhausted` aren't run by any test in the exports context.
+```
+
+The page shows the title as the heading of the block. The overview lists the
+title of every `> ⚠️` block as a section that is closed at first. A click on
+the title opens the section, which shows the text and a link to the block. The
+renderer fails on a `> ⚠️` block without a title.
 
 Each passage has an id, which is used in links and in Nick's comments:
 
@@ -365,16 +408,18 @@ ExportOwner | InvoiceNotFound -> ExportPermission @3
   write that in a point.
 
 If a point follows one call through the code, from the route down to the
-domain model, add a `steps` block to that point. The reader then sees every
-step of the point on one screen.
+domain model, add an empty `steps` block to that point. The reader then sees
+every step of the point on one screen.
 
-Each step is one passage of the point. The step links to that passage, which
-shows the step's code. That way the reader can jump straight to the code of
-any step.
+The renderer builds the chain of steps from the passages of the point. Each
+`### ` passage is one step, which is drawn as a numbered box that contains the
+title of the passage. The box also shows the context of the first code block
+in the passage that has a path. A passage without a code block like that has a
+box without a context. Each box links to its passage. That way the reader can
+jump straight to the code of any step.
 
-Write the block after the point's intro paragraphs and before the first `### `
-title. The block is drawn as a chain of numbered boxes, which are joined by
-arrows. Each line is `<name of a context>: <text> @<passage id>`:
+Write the empty block after the point's intro paragraphs and before the first
+`### ` title:
 
 ````markdown
 ## The export job stops after 3 failed uploads {Retry limit}
@@ -382,9 +427,6 @@ arrows. Each line is `<name of a context>: <text> @<passage id>`:
 The export job in the exports context tries an upload 3 times at most.
 
 ```steps
-exports context: `ExportController` reads the shop's retry limit @t1p3.b1
-billing context: `ReadInvoiceOwner` returns the ID of the shop that owns the invoice @t1p3.b2
-exports context: `UploadRetryPolicy` stops a 4th upload @t1p3.b3
 ```
 
 ### `ExportController` reads the retry limit of the shop
@@ -397,13 +439,11 @@ exports context: `UploadRetryPolicy` stops a 4th upload @t1p3.b3
 …
 ````
 
-- Write the name of the context exactly as it is written in a `context:` line
-  of the front matter. Each box shows that name in the context's colour.
-- List every passage of the point in order, with one line per passage. The
-  number of each box is the number of its passage, which is also shown in
-  front of the passage's title. If the lines don't link to the passages in
-  order, the renderer will fail.
-- Leave out the `> ⚠️` blocks, because they aren't numbered.
+- The renderer fails on a `steps` block that has any lines. A step always has
+  the title of its passage. So the text of a step can't be different from the
+  title of its passage.
+- To change the text of a step, change the title of its passage.
+- The `> ⚠️` blocks aren't in the chain, because they aren't numbered.
 
 The renderer also adds 3 things that you don't write in the source:
 
@@ -446,10 +486,6 @@ in 3 places:
   card is drawn under the last line of the note, or above the first line when
   there's more room above. That way the card is never drawn over the lines of
   the note.
-
-A switch at the top of each point that has notes changes how the notes on the
-whole page are shown. "On the lines" shows the notes as described above.
-"Beside the line (today)" shows each note beside its first line instead.
 
 The renderer fails on a note on several lines that isn't written correctly:
 
@@ -574,7 +610,7 @@ is built so that it can be read without the passage above it too.
      the point in order. Item 1 links to passage 1, item 2 links to passage 2
      and so on. The renderer will fail if the items aren't in the order of
      the passages.
-   - Don't start a label or a step with "the" if the thing hasn't been
+   - Don't start a label with "the" if the thing hasn't been
      introduced on the same screen yet. Don't write a sentence that has a
      label as its subject and continues after the link either.
 3. **Make the title of each passage its point.** If you link to an earlier

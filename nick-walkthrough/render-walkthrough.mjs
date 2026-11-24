@@ -143,13 +143,10 @@ const push = block => {
 function addSteps (body) {
   if (!point?.title) { errors.push(`a steps block is only allowed under a "## " heading:\n    ${body[0]}`); return }
   if (point.parts.length) { errors.push(`under "${point.title}": the steps block belongs before the first "### " title:\n    ${body[0]}`); return }
-  point.steps = body.filter(l => l.trim()).map(l => {
-    const m = /^(.+?):\s+(.+?)\s+@(\S+)$/.exec(l.trim())
-    if (!m) { errors.push(`under "${point.title}": this line of a steps block isn't "<context>: <text> @<block id>":\n    ${l}`); return undefined }
-    const ctx = CONTEXTS.find(c => c.name === m[1])
-    if (!ctx) errors.push(`under "${point.title}": "${m[1]}" isn't the name of a "context:" line of the front matter:\n    ${l}`)
-    return { ctx, text: m[2], id: m[3] }
-  }).filter(Boolean)
+  // The chain is built from the passages of the point. So a steps block is always empty.
+  const lines = body.filter(l => l.trim())
+  if (lines.length) { errors.push(`under "${point.title}": a steps block is always empty, because the renderer builds the chain from the "### " passages of the point. Remove the lines of the block. If a line was better than the title of its passage, put that wording into the title:\n    ${lines[0]}`); return }
+  point.steps = true
 }
 
 const lines = src.slice(front[0].length).split('\n')
@@ -186,7 +183,10 @@ for (let i = 0; i < lines.length; i++) {
     for (; i < lines.length && lines[i].startsWith('>'); i++) body.push(lines[i].replace(/^>\s?/, ''))
     i--
     const text = body.join(' ').trim()
-    push(text.startsWith('⚠️') ? { type: 'attention', text: text.slice(2).trim() } : { type: 'quote', text })
+    if (!text.startsWith('⚠️')) { push({ type: 'quote', text }); continue }
+    const titled = /^\*\*(.+?)\*\*\s*(.*)$/.exec(text.slice(2).trim())
+    if (!titled) errors.push(`under "${point?.title || tab.title}": this "> ⚠️" block doesn't have a title. Start the block with a short title in bold, as in "> ⚠️ **<title>** <text>":\n    ${text.slice(0, 90)}`)
+    push({ type: 'attention', heading: titled?.[1] ?? '', text: titled?.[2] ?? text.slice(2).trim() })
     continue
   }
   if (/^(\d+\.|-) /.test(line)) {
@@ -281,7 +281,6 @@ tabs.forEach((t, ti) => t.points.forEach((p, pi) => {
     b.rows = locate(b, where)
     if (b.file) numberNotes(b, where)
     else b.notes = []
-    if (b.notes.length) p.notes = true
     b.first = b.rows.find(r => r.n)?.n
     if (b.file && changed.has(b.file) && b.ref === 'head') changed.get(b.file).shownIn.add(p.id)
   }
@@ -299,7 +298,8 @@ tabs.forEach((t, ti) => t.points.forEach((p, pi) => {
     const want = p.passages.map(x => x.id)
     if (ids.join(' ') !== want.join(' ')) errors.push(`under "${p.title}": the ${kind} links to ${ids.join(', ') || 'nothing'}, but it has to link to each "### " passage of the point in order, one item per passage: ${want.join(', ') || '(the point has no passages)'}`)
   }
-  if (p.steps) breakdown('steps block', p.steps.map(s => s.id))
+  // One step per passage, with the title of the passage and the context of its first code block that has a path.
+  if (p.steps) p.steps = p.passages.map(x => ({ id: x.id, text: x.title, ctx: contextOf(x.blocks.find(b => b.type === 'code' && b.file)?.file ?? '') }))
   for (const b of p.intro.filter(isToc)) {
     breakdown('table of contents', b.items.map(item => /^\[[^\]]+\]\(#([^)]+)\)/.exec(item)?.[1] ?? '(an item without a link at its start)'))
   }
@@ -331,14 +331,14 @@ function codeBlock (b) {
   const rows = b.rows.map((r, i) => {
     if (r.gap) return '<span class="ln gap"><span class="no"></span>⋯</span>'
     const note = starts.get(i)
-    return `<span class="ln${r.add && !isNew ? ' add' : ''}${r.k ? ' mk' : ''}" data-i="${i}"${r.k ? ` data-k="${r.k}"` : ''}><span class="no">${r.n ?? ''}</span>${note ? `<button type="button" class="nb ann" data-k="${note.k}" aria-label="Note ${note.k}">${note.k}</button>` : ''}${linkTypes(paint(r.text), { file: b.file, n: r.n }) || ' '}${note ? `<span class="why today">${inline(note.text)}</span>` : ''}${cross(r.text)}</span>`
+    return `<span class="ln${r.add && !isNew ? ' add' : ''}${r.k ? ' mk' : ''}" data-i="${i}"${r.k ? ` data-k="${r.k}"` : ''}><span class="no">${r.n ?? ''}</span>${note ? `<button type="button" class="nb" data-k="${note.k}" aria-label="Note ${note.k}">${note.k}</button>` : ''}${linkTypes(paint(r.text), { file: b.file, n: r.n }) || ' '}${cross(r.text)}</span>`
   }).join('')
   const lines = note => {
     const [first, last] = [b.rows[note.first].n, b.rows[note.last].n]
     return first === last ? `line ${first}` : `lines ${first} to ${last}`
   }
-  const list = `<ol class="nn ann">${b.notes.map(note => `<li data-k="${note.k}"><span class="nb">${note.k}</span><span class="nn-t"><span class="nn-at">${lines(note)}</span>${inline(note.text)}</span></li>`).join('')}</ol>`
-  const cards = b.notes.map(note => `<span class="tc ann pc" role="note" data-k="${note.k}" data-first="${note.first}" data-last="${note.last}"><span class="tc-msg"><span class="tc-av" aria-hidden="true">A</span><span class="tc-body"><span class="tc-meta"><span class="tc-au">Agent</span><span class="tc-at">${lines(note)}</span></span><span class="tc-text">${inline(note.text)}</span></span></span></span>`).join('')
+  const list = `<ol class="nn">${b.notes.map(note => `<li data-k="${note.k}"><span class="nb">${note.k}</span><span class="nn-t"><span class="nn-at">${lines(note)}</span>${inline(note.text)}</span></li>`).join('')}</ol>`
+  const cards = b.notes.map(note => `<span class="tc pc" role="note" data-k="${note.k}" data-first="${note.first}" data-last="${note.last}"><span class="tc-msg"><span class="tc-av" aria-hidden="true">A</span><span class="tc-body"><span class="tc-meta"><span class="tc-au">Agent</span><span class="tc-at">${lines(note)}</span></span><span class="tc-text">${inline(note.text)}</span></span></span></span>`).join('')
   const name = b.file ? b.file.split('/').pop() : ''
   const dir = b.file ? b.file.slice(0, -name.length) : ''
   const head = b.file ? `
@@ -494,7 +494,7 @@ const META = []
 const plain = text => inline(text).replace(/<a [^>]*>|<\/a>/g, '')
 const ALERTS = tabs.flatMap(t => t.points.flatMap(p => (p.title ? [...p.intro, ...p.parts] : p.blocks).filter(b => b.type === 'attention').map(block => ({ tab: t, point: p, block }))))
 const shortOf = p => p.short ?? p.title.replace(/[`*]/g, '').split(' ').slice(0, 4).join(' ') + '…'
-const attnHtml = b => `<div class="attn" id="${b.id}"><span class="icon" aria-hidden="true">⚠️</span><p><b>Needs attention.</b> ${inline(b.text)}</p></div>`
+const attnHtml = b => `<div class="attn" id="${b.id}"><span class="icon" aria-hidden="true">⚠️</span><div><h4 class="attn-t">${inline(b.heading)}</h4><p>${inline(b.text)}</p></div></div>`
 function passageHtml (p, point) {
   if (p.type === 'attention') return attnHtml(p)
   META.push({ id: p.id, point: point.title, label: `${p.n}. ${p.title.replace(/[`*]/g, '')}` })
@@ -506,8 +506,6 @@ function passageHtml (p, point) {
         <div class="tell">
           <h3 class="pt-line"><span class="num">${p.n}</span><span>${inline(p.title)}</span></h3>
           ${tell.map(b => b.type === 'list' ? textList(b) : para(b)).join('')}
-          <button class="say-btn" type="button">💬 Comment on this</button>
-          <textarea class="say" data-id="${p.id}" rows="3" hidden placeholder="Your comment is saved as you type. Read the other points, then click Collect all my feedback at the bottom."></textarea>
         </div>
         ${show.length ? `<div class="show">${show.map(b => b.type === 'text' ? para(b) : b.type === 'list' ? textList(b) : evidence(b)).join('')}</div>` : ''}
       </div>`
@@ -515,10 +513,8 @@ function passageHtml (p, point) {
 
 const numberOf = (p, id) => p.passages.find(x => x.id === id)?.n ?? '?'
 const stepsHtml = p => `<ol class="steps">${p.steps.map(s => `
-        <li><a href="#${esc(s.id)}"><span class="num">${numberOf(p, s.id)}</span><span class="ctx c${s.ctx.n}">${esc(s.ctx.name)}</span><span class="steps-t">${plain(s.text)}</span></a></li>`).join('')}
+        <li><a href="#${esc(s.id)}"><span class="num">${numberOf(p, s.id)}</span>${s.ctx ? `<span class="ctx c${s.ctx.n}">${esc(s.ctx.name)}</span>` : ''}<span class="steps-t">${plain(s.text)}</span></a></li>`).join('')}
       </ol>`
-
-const modeBar = `<div class="modebar"><span>Notes on the code</span><span class="seg" role="group" aria-label="Where the notes on the code are shown"><button type="button" data-m="ann" aria-pressed="true">On the lines</button><button type="button" data-m="today" aria-pressed="false">Beside the line (today)</button></span></div>`
 
 function pointHtml (p, n, t, ti) {
   if (!p.title) {
@@ -534,7 +530,7 @@ function pointHtml (p, n, t, ti) {
     return `
     <section class="point overview" id="${p.id}">
       <div class="lead">${p.blocks.map(b => b.type === 'text' ? `<p>${inline(b.text)}</p>` : b.type === 'list' ? textList(b) : b.type === 'table' ? `<div class="show">${evidence(b)}</div>` : '').join('')}</div>
-      ${alerts.length ? `<div class="alerts"><h3>⚠️ ${alerts.length} ${alerts.length === 1 ? 'thing needs' : 'things need'} your attention</h3><ul>${alerts.map(a => `<li><a href="#${a.block.id}" data-go="${a.block.id}">${plain(a.block.text)}</a> <span class="dim">${esc(a.tab.title)} · ${plain(a.point.title)}</span></li>`).join('')}</ul></div>` : ''}
+      ${alerts.length ? `<div class="alerts"><h3>⚠️ ${alerts.length} ${alerts.length === 1 ? 'thing needs' : 'things need'} your attention</h3>${alerts.map(a => `<details class="alert"><summary>${inline(a.block.heading)}</summary><p>${inline(a.block.text)}</p><p class="alert-at"><a href="#${a.block.id}" data-go="${a.block.id}">Go to the warning</a> <span class="dim">${esc(a.tab.title)} · ${plain(a.point.title)}</span></p></details>`).join('')}</div>` : ''}
       ${flow ? flowSvg(flow) : ''}
       ${types ? typesSvg(types) : ''}
       <ol class="story">${story}</ol>
@@ -552,7 +548,6 @@ function pointHtml (p, n, t, ti) {
         <div><h2>${inline(p.title)}</h2>${lead.map(b => `<p class="lead">${inline(b.text)}</p>`).join('')}</div>
         <label class="read"><input type="checkbox" data-id="${p.id}"> read</label>
       </div>
-      ${p.notes ? modeBar : ''}
       ${p.steps ? stepsHtml(p) : ''}
       ${p.intro.map(introHtml).join('')}
       ${p.parts.map(x => passageHtml(x, p)).join('')}
@@ -614,13 +609,14 @@ writeFileSync(outPath, `<!doctype html>
 <style>${here('../nick-review/report.css')}
 ${here('./walkthrough.css')}</style>
 </head>
-<body class="m-ann">
+<body>
 <div class="tabbar">
   <div class="hdr bar">
     <a class="mr" href="${esc(meta.url)}" title="${esc(meta.title)}"><b>!${esc(meta.iid)}</b> ${esc(meta.title)}</a>
     <nav class="tabs">
       ${tabs.map((t, i) => `<button class="tab" aria-selected="${i === 0}" data-tab="${i}">${esc(t.title)}${ALERTS.some(a => a.tab === t) ? ` <span class="warn">⚠️ ${ALERTS.filter(a => a.tab === t).length}</span>` : ''}</button>`).join('')}
       <button class="tab" aria-selected="false" data-tab="${tabs.length}">Every file <span class="count">${changed.size}</span></button>
+      <button class="tab" aria-selected="false" data-tab="${tabs.length + 1}">Comments <span class="count" id="nComments">0</span></button>
     </nav>
   </div>
 </div>
@@ -628,6 +624,7 @@ ${here('./walkthrough.css')}</style>
 <div class="wrap">
   ${panes}
   <div class="pane" data-tab="${tabs.length}" hidden><main>${filesTab()}</main></div>
+  <div class="pane" data-tab="${tabs.length + 1}" hidden><main><section class="point comments-pt" id="comments"><p class="lead">These are the comments that you've written on this page. Select any text on the page and click Comment to add one.</p><ol class="cm-list" id="cmList"></ol></section></main></div>
 </div>
 
 <footer>
@@ -642,7 +639,7 @@ ${here('./walkthrough.css')}</style>
 <dialog id="out">
   <div class="dlg">
     <h3>Your feedback</h3>
-    <p>This collects every comment that you typed on the page. To add one, close this and click <b>Comment on this</b> under a passage. Type anything else here:</p>
+    <p>This collects every comment that you wrote on the page. To add one, close this, select some text on the page and click <b>Comment</b>. Type anything else here:</p>
     <textarea id="general" class="say" rows="4" placeholder="General feedback on the walkthrough"></textarea>
     <p class="paste">Copy the block below and paste it into a Claude session. It contains the path of the walkthrough.</p>
     <textarea id="outText" readonly></textarea>

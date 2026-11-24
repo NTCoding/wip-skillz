@@ -1,9 +1,9 @@
 const KEY = 'nick-walkthrough:' + RUN
 
-let state = { notes: {}, read: {} }
+let state = { notes: {}, read: {}, comments: [] }
 try {
   const kept = JSON.parse(localStorage.getItem(KEY) || '{}')
-  state = { notes: kept.notes || {}, read: kept.read || {}, toc: kept.toc }
+  state = { notes: kept.notes || {}, read: kept.read || {}, toc: kept.toc, comments: kept.comments || [] }
 } catch {}
 const save = () => { try { localStorage.setItem(KEY, JSON.stringify(state)) } catch {} }
 
@@ -11,10 +11,12 @@ const $$ = (sel, root = document) => [...root.querySelectorAll(sel)]
 const said = id => (state.notes[id] || '').trim()
 const numbered = () => $$('.point[data-n]')
 
+const pointOf = c => document.getElementById(c.at)?.closest('.point')
+
 function paint () {
-  for (const step of $$('.step')) step.classList.toggle('said', Boolean(said(step.id)))
+  for (const step of $$('.step')) step.classList.toggle('said', state.comments.some(c => c.at === step.id))
   for (const point of numbered()) {
-    const count = $$('.step', point).filter(s => said(s.id)).length
+    const count = state.comments.filter(c => pointOf(c) === point).length
     const link = document.querySelector(`[data-toc="${point.id}"]`)
     link?.classList.toggle('done', Boolean(state.read[point.id]))
     const badge = document.querySelector(`[data-badge="${point.id}"]`)
@@ -22,16 +24,12 @@ function paint () {
   }
   nRead.textContent = numbered().filter(p => state.read[p.id]).length
   nPoints.textContent = numbered().length
-  const total = META.filter(b => said(b.id)).length + (said('general') ? 1 : 0)
+  const total = state.comments.length + (said('general') ? 1 : 0)
   nSaid.textContent = total
+  nComments.textContent = state.comments.length
   brief.textContent = total ? `Collect all my feedback (${total})` : 'Collect all my feedback'
 }
 
-for (const box of $$('.step .say')) {
-  box.value = state.notes[box.dataset.id] || ''
-  box.hidden = !box.value
-  box.addEventListener('input', () => { state.notes[box.dataset.id] = box.value; save(); paint() })
-}
 for (const tick of $$('.read input')) {
   tick.checked = Boolean(state.read[tick.dataset.id])
   tick.addEventListener('change', () => { state.read[tick.dataset.id] = tick.checked; save(); paint() })
@@ -92,14 +90,6 @@ document.addEventListener('click', e => {
   if (e.target.closest('.next')) { move(1); return }
   if (e.target.closest('.prev')) { move(-1); return }
 
-  const add = e.target.closest('.say-btn')
-  if (add) {
-    const box = add.parentElement.querySelector('.say')
-    box.hidden = !box.hidden && !box.value
-    if (!box.hidden) box.focus()
-    return
-  }
-
   const unfold = e.target.closest('.unfold')
   if (unfold) { unfold.closest('.code').classList.remove('folded'); unfold.remove(); return }
 
@@ -127,12 +117,17 @@ document.addEventListener('keydown', e => {
 })
 
 function feedback () {
-  const mine = META.filter(b => said(b.id))
-  const entry = b => [
-    `### ${b.id}, under "${b.point}"`,
-    b.label,
+  const quoted = text => text.split('\n').map(l => `> ${l}`).join('\n')
+  const entry = c => [
+    `### ${c.at}: ${titleOf(c.at)}`,
     '',
-    said(b.id).split('\n').map(l => `> ${l}`).join('\n'),
+    'The selected text:',
+    '',
+    quoted(c.quote),
+    '',
+    "Nick's comment:",
+    '',
+    quoted(c.text),
     '',
   ].join('\n')
 
@@ -146,15 +141,15 @@ function feedback () {
     `Repository: ${REPO_DIR}`,
     `Merge request: ${MR}`,
     '',
-    'Each entry below is a passage of the source, which is a `### ` title and everything under it up to the next `### ` or `## ` heading. `t1p3.b2` is the 2nd `### ` passage under the 3rd `## ` heading of the 1st `# ` heading.',
+    'Each entry below is one comment on a piece of text that Nick selected on the page. The heading of an entry is the id of the passage that contains the text, followed by the title of that passage. `t1p3.b2` is the 2nd `### ` passage under the 3rd `## ` heading of the 1st `# ` heading.',
     'Where a comment is a question or describes something unclear, change the source so that the page explains it, then render the page again:',
     '',
     '```sh',
     `cd ${REPO_DIR} && node ${RENDERER} ${SOURCE} ${PAGE}`,
     '```',
     '',
-    ...(said('general') ? ['### General', '', said('general').split('\n').map(l => `> ${l}`).join('\n'), ''] : []),
-    ...mine.map(entry),
+    ...(said('general') ? ['### General', '', quoted(said('general')), ''] : []),
+    ...sortedComments().map(entry),
   ].join('\n')
 }
 
@@ -174,17 +169,6 @@ show(document.getElementById(start) ? start : document.querySelector('.point').i
 paint()
 
 // ── notes on the code ──
-// "On the lines" shows each note as a badge with a card. "Beside the line (today)" shows each note beside its line.
-const MODE = 'nick-walkthrough:notes'
-function setMode (m) {
-  document.body.classList.toggle('m-ann', m === 'ann')
-  document.body.classList.toggle('m-today', m === 'today')
-  for (const b of $$('.seg button')) b.setAttribute('aria-pressed', String(b.dataset.m === m))
-  try { localStorage.setItem(MODE, m) } catch {}
-  if (m === 'today') closeCards()
-}
-for (const b of $$('.seg button')) b.addEventListener('click', () => setMode(b.dataset.m))
-
 const light = (el, on) => { for (const x of $$(`[data-k="${el.dataset.k}"]`, el.closest('.noted'))) x.classList.toggle('on', on) }
 for (const li of $$('.nn li')) {
   li.addEventListener('mouseenter', () => light(li, true))
@@ -240,6 +224,212 @@ const replace = () => { queued = false; $$('.pc.open').forEach(place) }
 addEventListener('scroll', () => { if (!queued) { queued = true; requestAnimationFrame(replace) } }, { passive: true })
 addEventListener('resize', replace)
 
-let mode = 'ann'
-try { mode = localStorage.getItem(MODE) || 'ann' } catch {}
-setMode(mode)
+// ── comments on selected text ──
+// Nick selects any text on the page and clicks Comment. The comment is saved with the id of the passage that contains the
+// text and the selected text itself, which is found again on the page after a reload.
+const SKIP = '.no, .nb, button, textarea, .pc, .cm-tool, .cm-card'
+const wrap = document.querySelector('.wrap')
+const order = id => { const el = document.getElementById(id); return el ? $$('.point, .step, .attn').indexOf(el) : -1 }
+const sortedComments = () => [...state.comments].sort((a, b) => order(a.at) - order(b.at) || a.made - b.made)
+
+// The place of a comment is the closest element with an id that contains the text, such as a "### " passage.
+const placeOf = node => (node.nodeType === 1 ? node : node.parentElement)?.closest('.step[id], .attn[id], .point[id]')
+function titleOf (id) {
+  const el = document.getElementById(id)
+  if (!el) return id
+  const point = el.closest('.point')
+  const pointTitle = point?.querySelector('.phead h2')?.textContent.trim()
+  if (el.classList.contains('step')) return `${META.find(m => m.id === id)?.label ?? id}, under "${pointTitle}"`
+  if (el.classList.contains('attn')) return `the warning "${el.querySelector('.attn-t')?.textContent.trim()}", under "${pointTitle}"`
+  if (pointTitle) return pointTitle
+  const tab = $$('.tab').find(t => t.dataset.tab === el.closest('.pane')?.dataset.tab)
+  return `the overview of the tab "${tab?.firstChild.textContent.trim()}"`
+}
+
+// Every character that isn't white space, with the text node and the offset it comes from. White space is left out
+// because a selection across lines of code has line breaks that the text nodes don't have.
+function characters (root) {
+  const out = []
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+    acceptNode: n => n.parentElement.closest(SKIP) ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT,
+  })
+  for (let n = walker.nextNode(); n; n = walker.nextNode()) {
+    for (let i = 0; i < n.data.length; i++) if (!/\s/.test(n.data[i])) out.push({ ch: n.data[i], node: n, i })
+  }
+  return out
+}
+
+function highlight (c) {
+  const root = document.getElementById(c.at)
+  if (!root) return false
+  const chars = characters(root)
+  const flat = chars.map(x => x.ch).join('')
+  const want = c.quote.replace(/\s+/g, '')
+  const at = flat.indexOf(want)
+  if (!want || at === -1) return false
+  const pieces = new Map()
+  for (const x of chars.slice(at, at + want.length)) {
+    const piece = pieces.get(x.node) ?? { from: x.i, to: x.i }
+    piece.to = x.i + 1
+    pieces.set(x.node, piece)
+  }
+  for (const [node, { from, to }] of pieces) {
+    const range = document.createRange()
+    range.setStart(node, from)
+    range.setEnd(node, to)
+    const mark = document.createElement('mark')
+    mark.className = 'cm-hl'
+    mark.dataset.c = c.id
+    range.surroundContents(mark)
+  }
+  return true
+}
+
+function unhighlight (id) {
+  for (const mark of $$(`mark.cm-hl[data-c="${id}"]`)) {
+    const parent = mark.parentNode
+    while (mark.firstChild) parent.insertBefore(mark.firstChild, mark)
+    mark.replaceWith()
+    parent.normalize()
+  }
+}
+
+const tool = document.createElement('div')
+tool.className = 'cm-tool'
+tool.hidden = true
+tool.innerHTML = '<button type="button">💬 Comment</button>'
+document.body.append(tool)
+
+const card = document.createElement('div')
+card.className = 'cm-card'
+card.hidden = true
+document.body.append(card)
+
+let picked
+function selected () {
+  const sel = getSelection()
+  if (!sel.rangeCount || sel.isCollapsed) return undefined
+  const range = sel.getRangeAt(0)
+  const quote = sel.toString().trim()
+  const at = placeOf(range.startContainer)
+  const inside = node => (node.nodeType === 1 ? node : node.parentElement)?.closest(SKIP)
+  if (!quote || !at || !wrap.contains(at) || at.id === 'comments' || at.id === 'files' || inside(range.startContainer)) return undefined
+  return { range, quote, at: at.id }
+}
+
+function placeAt (el, rect, gap, above = false) {
+  el.style.top = `${above ? rect.top + scrollY - el.offsetHeight - gap : rect.bottom + scrollY + gap}px`
+  el.style.left = `${Math.max(16, Math.min(rect.left + scrollX, scrollX + innerWidth - el.offsetWidth - 16))}px`
+}
+
+function offerComment () {
+  picked = selected()
+  tool.hidden = !picked
+  if (picked) placeAt(tool, picked.range.getBoundingClientRect(), 8, true)
+}
+let settling
+document.addEventListener('selectionchange', () => { clearTimeout(settling); settling = setTimeout(offerComment, 200) })
+tool.addEventListener('mousedown', e => e.preventDefault())
+
+const esc = text => text.replace(/[&<>"]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]))
+function openCard (c, rect) {
+  const old = !state.comments.includes(c)
+  card.innerHTML = `
+    <div class="cm-head"><span class="cm-av" aria-hidden="true">N</span><b>Nick</b><span class="cm-at">${esc(titleOf(c.at))}</span></div>
+    <blockquote class="cm-quote">${esc(c.quote)}</blockquote>
+    <textarea class="cm-field" rows="3" placeholder="Write a comment…">${esc(c.text ?? '')}</textarea>
+    <div class="cm-acts">${old ? '' : '<button type="button" class="cm-del">Delete</button>'}<span class="spacer"></span><button type="button" class="cm-cancel">Cancel</button><button type="button" class="cm-save primary">${old ? 'Comment' : 'Save'}</button></div>`
+  card.hidden = false
+  placeAt(card, rect, 8)
+  const field = card.querySelector('.cm-field')
+  field.focus()
+  field.setSelectionRange(field.value.length, field.value.length)
+  const close = () => { card.hidden = true; for (const m of $$('mark.cm-hl.on')) m.classList.remove('on') }
+  const submit = () => {
+    const text = field.value.trim()
+    if (!text) { field.focus(); return }
+    c.text = text
+    if (old) { state.comments.push(c); if (!highlight(c)) c.lost = true }
+    save(); paint(); renderList(); close()
+  }
+  card.querySelector('.cm-save').onclick = submit
+  card.querySelector('.cm-cancel').onclick = close
+  const del = card.querySelector('.cm-del')
+  if (del) del.onclick = () => { remove(c.id); close() }
+  field.onkeydown = e => {
+    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); submit() }
+    if (e.key === 'Escape') close()
+  }
+  for (const m of $$(`mark.cm-hl[data-c="${c.id}"]`)) m.classList.add('on')
+}
+
+tool.querySelector('button').addEventListener('click', () => {
+  if (!picked) return
+  const rect = picked.range.getBoundingClientRect()
+  const c = { id: `c${Date.now().toString(36)}`, at: picked.at, quote: picked.quote, made: Date.now() }
+  tool.hidden = true
+  getSelection().removeAllRanges()
+  openCard(c, rect)
+})
+
+wrap.addEventListener('click', e => {
+  const mark = e.target.closest('mark.cm-hl')
+  if (!mark || !getSelection().isCollapsed) return
+  const c = state.comments.find(x => x.id === mark.dataset.c)
+  if (c) openCard(c, mark.getBoundingClientRect())
+})
+
+function remove (id) {
+  state.comments = state.comments.filter(c => c.id !== id)
+  unhighlight(id)
+  save(); paint(); renderList()
+}
+
+function jump (c) {
+  show(c.at)
+  const mark = document.querySelector(`mark.cm-hl[data-c="${c.id}"]`)
+  if (!mark) return
+  mark.scrollIntoView({ block: 'center' })
+  for (const m of $$(`mark.cm-hl[data-c="${c.id}"]`)) m.classList.add('on')
+  setTimeout(() => { for (const m of $$(`mark.cm-hl[data-c="${c.id}"]`)) m.classList.remove('on') }, 1600)
+}
+
+function renderList () {
+  const list = document.getElementById('cmList')
+  const all = sortedComments()
+  list.innerHTML = all.length ? all.map(c => `
+    <li class="cm-item" data-c="${c.id}">
+      <a href="#${esc(c.at)}" class="cm-go">${esc(titleOf(c.at))}</a>${c.lost ? ' <span class="dim">(the selected text isn\'t on the page any more)</span>' : ''}
+      <blockquote class="cm-quote">${esc(c.quote)}</blockquote>
+      <p class="cm-text">${esc(c.text)}</p>
+      <div class="cm-acts"><button type="button" class="cm-edit">Edit</button><button type="button" class="cm-del">Delete</button></div>
+    </li>`).join('') : '<li class="dim">There aren\'t any comments yet.</li>'
+}
+
+document.getElementById('cmList').addEventListener('click', e => {
+  const item = e.target.closest('.cm-item')
+  const c = item && state.comments.find(x => x.id === item.dataset.c)
+  if (!c) return
+  if (e.target.closest('.cm-go')) { e.preventDefault(); jump(c); return }
+  if (e.target.closest('.cm-del')) { remove(c.id); return }
+  if (e.target.closest('.cm-edit')) {
+    item.querySelector('.cm-text').outerHTML = `<textarea class="cm-field" rows="3">${esc(c.text)}</textarea>`
+    item.querySelector('.cm-acts').innerHTML = '<button type="button" class="cm-cancel">Cancel</button><button type="button" class="cm-save primary">Save</button>'
+    const field = item.querySelector('.cm-field')
+    field.focus()
+    field.setSelectionRange(field.value.length, field.value.length)
+    return
+  }
+  if (e.target.closest('.cm-save')) {
+    const text = item.querySelector('.cm-field').value.trim()
+    if (text) { c.text = text; save(); paint() }
+    renderList()
+    return
+  }
+  if (e.target.closest('.cm-cancel')) renderList()
+})
+
+addEventListener('keydown', e => { if (e.key === 'Escape') { tool.hidden = true; card.hidden = true } })
+for (const c of state.comments) c.lost = !highlight(c)
+renderList()
+paint()

@@ -42,15 +42,11 @@ a.sym { text-decoration: none }
 a.sym code { color: var(--brand) }
 a.sym:hover code { text-decoration: underline }
 
-.say-btn { appearance: none; background: var(--bg); border: 1px solid var(--border); border-radius: var(--r-pill); padding: 6px 12px; margin-top: calc(var(--s) * 1); font: 700 12.5px/1 var(--font); color: var(--text-2); cursor: pointer }
-.say-btn:hover { border-color: var(--brand); color: var(--brand) }
-.step.said .say-btn { border-color: var(--brand); color: var(--brand) }
-.tell .say { height: auto; min-height: 80px; margin-top: calc(var(--s) * 2); font: 15px/22px var(--font); background: var(--bg) }
-.tell .say[hidden] { display: none }
 
 .attn { display: flex; gap: calc(var(--s) * 3); align-items: flex-start; background: #fffbeb; border: 1px solid #fcd34d; border-radius: var(--r-sm); padding: calc(var(--s) * 3) calc(var(--s) * 4); margin: calc(var(--s) * 2) 0 calc(var(--s) * 4) }
 .attn p { margin: 0; color: #78350f; font-size: 15px; line-height: 23px }
 .attn .icon { font-size: 18px; line-height: 23px }
+.attn-t { margin: 0 0 4px; font-size: 15px; line-height: 23px; font-weight: 700; color: #78350f }
 
 .code { position: relative; border-radius: var(--r-sm); background: var(--code-bg); box-shadow: 0 1px 3px rgba(15, 23, 42, .15) }
 .code .file { border-radius: var(--r-sm) var(--r-sm) 0 0 }
@@ -154,10 +150,13 @@ footer .fwrap { margin: 0 calc(var(--s) * 8); padding: 8px 0 }
 
 .alerts { background: #fffbeb; border: 1px solid #fcd34d; border-radius: var(--r); padding: calc(var(--s) * 4) calc(var(--s) * 5); margin-bottom: calc(var(--s) * 8) }
 .alerts h3 { margin: 0 0 calc(var(--s) * 2); font-size: 16px; color: #78350f }
-.alerts ul { margin: 0; padding-left: calc(var(--s) * 5) }
-.alerts li { margin-bottom: 4px; font-size: 15px }
-.alerts a { color: #78350f; font-weight: 700 }
-.alerts .dim { font-size: 13px; margin-left: 6px }
+.alert { border-top: 1px solid #fde68a }
+.alert summary { cursor: pointer; padding: 10px 0; font-size: 15px; line-height: 23px; font-weight: 700; color: #78350f }
+.alert summary code, .alert p code, .attn-t code { font-size: .86em; background: rgba(255, 255, 255, .7); border-radius: 5px; padding: 1px 5px }
+.alert p { margin: 0 0 10px; padding-left: 18px; font-size: 15px; line-height: 23px; color: var(--text-1); max-width: 74ch }
+.alert .alert-at { font-size: 13px }
+.alert .alert-at a { color: #78350f; font-weight: 700 }
+.alert .dim { margin-left: 6px }
 
 .story { list-style: none; margin: 0; padding: 0; position: relative }
 .story::before { content: ""; position: absolute; left: 10px; top: 12px; bottom: 12px; width: 2px; background: var(--divider) }
@@ -204,14 +203,7 @@ pre .why.cross.c5 { background: rgba(203, 213, 225, .12); color: #c3cad4 }
 
 /* ── notes on the code ─────────────────────────────────────────────────── */
 /* A "//~" note is a numbered badge in the gutter of its first line, a numbered list above the block and a card that opens
-   when the badge is hovered or clicked. "Beside the line (today)" shows each note beside its first line instead. */
-.modebar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin: 0 0 24px; font-size: 14px; color: var(--text-2) }
-.seg { display: inline-flex; border: 1px solid var(--border); border-radius: 999px; padding: 3px; background: var(--bg) }
-.seg button { appearance: none; border: 0; background: none; font: 700 13px/1 var(--font); color: var(--text-2); padding: 7px 14px; border-radius: 999px; cursor: pointer }
-.seg button[aria-pressed="true"] { background: var(--brand); color: #fff }
-body.m-ann .today { display: none }
-body.m-today .ann { display: none !important }
-body.m-today pre .ln.mk { background: none; box-shadow: none }
+   when the badge is hovered or clicked. */
 
 .noted { display: flex; flex-direction: column; gap: calc(var(--s) * 2) }
 .nn { list-style: none; margin: 0; padding: 0; max-width: 74ch }
@@ -246,3 +238,34 @@ pre.focus .ln:not(.on) { opacity: .45; transition: opacity .12s ease }
 .pc::before { content: ""; position: absolute; left: 18px; width: 12px; height: 12px; background: #fff; transform: rotate(45deg); border-radius: 2px }
 .pc.below::before { top: -6px }
 .pc.above::before { bottom: -6px }
+
+/* ── comments on selected text ─────────────────────────────────────────── */
+/* The look of the comments of the scratch pad: a green highlight, a pill with the action and a white card. */
+mark.cm-hl { background: #e0f0e0; color: inherit; padding: 1px 0; box-decoration-break: clone; -webkit-box-decoration-break: clone; cursor: pointer; transition: background .15s ease }
+mark.cm-hl.on, mark.cm-hl:hover { background: #bfe3be; box-shadow: 0 2px 0 #1a8917 }
+pre mark.cm-hl { background: rgba(74, 222, 128, .28); color: inherit }
+pre mark.cm-hl.on, pre mark.cm-hl:hover { background: rgba(74, 222, 128, .45) }
+pre .nb, .nn .nb { user-select: none }
+.cm-tool { position: absolute; z-index: 30; padding: 4px; border-radius: 999px; background: #fff; box-shadow: 0 2px 6px rgb(0 0 0 / 6%), 0 8px 24px rgb(0 0 0 / 10%) }
+.cm-tool[hidden], .cm-card[hidden] { display: none }
+.cm-tool button { appearance: none; border: 0; background: none; border-radius: 999px; padding: 7px 14px; font: 600 13px/1 var(--font); color: var(--text-1); cursor: pointer; white-space: nowrap }
+.cm-tool button:hover { background: rgb(0 0 0 / 5%) }
+.cm-card { position: absolute; z-index: 30; width: min(380px, calc(100vw - 32px)); padding: 14px 16px 16px; border-radius: 8px; background: #fff; box-shadow: 0 0 0 1.5px #1a8917, 0 6px 22px rgb(0 0 0 / 10%); font: 14.5px/22px var(--font); color: var(--text-1); display: flex; flex-direction: column; gap: 10px }
+.cm-head { display: flex; align-items: center; gap: 8px; min-width: 0 }
+.cm-av { display: grid; place-items: center; flex: none; width: 26px; height: 26px; border-radius: 50%; background: #191919; color: #fff; font: 700 12px/1 var(--font) }
+.cm-at { min-width: 0; color: var(--text-3); font-size: 12px; line-height: 16px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
+.cm-quote { margin: 0; padding-left: 10px; border-left: 2px solid #9fd19e; color: var(--text-2); font-style: italic; font-size: 14px; line-height: 21px; white-space: pre-wrap; overflow-wrap: anywhere; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; line-clamp: 3; overflow: hidden }
+.cm-field { display: block; width: 100%; box-sizing: border-box; height: 88px; min-height: 64px; padding: 6px 10px; border: 1px solid #e6e6e6; border-radius: 8px; font: 14.5px/22px var(--font); color: var(--text-1); background: #fff; resize: vertical; outline: 0 }
+.cm-field:focus { border-color: #1a8917; box-shadow: 0 0 0 2px rgb(26 137 23 / 16%) }
+.cm-acts { display: flex; align-items: center; gap: 8px }
+.cm-acts .spacer { flex: 1 }
+.cm-acts button { appearance: none; border: 0; background: none; border-radius: 999px; padding: 6px 12px; font: 600 13px/1 var(--font); color: var(--text-2); cursor: pointer }
+.cm-acts button:hover { background: rgb(0 0 0 / 5%) }
+.cm-acts button.primary { background: #1a8917; color: #fff }
+.cm-acts button.primary:hover { background: #156e12 }
+.cm-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; max-width: 760px }
+.cm-item { padding: 14px 16px; border-radius: 8px; background: #fff; box-shadow: 0 1px 3px rgb(0 0 0 / 6%), 0 4px 14px rgb(0 0 0 / 7%); display: flex; flex-direction: column; gap: 8px }
+.cm-go { color: var(--brand); font-weight: 700; text-decoration: none; font-size: 14px }
+.cm-go:hover { text-decoration: underline }
+.cm-text { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 15px; line-height: 23px }
+.cm-item .cm-acts { justify-content: flex-end }
