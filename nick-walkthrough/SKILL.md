@@ -141,7 +141,7 @@ The source is one markdown file, in the format described in "The source
 format" below. Save it in a folder that isn't deleted when the session ends:
 
 ```sh
-dir=~/.claude/nick-walkthrough/<iid>-$(date +%Y%m%d-%H%M%S)
+dir=~/nick-walkthrough/<iid>-$(date +%Y%m%d-%H%M%S)
 mkdir -p "$dir"
 # write "$dir/walkthrough.md"
 ```
@@ -1036,5 +1036,5 @@ a laptop screen and read the screenshot:
   walkthrough out in the chat as well.
 - **Keep the folder**, because Nick's feedback contains the folder's path. If
   the folder was deleted, the paths in his feedback wouldn't open any more.
-  Nick will clear out the old folders under `~/.claude/nick-walkthrough/`
+  Nick will clear out the old folders under `~/nick-walkthrough/`
   himself.
