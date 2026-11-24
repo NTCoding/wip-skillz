@@ -146,7 +146,7 @@ function feedback () {
     `Repository: ${REPO_DIR}`,
     `Merge request: ${MR}`,
     '',
-    'Each entry below is a passage of the source, which is a paragraph and the code under it. `t1p3.b2` is the 2nd block under the 3rd `## ` heading of the 1st `# ` heading, and the passage starts at that block.',
+    'Each entry below is a passage of the source, which is a `### ` title and everything under it up to the next `### ` or `## ` heading. `t1p3.b2` is the 2nd `### ` passage under the 3rd `## ` heading of the 1st `# ` heading.',
     'Where a comment is a question or describes something unclear, change the source so that the page explains it, then render the page again:',
     '',
     '```sh',

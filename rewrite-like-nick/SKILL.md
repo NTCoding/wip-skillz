@@ -8,7 +8,7 @@ effort: medium
 
 A document written by an agent reads like AI slop. It opens with low level
 mechanics instead of the key idea, it leaves the agent's thinking in the text,
-and the sentences are clipped and grammatically precise in a way that nobody talks.
+and the sentences are clipped and grammatically precise in a way nobody talks.
 This skill turns such a document into one that reads like Nick wrote it.
 
 Nick's voice is in the output style `~/.claude/output-styles/nick-grammar-rules.md`.
@@ -390,8 +390,8 @@ ADR-0002 has the Draft line under its title and this record does not.
 **Good:** A numbered list, one section per item.
 
 **Bad:** Section 8, "Problems inside the ADRs themselves". These are 6
-corrections to the ADRs rather than changes to the architecture document.
-Should they go on a card?
+corrections to the ADRs rather than changes to the architecture overview. Should they go on a
+card?
 **Why:** "ignore you are rewriting for tone not reviewing hte content"
 **Good:** (not asked)
 
@@ -401,6 +401,27 @@ history.
 **Why:** The source is the source at the time of writing, that is correct. It
 doesn't get out of date because the decision was based on that.
 **Good:** The row stays as it was.
+
+**Bad:** The front matter of the source has one `context:` line per context.
+**Why:** Abuse of "of". The source's front matter is the only way a person
+would ever say that.
+**Good:** The source's front matter has one `context:` line per context.
+
+**Bad:** In one paragraph, that would be 8 sentences, which is more than Nick
+would read.
+**Why:** A paragraph with 8 sentences is a wall of text that is hard to read.
+**Good:** If you were to write all of that as one paragraph, you'd end up with
+8 sentences, which is a wall of text that's hard to read.
+
+**Bad:** Now each call is checked for the membership and the role of the shop
+user of its session.
+**Why:** "the shop user of its session". Just "the session" is normal here.
+**Good:** Every call to the shop API now runs as the session's user.
+
+**Bad:** The accounts module returns the id of the shop user who owns that
+session.
+**Why:** A person would say it shorter, with the possessive.
+**Good:** The accounts module returns the ID of the session's user.
 
 ## Approved text
 

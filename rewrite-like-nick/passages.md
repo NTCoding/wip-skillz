@@ -1,6 +1,6 @@
 # Passages Nick wrote
 
-Longer passages from Nick's blog. Read the one for
+Longer passages from Nick's blog, one per kind of passage. Read the one for
 the kind of passage you are about to write, then write yours as a
 continuation of it. Each is verbatim.
 
