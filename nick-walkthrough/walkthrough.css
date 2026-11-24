@@ -32,7 +32,8 @@ body { font-size: 16px; line-height: 25px; background: var(--bg) }
 .step { padding: calc(var(--s) * 7) 0; border-top: 1px solid var(--divider) }
 .tell { max-width: 74ch; margin-bottom: calc(var(--s) * 3) }
 .step.said { box-shadow: -4px 0 0 var(--brand); padding-left: calc(var(--s) * 4); margin-left: calc(var(--s) * -4) }
-.pt-line { margin: 0 0 calc(var(--s) * 1.5); font-size: 18px; line-height: 27px; font-weight: 700; color: var(--text-1) }
+.pt-line { display: flex; align-items: baseline; gap: calc(var(--s) * 2.5); margin: 0 0 calc(var(--s) * 1.5); font-size: 18px; line-height: 27px; font-weight: 700; color: var(--text-1) }
+.pt-line .num { position: relative; top: -2px }
 .ex-line { margin: 0 0 calc(var(--s) * 2); font-size: 16px; line-height: 25px; color: var(--text-2) }
 .show { min-width: 0; display: flex; flex-direction: column; gap: calc(var(--s) * 3) }
 
@@ -100,6 +101,21 @@ td { padding: 7px 12px; border-bottom: 1px solid var(--divider); color: var(--te
 .flow .pt-t { fill: #fff; font: 700 11px var(--font) }
 .flow .hop:hover .msg { fill: var(--brand) }
 .flow .hop:hover .arrow { stroke: var(--brand) }
+.types .t-arrow { fill: none; stroke: var(--text-2); stroke-width: 2 }
+.types .t-tip { fill: var(--text-2) }
+.types .hop:hover .t-arrow { stroke: var(--brand) }
+.types .k { stroke-width: 1.5 }
+.types .k-t { font: 600 14px var(--mono) }
+.types .key-t { fill: var(--text-2); font: 13px var(--font) }
+.types rect.k-error { fill: #fcebeb; stroke: #a32d2d } .types text.k-error { fill: #791f1f }
+.types rect.k-event { fill: #fddcb5; stroke: #c2620c } .types text.k-event { fill: #6b3206 }
+.types rect.k-aggregate { fill: #fff3b0; stroke: #b59a00 } .types text.k-aggregate { fill: #5c4b00 }
+.types rect.k-command { fill: #e6f1fb; stroke: #185fa5 } .types text.k-command { fill: #0c447c }
+.types rect.k-vo { fill: #e1f5ee; stroke: #0f6e56 } .types text.k-vo { fill: #085041 }
+.types rect.k-array { fill: #e4e2da; stroke: #5f5e5a } .types text.k-array { fill: #2c2c2a }
+.types rect.k-api, .types rect.k-spi { fill: #eeedfe; stroke: #534ab7 } .types text.k-api, .types text.k-spi { fill: #3c3489 }
+.types rect.k-spi { stroke-dasharray: 5 4 }
+.types rect.k-adapter { fill: #fbeaf0; stroke: #993556 } .types text.k-adapter { fill: #72243e }
 
 .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: calc(var(--s) * 3) }
 .card-pt { display: flex; gap: calc(var(--s) * 3); padding: calc(var(--s) * 4); border-radius: var(--r); text-decoration: none; border: 1px solid var(--divider) }
@@ -152,7 +168,32 @@ footer .fwrap { margin: 0 calc(var(--s) * 8); padding: 8px 0 }
 .dlg .paste { margin-top: 0 }
 
 .ctx { flex: none; font: 700 12px/1 var(--font); padding: 5px 10px; border-radius: var(--r-pill); color: #0f172a; white-space: nowrap }
-.ctx.c0 { background: #5eead4 } .ctx.c1 { background: #fcd34d } .ctx.c2 { background: #c4b5fd }
-.ctx.c3 { background: #7dd3fc } .ctx.c4 { background: #fda4af } .ctx.c5 { background: #cbd5e1 }
-pre .why.cross { background: rgba(252, 211, 77, .22); color: #fcd34d }
+/* Each context keeps its hue as a faint tint with dark text in the same hue. */
+.ctx.c0 { background: #e6f7f4; color: #134e4a; box-shadow: inset 0 0 0 1px #c5ebe4 }
+.ctx.c1 { background: #fbf4e0; color: #713f12; box-shadow: inset 0 0 0 1px #f0e2b6 }
+.ctx.c2 { background: #f1eefb; color: #4c1d95; box-shadow: inset 0 0 0 1px #ddd6f3 }
+.ctx.c3 { background: #e9f3fa; color: #0c4a6e; box-shadow: inset 0 0 0 1px #cde3f1 }
+.ctx.c4 { background: #fbecee; color: #881337; box-shadow: inset 0 0 0 1px #f2d3d8 }
+.ctx.c5 { background: #f1f3f6; color: #334155; box-shadow: inset 0 0 0 1px #dde2e8 }
+/* On the dark code background, the note on a line that imports another context is a faint wash of that context's hue. */
+pre .why.cross { white-space: nowrap }
+pre .why.cross.c0 { background: rgba(94, 234, 212, .12); color: #a7e3d8 }
+pre .why.cross.c1 { background: rgba(252, 211, 77, .12); color: #e6d39a }
+pre .why.cross.c2 { background: rgba(196, 181, 253, .14); color: #cfc6ef }
+pre .why.cross.c3 { background: rgba(125, 211, 252, .12); color: #b3d6ea }
+pre .why.cross.c4 { background: rgba(253, 164, 175, .12); color: #e8bcc2 }
+pre .why.cross.c5 { background: rgba(203, 213, 225, .12); color: #c3cad4 }
 .ctx.inl { display: inline-block; font-size: .8em; line-height: 1.5; padding: 0 8px; vertical-align: 1px; font-weight: 700 }
+
+.steps { list-style: none; margin: 0 0 calc(var(--s) * 6); padding: 0; max-width: 860px }
+.steps li + li::before { content: "↓"; display: block; width: 46px; text-align: center; color: var(--text-3); font-size: 15px; line-height: 20px }
+.steps a { display: flex; align-items: baseline; gap: calc(var(--s) * 3); padding: 8px 12px; border: 1px solid var(--divider); border-radius: var(--r-sm); text-decoration: none; color: var(--text-1); font-size: 15px; line-height: 23px }
+.steps a:hover { border-color: var(--brand) }
+.steps .num, .steps .ctx { position: relative; top: -1px }
+.steps-t { min-width: 0; overflow-wrap: anywhere }
+.toc .toc-i { display: flex; align-items: baseline; gap: calc(var(--s) * 3); padding: 8px 12px; border: 1px solid var(--divider); border-radius: var(--r-sm); color: var(--text-1); font-size: 15px; line-height: 23px }
+.toc li + li::before { content: none }
+.toc li + li { margin-top: 6px }
+.toc .num { position: relative; top: -1px }
+.toc a { display: inline; padding: 0; border: 0; color: var(--brand); font-weight: 700 }
+.steps code { font-size: .86em; background: var(--bg-alt); border-radius: 5px; padding: 1px 5px; color: var(--text-1) }
