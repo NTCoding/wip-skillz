@@ -9,7 +9,7 @@ Problem: agents don't communicate ideas clearly to humans. They tend to throw ou
 
 Every explanation follows Point, Explain, Evidence (PEE). 
 
-1. **Point**: What is the key idea of a piece of content? Is there a problem to solve, a goal to be achieved, a topic to be explore? Make that point straight away as clearly as possible to the reader so that they can relate everything that follows to the key point.
+1. **Point**: What is the key idea of a piece of content? Is there a problem to solve, a goal to be achieved, a topic to be explored? Make that point straight away as clearly as possible to the reader so that they can relate everything that follows to the key point.
 
 2. **Explain**: Explain the key point in more details. This might include:
  - explain some of the terms and concepts introduced
