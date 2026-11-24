@@ -80,6 +80,26 @@ git merge-base origin/<target branch> FETCH_HEAD    # the base
 git diff --numstat <base> <head>
 ```
 
+A merge request can be stacked on another one. The target branch of a
+stacked merge request can be rebased after the merge request was created from
+that branch. The merge base is then too far back. So the diff also shows every
+commit of the merge request underneath. GitLab then reports a conflict,
+which is `has_conflicts: true` in the JSON of `glab mr view`. In that
+case, take the parent of the first commit of the merge request as the base:
+
+```sh
+git cherry -v origin/<target branch> FETCH_HEAD     # "-" is already on the target branch, "+" is new
+first=$(git cherry origin/<target branch> FETCH_HEAD | grep '^+' | head -1 | cut -c3-)
+git rev-parse "$first^"                             # the base
+```
+
+`git log <merge base>..FETCH_HEAD` doesn't find that first commit because it
+lists the commits of the merge request underneath too. `git cherry` marks each
+commit whose change is already on the target branch with a `-`. So the first
+commit with a `+` is the first commit of this merge request. Read the list
+before you use the base. A commit of the merge request underneath can also
+have a `+` if the target branch was rebased with a conflict.
+
 Read a file at the head with `git show <head>:<path>` rather than checking
 anything out.
 
@@ -136,10 +156,13 @@ rewrite. Then read the prose against
 
 ### 6. Render and open
 
-Run the renderer from the merge request's repository:
+Run the renderer from the merge request's repository. The renderer is in the
+base directory of this skill, which is the folder that the harness prints
+when it loads the skill:
 
 ```sh
-node ~/.claude/skills/nick-walkthrough/render-walkthrough.mjs "$dir/walkthrough.md" "$dir/walkthrough.html"
+skill=<the base directory of this skill>
+node "$skill/render-walkthrough.mjs" "$dir/walkthrough.md" "$dir/walkthrough.html"
 open "$dir/walkthrough.html"
 ```
 
@@ -319,6 +342,9 @@ ExportOwner | InvoiceNotFound -> ExportPermission @3
   an arrow from the previous box. Those 2 boxes are drawn side by side.
 - Write a union with `|`. Each type in the union can be a different kind. The
   types of a union are drawn stacked in one box.
+- When 2 boxes share a name, write `in <context>` after that name in every
+  arrow, as in `OpenSessionInProcAdapter -> OpenSession in identity @3`. Leave
+  every other name bare. The renderer fails on a bare name that 2 boxes share.
 - Read the kind of each type off its declaration in the code. Some of the
   colours are taken from event storming, such as orange for a domain event
   and blue for a command:
@@ -625,6 +651,65 @@ belongs:
 Never get under the limit by joining sentences with "and" or by cutting a
 thing's context.
 
+### Steps and separate facts written as a paragraph
+
+Write each step of the code being discussed as a numbered list because humans
+find it easier to read a sequence of steps as a list instead of prose. Use
+your judgment, though. For example, 2 short steps can read fine as one
+sentence.
+
+Separate facts about the code are usually easier to read as bullet points
+too. A fact and the reason for it stay in one bullet, joined as one sentence.
+A reason on a separate bullet reads like a separate fact, because a reason
+only makes sense when it's joined to the sentence it explains.
+
+1. Steps in a paragraph.
+
+   **Bad:**
+
+   > `UploadInvoiceAdapter` in the exports context implements
+   > `UploadInvoice`, which is a new SPI port. It signs the file with the
+   > shop's key and posts the file to the storage bucket. Then it checks the
+   > ETag of the response against the checksum of the file.
+
+   **Good:**
+
+   > `UploadInvoiceAdapter` in the exports context implements
+   > `UploadInvoice`, which is a new SPI port. These are the 3 steps of
+   > `UploadInvoiceAdapter`:
+   >
+   > 1. It signs the file with the shop's key.
+   > 2. It posts the file to the storage bucket.
+   > 3. It checks the ETag of the response against the checksum of the file.
+
+2. Separate facts in a paragraph.
+
+   **Bad:**
+
+   > `ExportController` is a new controller in the exports context. The
+   > `exportInvoice` route is tagged `@Public()` so the auth guard lets a
+   > caller without a token through. The retry limit is the number that is
+   > returned by the billing context.
+
+   **Good:**
+
+   > - `ExportController` is a new controller in the exports context.
+   > - The `exportInvoice` route is tagged `@Public()` so the auth guard lets
+   >   a caller without a token through.
+   > - The retry limit is the number that is returned by the billing context.
+
+3. A reason on a separate bullet.
+
+   **Bad:**
+
+   > - The export job tries an upload 3 times.
+   > - Because the storage bucket sometimes drops an upload.
+
+   **Good:**
+
+   > The export job tries an upload 3 times because the storage bucket
+   > sometimes drops an upload.
+
 ### A paragraph whose sentences don't explain the code under the paragraph
 
 Each sentence in a passage usually explains a line of the code block under
@@ -663,6 +748,43 @@ controller's route or a module's provider. Show the decorator or the
 registration instead. It doesn't apply either to a type that's already used
 in a block on the page.
 
+### A code block that starts in the middle of a method
+
+Show the signature line of the method that contains the code, even when the
+point is only about a few lines in the middle. Replace each part that you
+leave out with `…`. End the block with the line that closes the method. A
+reviewer can only understand the lines once they know which method and which
+class the lines are in. The parameters of that method also explain where each
+variable comes from.
+
+This mistake is usually made in a point about 2 or 3 lines of a long method.
+The block then starts at those lines. So the reader sees an `if` and a
+`return` without knowing which method they're in or where `attempts` comes
+from.
+
+**Bad:**
+
+```ts
+    if (attempts >= this.limit) {
+      return UploadResult.gaveUp(attempts)
+    }
+```
+
+**Good:**
+
+```ts
+  async upload(file: ExportFile): Promise<UploadResult> {
+    …
+    if (attempts >= this.limit) {
+      return UploadResult.gaveUp(attempts)
+    }
+    …
+  }
+```
+
+A function outside a class is shown in the same way. The block starts at the
+`function` line and ends at the line that closes the function.
+
 ### Several names of the same kind inside one sentence
 
 Write 3 or more names of the same kind as a list rather than inside a
@@ -687,11 +809,9 @@ This is only for names that are the same kind of thing and that the reader
 might want to open. Examples are files and classes. Routes and tests are
 examples too.
 
-If there are only 2 names, leave them in the sentence. The steps of one
-request stay in a sentence too ("from a controller to a use case and then to a
-port"), because the order of the steps is what the reader needs to know. If
-each name has a second fact, such as the action that each handler checks, use
-a table instead of bullets.
+If there are only 2 names, leave them in the sentence. If each name has a
+second fact, such as the action that each handler checks, use a table instead
+of bullets.
 
 ### Using a vague word when there is a precise technical word
 

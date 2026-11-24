@@ -213,15 +213,25 @@ function locate (block, where) {
   if (!contextOf(block.file)) errors.push(`${where}: ${block.file} isn't under any "context:" line of the front matter`)
   const trimmed = fileLines.map(l => l.trim())
   const added = block.ref === 'base' ? new Set() : addedLines(block.file)
+  const indent = s => /^\s*/.exec(s)[0].length
   let cursor = 0
+  let shift
   return block.body.map(raw => {
     const [text, note] = raw.split(' //~ ')
     if (GAP.test(text)) return { gap: true }
     if (!text.trim()) return { text: '' }
-    let at = trimmed.indexOf(text.trim(), cursor)
+    let at = -1
+    // A line of closing brackets matches many lines of the file. The first one below the last match is often the end of
+    // an inner block. So the line is also matched by the indentation that the block shows.
+    if (shift !== undefined && /^[)\]}]+[;,)]*$/.test(text.trim())) {
+      const want = indent(text) + shift
+      for (let k = cursor; k < trimmed.length && at === -1; k++) if (trimmed[k] === text.trim() && indent(fileLines[k]) === want) at = k
+    }
+    if (at === -1) at = trimmed.indexOf(text.trim(), cursor)
     if (at === -1) at = trimmed.indexOf(text.trim())
     if (at === -1) { errors.push(`${where}: this line isn't in ${block.file} at ${block.ref}:\n    ${text.trim()}`); return { text, note } }
     cursor = at + 1
+    shift ??= indent(fileLines[at]) - indent(text)
     return { text, note, n: at + 1, add: added.has(at + 1) }
   })
 }
@@ -261,7 +271,7 @@ if (errors.length) throw new Error(`${errors.length} problems in the source:\n\n
 
 // ── html ─────────────────────────────────────────────────────────────────
 const STATUS = { A: ['new file', 'b1'], M: ['changed', 'b2'], R: ['renamed', 'b2'], D: ['deleted', 'b3'] }
-const FOLD = 22
+const FOLD = 50
 
 function linkTypes (html, own) {
   return html.replace(/<span class="t-(type|fn)">([\w$]+)<\/span>/g, (all, kind, name) => {
@@ -345,10 +355,21 @@ function typesSvg (b) {
     const names = node[1].split('|').map(s => s.trim()); const kinds = node[2].split('|').map(s => s.trim())
     if (names.length !== kinds.length) throw new Error(`each name of a union needs its own kind:\n  ${l}`)
     for (const k of kinds) if (!KINDS[k]) throw new Error(`"${k}" isn't a kind of a types block. The kinds are: ${Object.keys(KINDS).join(', ')}\n  ${l}`)
-    nodes.push({ id: node[1], parts: names.map((name, i) => ({ name, kind: kinds[i] })), ctx: node[3] })
+    nodes.push({ id: `${node[1]} in ${node[3]}`, name: node[1], parts: names.map((name, i) => ({ name, kind: kinds[i] })), ctx: node[3] })
   }
   const byId = new Map(nodes.map(n => [n.id, n]))
-  for (const e of edges) for (const end of [e.from, e.to]) if (!byId.has(end)) throw new Error(`a types block uses "${end}" in an arrow without declaring it`)
+  const resolve = end => {
+    const scoped = /^(.+?)\s+in\s+(.+)$/.exec(end)
+    if (scoped) {
+      if (!byId.has(`${scoped[1]} in ${scoped[2]}`)) throw new Error(`a types block uses "${end}" in an arrow, but there isn't any box "${scoped[1]}" declared in ${scoped[2]}`)
+      return `${scoped[1]} in ${scoped[2]}`
+    }
+    const found = nodes.filter(n => n.name === end)
+    if (!found.length) throw new Error(`a types block uses "${end}" in an arrow without declaring it`)
+    if (found.length > 1) throw new Error(`a types block uses "${end}" in an arrow, but ${found.length} boxes share that name, in ${found.map(n => n.ctx).join(' and in ')}. Write "${end} in <context>" in the arrow.`)
+    return found[0].id
+  }
+  for (const e of edges) { e.from = resolve(e.from); e.to = resolve(e.to) }
   const ctxs = [...new Set(nodes.map(n => n.ctx))]
   const W = 1040; const col = W / ctxs.length; const cx = n => col * ctxs.indexOf(n.ctx) + col / 2
   const PART = 34; const ROW_GAP = 40; const top = 68
@@ -377,10 +398,24 @@ function typesSvg (b) {
   const arrows = edges.map(e => {
     const a = byId.get(e.from); const z = byId.get(e.to)
     const side = a.row === z.row; const dir = cx(z) >= cx(a) ? 1 : -1
-    const [x1, y1] = side ? [cx(a) + dir * a.w / 2, a.y + a.h / 2] : [cx(a), a.y + a.h]
-    const [x2, y2] = side ? [cx(z) - dir * z.w / 2, z.y + z.h / 2] : [cx(z), z.y]
-    const path = side || x1 === x2 ? `M${x1} ${y1} L${x2} ${y2}` : `M${x1} ${y1} V${(y1 + y2) / 2} H${x2} V${y2}`
-    const [bx, by] = side ? [(x1 + x2) / 2, y1 - 18] : [x2 + 20, (y1 + y2) / 2 + (x1 === x2 ? 0 : 12)]
+    // An arrow back to an earlier box is drawn beside the other arrows so that the reader can see every arrow and every badge.
+    const back = side ? nodes.indexOf(z) < nodes.indexOf(a) : z.row < a.row
+    const BACK = 12
+    let [x1, y1] = side ? [cx(a) + dir * a.w / 2, a.y + a.h / 2] : [cx(a), a.y + a.h]
+    let [x2, y2] = side ? [cx(z) - dir * z.w / 2, z.y + z.h / 2] : [cx(z), z.y]
+    let path = side || x1 === x2 ? `M${x1} ${y1} L${x2} ${y2}` : `M${x1} ${y1} V${(y1 + y2) / 2} H${x2} V${y2}`
+    let [bx, by] = side ? [(x1 + x2) / 2, y1 - 18] : [x2 + 20, (y1 + y2) / 2 + (x1 === x2 ? 0 : 12)]
+    if (back && side) {
+      y1 += BACK; y2 += BACK
+      path = `M${x1} ${y1} L${x2} ${y2}`; [bx, by] = [(x1 + x2) / 2, y1 + 18]
+    } else if (back && a.ctx === z.ctx) {
+      const between = nodes.filter(n => n.ctx === a.ctx && n.row >= z.row && n.row <= a.row)
+      const xo = Math.min(...between.map(n => n.x)) - BACK * 2
+      path = `M${a.x} ${a.y + a.h / 2} H${xo} V${z.y + z.h / 2} H${z.x}`; [bx, by] = [xo - 18, (a.y + a.h / 2 + z.y + z.h / 2) / 2]
+    } else if (back) {
+      x1 -= BACK; x2 -= BACK
+      path = `M${x1} ${y1} V${(y1 + y2) / 2} H${x2} V${y2}`; [bx, by] = [x2 - 20, (y1 + y2) / 2 + 12]
+    }
     const inner = `<path d="${path}" class="t-arrow" marker-end="url(#types-tip)"/>
       ${e.point ? `<circle cx="${bx}" cy="${by}" r="10" class="pt"/><text x="${bx}" y="${by + 4}" text-anchor="middle" class="pt-t">${e.point}</text>` : ''}`
     return e.point ? `<a href="#" data-step="${e.point}" class="hop">${inner}</a>` : `<g>${inner}</g>`
@@ -396,12 +431,15 @@ function typesSvg (b) {
     ${head}${arrows}${boxes}${legend}</svg>`
 }
 
+// A list is part of the explanation rather than a separate piece of evidence, so it's drawn as body text without a box.
+const textList = b => `<${b.ordered ? 'ol' : 'ul'} class="text-list">${b.items.map(item => `<li>${inline(item)}</li>`).join('')}</${b.ordered ? 'ol' : 'ul'}>`
+
 function evidence (b) {
   return b.type === 'code' ? codeBlock(b)
     : b.type === 'flow' ? flowSvg(b)
     : b.type === 'types' ? typesSvg(b)
     : b.type === 'quote' ? `<blockquote>${inline(b.text)}</blockquote>`
-    : b.type === 'list' ? `<${b.ordered ? 'ol' : 'ul'} class="ev-list">${b.items.map(item => `<li>${inline(item)}</li>`).join('')}</${b.ordered ? 'ol' : 'ul'}>`
+    : b.type === 'list' ? textList(b)
     : `<table><thead><tr>${b.head.map(c => `<th>${inline(c)}</th>`).join('')}</tr></thead><tbody>${b.rows.map(r => `<tr>${r.map(c => `<td>${inline(c)}</td>`).join('')}</tr>`).join('')}</tbody></table>`
 }
 
@@ -413,18 +451,18 @@ const attnHtml = b => `<div class="attn" id="${b.id}"><span class="icon" aria-hi
 function passageHtml (p, point) {
   if (p.type === 'attention') return attnHtml(p)
   META.push({ id: p.id, point: point.title, label: `${p.n}. ${p.title.replace(/[`*]/g, '')}` })
-  const lead = p.blocks.findIndex(b => b.type !== 'text')
+  const lead = p.blocks.findIndex(b => b.type !== 'text' && b.type !== 'list')
   const [tell, show] = lead === -1 ? [p.blocks, []] : [p.blocks.slice(0, lead), p.blocks.slice(lead)]
   const para = b => `<p class="ex-line">${inline(b.text)}</p>`
   return `
       <div class="step${show.length ? '' : ' solo'}" id="${p.id}">
         <div class="tell">
           <h3 class="pt-line"><span class="num">${p.n}</span><span>${inline(p.title)}</span></h3>
-          ${tell.map(para).join('')}
+          ${tell.map(b => b.type === 'list' ? textList(b) : para(b)).join('')}
           <button class="say-btn" type="button">💬 Comment on this</button>
           <textarea class="say" data-id="${p.id}" rows="3" hidden placeholder="Your comment is saved as you type. Read the other points, then click Collect all my feedback at the bottom."></textarea>
         </div>
-        ${show.length ? `<div class="show">${show.map(b => b.type === 'text' ? para(b) : evidence(b)).join('')}</div>` : ''}
+        ${show.length ? `<div class="show">${show.map(b => b.type === 'text' ? para(b) : b.type === 'list' ? textList(b) : evidence(b)).join('')}</div>` : ''}
       </div>`
 }
 
@@ -446,7 +484,7 @@ function pointHtml (p, n, t, ti) {
     const alerts = ti === 0 ? ALERTS : ALERTS.filter(a => a.tab === t)
     return `
     <section class="point overview" id="${p.id}">
-      <div class="lead">${p.blocks.filter(b => b.type === 'text').map(b => `<p>${inline(b.text)}</p>`).join('')}</div>
+      <div class="lead">${p.blocks.map(b => b.type === 'text' ? `<p>${inline(b.text)}</p>` : b.type === 'list' ? textList(b) : b.type === 'table' ? `<div class="show">${evidence(b)}</div>` : '').join('')}</div>
       ${alerts.length ? `<div class="alerts"><h3>⚠️ ${alerts.length} ${alerts.length === 1 ? 'thing needs' : 'things need'} your attention</h3><ul>${alerts.map(a => `<li><a href="#${a.block.id}" data-go="${a.block.id}">${plain(a.block.text)}</a> <span class="dim">${esc(a.tab.title)} · ${plain(a.point.title)}</span></li>`).join('')}</ul></div>` : ''}
       ${flow ? flowSvg(flow) : ''}
       ${types ? typesSvg(types) : ''}
@@ -457,7 +495,7 @@ function pointHtml (p, n, t, ti) {
   const tocHtml = b => `<ol class="steps toc">${b.items.map(item => `
         <li><span class="toc-i"><span class="num">${numberOf(p, /^\[[^\]]+\]\(#([^)]+)\)/.exec(item)?.[1])}</span><span class="steps-t">${inline(item)}</span></span></li>`).join('')}
       </ol>`
-  const introHtml = b => b.type === 'attention' ? attnHtml(b) : isToc(b) ? tocHtml(b) : b.type === 'list' ? `<div class="show">${evidence(b)}</div>` : ''
+  const introHtml = b => b.type === 'attention' ? attnHtml(b) : isToc(b) ? tocHtml(b) : b.type === 'list' ? textList(b) : ''
   return `
     <section class="point${p.attention ? ' has-attn' : ''}" id="${p.id}" data-n="${n}">
       <div class="phead">

@@ -37,7 +37,7 @@ body { font-size: 16px; line-height: 25px; background: var(--bg) }
 .ex-line { margin: 0 0 calc(var(--s) * 2); font-size: 16px; line-height: 25px; color: var(--text-2) }
 .show { min-width: 0; display: flex; flex-direction: column; gap: calc(var(--s) * 3) }
 
-.step code, .lead code, .cards code, .files code, .grp code, .attn code { font-size: .86em; background: var(--bg-alt); border-radius: 5px; padding: 1px 5px; color: var(--text-1) }
+.step code, .lead code, .text-list code, .cards code, .files code, .grp code, .attn code { font-size: .86em; background: var(--bg-alt); border-radius: 5px; padding: 1px 5px; color: var(--text-1) }
 a.sym { text-decoration: none }
 a.sym code { color: var(--brand) }
 a.sym:hover code { text-decoration: underline }
@@ -81,7 +81,9 @@ pre a.sym:hover { text-decoration-color: currentColor }
 .show table { border-collapse: collapse; font-size: 14.5px; line-height: 22px; width: 100%; border: 1px solid var(--divider); border-radius: var(--r-sm) }
 th { text-align: left; font-size: 11px; letter-spacing: .09em; text-transform: uppercase; color: var(--text-3); padding: 8px 12px; border-bottom: 1px solid var(--divider) }
 td { padding: 7px 12px; border-bottom: 1px solid var(--divider); color: var(--text-1); vertical-align: top }
-.ev-list { margin: 0; padding: calc(var(--s) * 3) calc(var(--s) * 4) calc(var(--s) * 3) calc(var(--s) * 9); border: 1px solid var(--divider); border-radius: var(--r-sm); font-size: 14.5px; line-height: 26px; color: var(--text-1) }
+.text-list { margin: 0 0 calc(var(--s) * 2); padding-left: calc(var(--s) * 6); max-width: 74ch; font-size: 16px; line-height: 25px; color: var(--text-2) }
+.text-list li + li { margin-top: calc(var(--s) * 1) }
+.lead .text-list { font-size: 18px; line-height: 28px; color: var(--text-1) }
 .show blockquote { margin: 0; border-left: 3px solid var(--border); padding-left: calc(var(--s) * 4); color: var(--text-2); font-style: italic }
 
 .pager { display: flex; padding: calc(var(--s) * 8) 0 0; border-top: 1px solid var(--divider) }
