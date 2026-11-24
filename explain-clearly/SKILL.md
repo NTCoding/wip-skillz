@@ -213,19 +213,6 @@ accepted.
 
 ### The structure of the document
 
-#### Open with the conclusion
-
-The first paragraph states what you think is true, in 1 or 2 sentences. It
-doesn't open with what the reader has to do or why you're asking them.
-
-**Rejected:** I need you to decide whether `npm run check:modules` should fail
-when a function in the code for the reporting database has a parameter of the
-type `Knex.Transaction`. It fails on that code today.
-
-**Accepted:** I think `checkTransactionParams` fails on code that is fine. It
-fails on a `trx` in a repository of the reporting database, but another module
-can't use that `trx`.
-
 #### List the steps of the argument as links
 
 After the first paragraph, list the sections as numbered steps. Each step
