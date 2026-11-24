@@ -8,7 +8,7 @@ effort: medium
 
 A document written by an agent reads like AI slop. It opens with low level
 mechanics instead of the key idea, it leaves the agent's thinking in the text,
-and the sentences are clipped and grammatically precise in a way nobody talks.
+and the sentences are clipped and grammatically precise in a way that nobody talks.
 This skill turns such a document into one that reads like Nick wrote it.
 
 Nick's voice is in the output style `~/.claude/output-styles/nick-grammar-rules.md`.
