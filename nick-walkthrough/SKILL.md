@@ -38,7 +38,7 @@ He doesn't need to scroll or open another point. He doesn't need to remember
 what an earlier passage described either.
 
 The source is the markdown file that you write in step 4. The renderer is the
-script that turns the source into the HTML page in step 6. Both of them help
+script that turns the source into the HTML page in step 5. Both of them help
 to show the context of each piece:
 
 - **The source's front matter has one `context:` line per context.** Each
@@ -146,15 +146,7 @@ mkdir -p "$dir"
 # write "$dir/walkthrough.md"
 ```
 
-### 5. Check your own writing
-
-The page follows Nick's writing rules like anything else you write, because
-he'll read the page. Run the prose of the source through
-`~/.claude/hooks/check-constructions.sh` and fix each hit that has a valid
-rewrite. Then read the prose against
-`~/.claude/output-styles/nick-grammar-rules.md`.
-
-### 6. Render and open
+### 5. Render and open
 
 Run the renderer from the merge request's repository. The renderer is in the
 base directory of this skill, which is the folder that the harness prints
