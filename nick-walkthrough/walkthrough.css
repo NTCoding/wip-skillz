@@ -291,13 +291,12 @@ pre .nb, .nn .nb { user-select: none }
 .nn-at { font-size: 12px }
 
 /* ── contexts ─────────────────────────────────────────────────────────── */
-/* In the text, a context is a marker highlight in the colour of the context rather than a pill. The badge in the file
-   bar of a code block stays a pill. */
-.ctx.inl, .steps .ctx { display: inline; padding: 1px 3px; border-radius: 3px; box-shadow: none; font: inherit; font-weight: 600; vertical-align: baseline; white-space: normal; box-decoration-break: clone; -webkit-box-decoration-break: clone }
-.steps .ctx { font-family: var(--font); font-size: 14px; top: 0 }
-.ctx.inl.c0, .steps .ctx.c0 { background: #c9efe7 }
-.ctx.inl.c1, .steps .ctx.c1 { background: #f7e7b4 }
-.ctx.inl.c2, .steps .ctx.c2 { background: #e2dbf7 }
-.ctx.inl.c3, .steps .ctx.c3 { background: #d3e8f6 }
-.ctx.inl.c4, .steps .ctx.c4 { background: #f6d6dc }
-.ctx.inl.c5, .steps .ctx.c5 { background: #e2e6ec }
+/* In the text, a context is plain text in a darker shade of the colour of the context. The badge in the file bar of a
+   code block stays a pill. */
+.ctx.inl, .steps .ctx { display: inline; padding: 0; border-radius: 0; background: none; box-shadow: none; font: inherit; vertical-align: baseline; white-space: normal; top: 0 }
+.ctx.inl.c0, .steps .ctx.c0 { color: #0f766e }
+.ctx.inl.c1, .steps .ctx.c1 { color: #a16207 }
+.ctx.inl.c2, .steps .ctx.c2 { color: #6d28d9 }
+.ctx.inl.c3, .steps .ctx.c3 { color: #0369a1 }
+.ctx.inl.c4, .steps .ctx.c4 { color: #be123c }
+.ctx.inl.c5, .steps .ctx.c5 { color: #475569 }
