@@ -52,10 +52,12 @@ a.sym:hover code { text-decoration: underline }
 .attn p { margin: 0; color: #78350f; font-size: 15px; line-height: 23px }
 .attn .icon { font-size: 18px; line-height: 23px }
 
-.code { border-radius: var(--r-sm); overflow: hidden; background: var(--code-bg); box-shadow: 0 1px 3px rgba(15, 23, 42, .15) }
-.code pre { border: 0; border-radius: 0; font-size: 13.5px; line-height: 22px; padding: calc(var(--s) * 3) 0 }
-.code.folded pre { max-height: 400px; overflow: hidden; -webkit-mask-image: linear-gradient(#000 78%, transparent); mask-image: linear-gradient(#000 78%, transparent) }
-.unfold { display: block; width: 100%; appearance: none; border: 0; border-top: 1px solid #1e293b; background: var(--code-bg); color: #94a3b8; font: 700 12px/1 var(--font); padding: 10px; cursor: pointer }
+.code { position: relative; border-radius: var(--r-sm); background: var(--code-bg); box-shadow: 0 1px 3px rgba(15, 23, 42, .15) }
+.code .file { border-radius: var(--r-sm) var(--r-sm) 0 0 }
+.code .file + pre { border-top-left-radius: 0; border-top-right-radius: 0 }
+.code pre { border: 0; border-radius: var(--r-sm); font-size: 13.5px; line-height: 22px; padding: calc(var(--s) * 3) 0 }
+.code.folded pre { border-bottom-left-radius: 0; border-bottom-right-radius: 0; max-height: 400px; overflow: hidden; -webkit-mask-image: linear-gradient(#000 78%, transparent); mask-image: linear-gradient(#000 78%, transparent) }
+.unfold { border-radius: 0 0 var(--r-sm) var(--r-sm); display: block; width: 100%; appearance: none; border: 0; border-top: 1px solid #1e293b; background: var(--code-bg); color: #94a3b8; font: 700 12px/1 var(--font); padding: 10px; cursor: pointer }
 .unfold:hover { color: #e2e8f0 }
 .file { display: flex; align-items: center; gap: calc(var(--s) * 2.5); background: #1e293b; padding: 7px 12px }
 .fpath { flex: 1; min-width: 0; font-family: var(--mono); font-size: 12px; line-height: 18px; color: #94a3b8; text-decoration: none; overflow-wrap: anywhere }
@@ -68,8 +70,8 @@ a.sym:hover code { text-decoration: underline }
 .file .chip.b3 { background: rgba(244, 63, 94, .25); color: #fda4af }
 .copy { appearance: none; background: none; border: 0; color: #64748b; font: 700 11px/1 var(--font); padding: 4px; cursor: pointer }
 .copy:hover { color: #e2e8f0 }
-pre .ln { display: block; position: relative; white-space: pre-wrap; overflow-wrap: anywhere; padding: 0 calc(var(--s) * 4) 0 8ch; text-indent: 0 }
-pre .no { position: absolute; left: 0; top: 0; width: 6ch; text-align: right; color: #64748b; user-select: none }
+pre .ln { display: block; position: relative; white-space: pre-wrap; overflow-wrap: anywhere; padding: 0 calc(var(--s) * 4) 0 9ch; text-indent: 0 }
+pre .no { position: absolute; left: 1.5ch; top: 0; width: 6ch; text-align: right; color: #64748b; user-select: none }
 pre .ln.add { box-shadow: inset 3px 0 0 #34d399; background: rgba(16, 185, 129, .12) }
 pre .ln.add .no { color: var(--code-add-sig) }
 pre .ln.gap { color: #475569 }
@@ -199,3 +201,48 @@ pre .why.cross.c5 { background: rgba(203, 213, 225, .12); color: #c3cad4 }
 .toc .num { position: relative; top: -1px }
 .toc a { display: inline; padding: 0; border: 0; color: var(--brand); font-weight: 700 }
 .steps code { font-size: .86em; background: var(--bg-alt); border-radius: 5px; padding: 1px 5px; color: var(--text-1) }
+
+/* ── notes on the code ─────────────────────────────────────────────────── */
+/* A "//~" note is a numbered badge in the gutter of its first line, a numbered list above the block and a card that opens
+   when the badge is hovered or clicked. "Beside the line (today)" shows each note beside its first line instead. */
+.modebar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin: 0 0 24px; font-size: 14px; color: var(--text-2) }
+.seg { display: inline-flex; border: 1px solid var(--border); border-radius: 999px; padding: 3px; background: var(--bg) }
+.seg button { appearance: none; border: 0; background: none; font: 700 13px/1 var(--font); color: var(--text-2); padding: 7px 14px; border-radius: 999px; cursor: pointer }
+.seg button[aria-pressed="true"] { background: var(--brand); color: #fff }
+body.m-ann .today { display: none }
+body.m-today .ann { display: none !important }
+body.m-today pre .ln.mk { background: none; box-shadow: none }
+
+.noted { display: flex; flex-direction: column; gap: calc(var(--s) * 2) }
+.nn { list-style: none; margin: 0; padding: 0; max-width: 74ch }
+.nn li { display: flex; gap: 10px; align-items: baseline; padding: 4px 8px; margin: 0 -8px; border-radius: 6px; font-size: 16px; line-height: 25px; color: var(--text-1); cursor: default }
+.nn li.on { background: rgba(13, 148, 136, .1) }
+.nn .nb { position: relative; top: -1px }
+.nn-t { min-width: 0; overflow-wrap: anywhere }
+.nn-at { color: var(--text-3); font-size: 12px; margin-right: 8px; font-family: var(--mono) }
+.nn code { font-size: .86em; background: var(--bg-alt); border-radius: 5px; padding: 1px 5px; color: var(--text-1) }
+.nb { flex: none; display: inline-flex; align-items: center; justify-content: center; min-width: 20px; height: 20px; border-radius: 999px; background: #4ade80; color: #0f172a; font: 700 11.5px/1 var(--font) }
+pre .nb { position: absolute; left: 6px; top: 1px }
+pre button.nb { appearance: none; border: 0; padding: 0; cursor: pointer }
+pre button.nb:hover, pre button.nb.pin, pre .ln.mk.on .nb, .nn li.on .nb { background: #fff; box-shadow: 0 0 0 2px #4ade80 }
+pre .ln.mk { background: rgba(74, 222, 128, .07); box-shadow: inset 3px 0 0 rgba(74, 222, 128, .45) }
+pre .ln.mk.on { background: rgba(74, 222, 128, .26); box-shadow: inset 4px 0 0 #4ade80 }
+pre.focus .ln:not(.on) { opacity: .45; transition: opacity .12s ease }
+
+/* The card has the style of a comment in the scratch pad. */
+.tc { display: block; background: #fff; border-radius: 8px; box-shadow: 0 1px 3px rgb(0 0 0 / 6%), 0 4px 14px rgb(0 0 0 / 7%);
+  padding: 14px 16px 15px; color: var(--text-1); font: 14.5px/22px var(--font); white-space: normal; text-align: left }
+.tc-msg { display: grid; grid-template-columns: 26px minmax(0, 1fr); column-gap: 10px }
+.tc-av { display: grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; background: #b5532e; color: #fff; font: 700 12px/1 var(--font) }
+.tc-body { display: block; min-width: 0 }
+.tc-meta { display: flex; align-items: center; gap: 6px; min-height: 26px }
+.tc-au { font-weight: 700; font-size: 14px }
+.tc-at { color: var(--text-3); font-size: 12px }
+.tc-text { display: block; margin-top: 2px; overflow-wrap: anywhere }
+.tc code { font-size: .86em; background: var(--bg-alt); border-radius: 5px; padding: 1px 5px; color: var(--text-1); font-family: var(--mono) }
+.tc .ctx.inl { font-size: .8em }
+.pc { display: none; position: absolute; left: 4px; width: min(480px, calc(100% - 8px)); z-index: 6 }
+.pc.open { display: block; box-shadow: 0 0 0 1.5px var(--brand), 0 6px 22px rgb(0 0 0 / 14%) }
+.pc::before { content: ""; position: absolute; left: 18px; width: 12px; height: 12px; background: #fff; transform: rotate(45deg); border-radius: 2px }
+.pc.below::before { top: -6px }
+.pc.above::before { bottom: -6px }

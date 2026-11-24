@@ -204,6 +204,14 @@ flush()
 
 // ── code blocks ──────────────────────────────────────
 const GAP = /^\s*(\/\/|#)?\s*…\s*$/
+// "//~ <note>" is a note on one line. "//~[ <note>" starts a note on several lines and "//~]" ends it on its last line.
+const NOTE = / \/\/~([[\]]?)(?: (.*))?$/
+
+function splitNote (raw) {
+  const m = NOTE.exec(raw)
+  if (!m) return { text: raw }
+  return { text: raw.slice(0, m.index), mark: m[1] || '~', note: (m[2] ?? '').trim() }
+}
 
 function locate (block, where) {
   if (!block.file) return block.body.map(text => ({ text }))
@@ -217,9 +225,9 @@ function locate (block, where) {
   let cursor = 0
   let shift
   return block.body.map(raw => {
-    const [text, note] = raw.split(' //~ ')
-    if (GAP.test(text)) return { gap: true }
-    if (!text.trim()) return { text: '' }
+    const { text, note, mark } = splitNote(raw)
+    if (GAP.test(text)) return { gap: true, mark }
+    if (!text.trim()) return { text: '', note, mark }
     let at = -1
     // A line of closing brackets matches many lines of the file. The first one below the last match is often the end of
     // an inner block. So the line is also matched by the indentation that the block shows.
@@ -229,11 +237,37 @@ function locate (block, where) {
     }
     if (at === -1) at = trimmed.indexOf(text.trim(), cursor)
     if (at === -1) at = trimmed.indexOf(text.trim())
-    if (at === -1) { errors.push(`${where}: this line isn't in ${block.file} at ${block.ref}:\n    ${text.trim()}`); return { text, note } }
+    if (at === -1) { errors.push(`${where}: this line isn't in ${block.file} at ${block.ref}:\n    ${text.trim()}`); return { text, note, mark } }
     cursor = at + 1
     shift ??= indent(fileLines[at]) - indent(text)
-    return { text, note, n: at + 1, add: added.has(at + 1) }
+    return { text, note, mark, n: at + 1, add: added.has(at + 1) }
   })
+}
+
+// Each note of a block is numbered from 1. A row that a note is about is given the number of the note as "k".
+function numberNotes (b, where) {
+  b.notes = []
+  let open
+  const fail = (r, problem) => errors.push(`${where}: ${problem}:\n    ${r.gap ? '…' : r.text.trim()}`)
+  b.rows.forEach((r, i) => {
+    if (r.mark && r.gap) { fail(r, 'a note can\'t start or end on a "…" line'); return }
+    if (r.mark === '~' && r.note) {
+      if (open) { fail(r, 'this "//~" note is inside a note that was started with "//~[" on an earlier line. End that note with "//~]" first'); return }
+      b.notes.push({ k: b.notes.length + 1, first: i, last: i, text: r.note }); r.k = b.notes.length; return
+    }
+    if (r.mark === '[') {
+      if (!r.note) { fail(r, 'this "//~[" starts a note without any text. Write the note after it, as in "//~[ <note>"'); return }
+      if (open) { fail(r, 'this "//~[" starts a note while the note that was started on an earlier line is still open. End that note with "//~]" first'); return }
+      open = { k: b.notes.length + 1, first: i, last: i, text: r.note }; b.notes.push(open); r.k = open.k; return
+    }
+    if (r.mark === ']') {
+      if (r.note) fail(r, 'a "//~]" ends a note, so it doesn\'t take any text. Write the text after the "//~[" on the first line of the note')
+      if (!open) { fail(r, 'this "//~]" doesn\'t end any note. Start the note with "//~[ <note>" on its first line'); return }
+      open.last = i; r.k = open.k; open = undefined; return
+    }
+    if (open && !r.gap) r.k = open.k
+  })
+  if (open) fail(b.rows[open.first], 'the note that is started with "//~[" on this line isn\'t ended. Add "//~]" to its last line')
 }
 
 // Ids: "t1p3" is the 3rd "## " point of the 1st "# " tab ("t1p0" is the overview). "t1p3.b2" is the 2nd "### " passage
@@ -245,6 +279,9 @@ tabs.forEach((t, ti) => t.points.forEach((p, pi) => {
   let n = 0; let w = 0
   const code = (b, where) => {
     b.rows = locate(b, where)
+    if (b.file) numberNotes(b, where)
+    else b.notes = []
+    if (b.notes.length) p.notes = true
     b.first = b.rows.find(r => r.n)?.n
     if (b.file && changed.has(b.file) && b.ref === 'head') changed.get(b.file).shownIn.add(p.id)
   }
@@ -290,9 +327,18 @@ function codeBlock (b) {
   const ref = b.ref === 'base' ? meta.base : meta.head
   const own = b.file && contextOf(b.file)
   const cross = text => CONTEXTS.filter(c => c !== own && c.pkg && text.includes(`'${c.pkg}'`)).map(c => `<span class="why cross c${c.n}">from the ${esc(c.name)}</span>`).join('')
-  const rows = b.rows.map(r => r.gap
-    ? '<span class="ln gap"><span class="no"></span>⋯</span>'
-    : `<span class="ln${r.add && !isNew ? ' add' : ''}"><span class="no">${r.n ?? ''}</span>${linkTypes(paint(r.text), { file: b.file, n: r.n }) || ' '}${r.note ? `<span class="why">${inline(r.note)}</span>` : ''}${cross(r.text)}</span>`).join('')
+  const starts = new Map(b.notes.map(note => [note.first, note]))
+  const rows = b.rows.map((r, i) => {
+    if (r.gap) return '<span class="ln gap"><span class="no"></span>⋯</span>'
+    const note = starts.get(i)
+    return `<span class="ln${r.add && !isNew ? ' add' : ''}${r.k ? ' mk' : ''}" data-i="${i}"${r.k ? ` data-k="${r.k}"` : ''}><span class="no">${r.n ?? ''}</span>${note ? `<button type="button" class="nb ann" data-k="${note.k}" aria-label="Note ${note.k}">${note.k}</button>` : ''}${linkTypes(paint(r.text), { file: b.file, n: r.n }) || ' '}${note ? `<span class="why today">${inline(note.text)}</span>` : ''}${cross(r.text)}</span>`
+  }).join('')
+  const lines = note => {
+    const [first, last] = [b.rows[note.first].n, b.rows[note.last].n]
+    return first === last ? `line ${first}` : `lines ${first} to ${last}`
+  }
+  const list = `<ol class="nn ann">${b.notes.map(note => `<li data-k="${note.k}"><span class="nb">${note.k}</span><span class="nn-t"><span class="nn-at">${lines(note)}</span>${inline(note.text)}</span></li>`).join('')}</ol>`
+  const cards = b.notes.map(note => `<span class="tc ann pc" role="note" data-k="${note.k}" data-first="${note.first}" data-last="${note.last}"><span class="tc-msg"><span class="tc-av" aria-hidden="true">A</span><span class="tc-body"><span class="tc-meta"><span class="tc-au">Agent</span><span class="tc-at">${lines(note)}</span></span><span class="tc-text">${inline(note.text)}</span></span></span></span>`).join('')
   const name = b.file ? b.file.split('/').pop() : ''
   const dir = b.file ? b.file.slice(0, -name.length) : ''
   const head = b.file ? `
@@ -303,7 +349,8 @@ function codeBlock (b) {
           <button class="copy" type="button">Copy</button>
         </div>` : ''
   const fold = b.rows.length > FOLD
-  return `<div class="code${fold ? ' folded' : ''}">${head}<pre>${rows}</pre>${fold ? `<button class="unfold" type="button">Show all ${b.rows.length} lines</button>` : ''}</div>`
+  const code = `<div class="code${fold ? ' folded' : ''}">${head}<pre>${rows}</pre>${fold ? `<button class="unfold" type="button">Show all ${b.rows.length} lines</button>` : ''}${cards}</div>`
+  return b.notes.length ? `<div class="noted">${list}${code}</div>` : code
 }
 
 function flowSvg (b) {
@@ -471,6 +518,8 @@ const stepsHtml = p => `<ol class="steps">${p.steps.map(s => `
         <li><a href="#${esc(s.id)}"><span class="num">${numberOf(p, s.id)}</span><span class="ctx c${s.ctx.n}">${esc(s.ctx.name)}</span><span class="steps-t">${plain(s.text)}</span></a></li>`).join('')}
       </ol>`
 
+const modeBar = `<div class="modebar"><span>Notes on the code</span><span class="seg" role="group" aria-label="Where the notes on the code are shown"><button type="button" data-m="ann" aria-pressed="true">On the lines</button><button type="button" data-m="today" aria-pressed="false">Beside the line (today)</button></span></div>`
+
 function pointHtml (p, n, t, ti) {
   if (!p.title) {
     const story = t.points.filter(q => q.title).map((q, i) => `
@@ -503,6 +552,7 @@ function pointHtml (p, n, t, ti) {
         <div><h2>${inline(p.title)}</h2>${lead.map(b => `<p class="lead">${inline(b.text)}</p>`).join('')}</div>
         <label class="read"><input type="checkbox" data-id="${p.id}"> read</label>
       </div>
+      ${p.notes ? modeBar : ''}
       ${p.steps ? stepsHtml(p) : ''}
       ${p.intro.map(introHtml).join('')}
       ${p.parts.map(x => passageHtml(x, p)).join('')}
@@ -564,7 +614,7 @@ writeFileSync(outPath, `<!doctype html>
 <style>${here('../nick-review/report.css')}
 ${here('./walkthrough.css')}</style>
 </head>
-<body>
+<body class="m-ann">
 <div class="tabbar">
   <div class="hdr bar">
     <a class="mr" href="${esc(meta.url)}" title="${esc(meta.title)}"><b>!${esc(meta.iid)}</b> ${esc(meta.title)}</a>

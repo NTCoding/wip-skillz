@@ -107,7 +107,7 @@ document.addEventListener('click', e => {
   if (copy) {
     const text = $$('.ln', copy.closest('.code')).map(ln => {
       const clone = ln.cloneNode(true)
-      $$('.no, .why', clone).forEach(n => n.remove())
+      $$('.no, .why, .nb', clone).forEach(n => n.remove())
       return clone.textContent
     }).join('\n')
     navigator.clipboard?.writeText(text)
@@ -172,3 +172,74 @@ const start = location.hash.slice(1)
 addEventListener('load', () => { if (document.getElementById(start)?.classList.contains('point') ?? true) window.scrollTo(0, 0) })
 show(document.getElementById(start) ? start : document.querySelector('.point').id)
 paint()
+
+// ── notes on the code ──
+// "On the lines" shows each note as a badge with a card. "Beside the line (today)" shows each note beside its line.
+const MODE = 'nick-walkthrough:notes'
+function setMode (m) {
+  document.body.classList.toggle('m-ann', m === 'ann')
+  document.body.classList.toggle('m-today', m === 'today')
+  for (const b of $$('.seg button')) b.setAttribute('aria-pressed', String(b.dataset.m === m))
+  try { localStorage.setItem(MODE, m) } catch {}
+  if (m === 'today') closeCards()
+}
+for (const b of $$('.seg button')) b.addEventListener('click', () => setMode(b.dataset.m))
+
+const light = (el, on) => { for (const x of $$(`[data-k="${el.dataset.k}"]`, el.closest('.noted'))) x.classList.toggle('on', on) }
+for (const li of $$('.nn li')) {
+  li.addEventListener('mouseenter', () => light(li, true))
+  li.addEventListener('mouseleave', () => light(li, false))
+}
+
+const cardOf = b => b.closest('.code').querySelector(`.pc[data-k="${b.dataset.k}"]`)
+const badgeOf = card => card.closest('.code').querySelector(`button.nb[data-k="${card.dataset.k}"]`)
+const rowOf = (code, i) => code.querySelector(`.ln[data-i="${i}"]`)
+// The tab bar and the timeline of the open point are pinned to the top of the window. A card above a line has to stay below them.
+const stuck = () => document.querySelector('.tabbar').offsetHeight + ($$('.line').find(l => l.offsetParent)?.offsetHeight ?? 0)
+
+// A card opens under the last line of its note, or above the first line when there's more room above. That way the card
+// is never drawn over the lines of its note.
+function place (card) {
+  const code = card.closest('.code')
+  const box = code.getBoundingClientRect()
+  const first = rowOf(code, card.dataset.first).getBoundingClientRect()
+  const last = rowOf(code, card.dataset.last).getBoundingClientRect()
+  const h = card.offsetHeight
+  const below = innerHeight - last.bottom
+  const under = below >= h + 12 || below >= first.top - stuck()
+  card.classList.toggle('below', under)
+  card.classList.toggle('above', !under)
+  card.style.top = `${under ? last.bottom - box.top + 8 : first.top - box.top - h - 8}px`
+}
+
+let hide
+function toggle (badge, on) {
+  const keep = on || badge.classList.contains('pin')
+  if (keep) for (const other of $$('pre button.nb')) if (other !== badge && cardOf(other).classList.contains('open')) { other.classList.remove('pin'); toggle(other, false) }
+  const card = cardOf(badge)
+  card.classList.toggle('open', keep)
+  if (keep) place(card)
+  light(badge, keep)
+  const pre = badge.closest('pre')
+  pre.classList.toggle('focus', Boolean(pre.querySelector('.ln.on')))
+}
+function closeCards () { for (const b of $$('pre button.nb')) { b.classList.remove('pin'); toggle(b, false) } }
+
+for (const b of $$('pre button.nb')) {
+  b.addEventListener('mouseenter', () => { clearTimeout(hide); toggle(b, true) })
+  b.addEventListener('mouseleave', () => { hide = setTimeout(() => toggle(b, false), 250) })
+  b.addEventListener('click', () => { b.classList.toggle('pin'); toggle(b, b.classList.contains('pin')) })
+}
+for (const card of $$('.pc')) {
+  card.addEventListener('mouseenter', () => clearTimeout(hide))
+  card.addEventListener('mouseleave', () => { hide = setTimeout(() => toggle(badgeOf(card), false), 250) })
+}
+addEventListener('keydown', e => { if (e.key === 'Escape') closeCards() })
+let queued = false
+const replace = () => { queued = false; $$('.pc.open').forEach(place) }
+addEventListener('scroll', () => { if (!queued) { queued = true; requestAnimationFrame(replace) } }, { passive: true })
+addEventListener('resize', replace)
+
+let mode = 'ann'
+try { mode = localStorage.getItem(MODE) || 'ann' } catch {}
+setMode(mode)

@@ -300,7 +300,8 @@ return new UploadRetriesExhausted() //~ the error from point 3
   line, links the path to GitLab and marks the lines that the merge request
   adds.
 - A line with only `…` on it is a gap between 2 parts of the file.
-- ` //~ ` starts a note that is shown beside the line.
+- ` //~ ` at the end of a line starts a note on that line, as described in
+  "Notes on lines of code" below.
 - A code block without a path isn't checked. Use one for an example of a
   request or a response.
 - A `flow` block before the first `## ` heading is drawn as a sequence
@@ -418,6 +419,53 @@ The renderer also adds 3 things that you don't write in the source:
 - a link on the path of every changed file
 - the last tab, "Every file", which lists each changed file next to the points
   where the file is shown
+
+### Notes on lines of code
+
+A note explains one line of a code block or a few lines of the block. Write
+` //~ ` at the end of the line, followed by the note:
+
+````markdown
+```ts modules/exports/src/application/export-invoice.handler.ts
+const policy = UploadRetryPolicy.fromAttempts(command.attempts) //~ the limit is read from the shop's settings
+```
+````
+
+When a note is about several lines, write ` //~[ ` at the end of the first
+line, followed by the note. Then write ` //~]` at the end of the last line.
+The lines in between don't need a marker. A `…` line can also be one of them:
+
+````markdown
+```ts modules/exports/src/application/export-invoice.handler.ts
+if (policy.isExhausted(attempts)) { //~[ a 4th upload is never tried
+  return new UploadRetriesExhausted()
+} //~]
+```
+````
+
+The renderer numbers the notes of each code block from 1. Each note is shown
+in 3 places:
+
+- A numbered badge is drawn in the gutter of the note's first line. Every line
+  of the note has a green wash.
+- A numbered list above the code block shows the text of each note and the
+  lines that the note is about.
+- A card is opened by hovering over the badge or by clicking the badge. The
+  card is drawn under the last line of the note, or above the first line when
+  there's more room above. That way the card is never drawn over the lines of
+  the note.
+
+A switch at the top of each point that has notes changes how the notes on the
+whole page are shown. "On the lines" shows the notes as described above.
+"Beside the line (today)" shows each note beside its first line instead.
+
+The renderer fails on a note on several lines that isn't written correctly:
+
+- a `//~]` that doesn't end a note that was started with `//~[`
+- a `//~[` without any text, or a `//~]` with text after it
+- a `//~[` or a `//~` while a note on several lines is still open
+- a `//~[` that isn't ended with a `//~]` before the end of the block
+- a `//~[` or a `//~]` on a `…` line
 
 ## The tabs
 
