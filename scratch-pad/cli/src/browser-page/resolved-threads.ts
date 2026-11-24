@@ -4,8 +4,8 @@ import { type Thread } from './api-responses'
 // In a wide reading column, the card of a resolved thread is hidden behind its marker so that it
 // doesn't take any room in the margin. That's only the case if the thread was already resolved when
 // the page showed the thread for the first time, or if Nick resolved the thread himself. So if the
-// agent resolves a thread that Nick has seen open, its card stays in the margin until the page is
-// reloaded.
+// agent resolves a thread that Nick has seen open, its card will stay in the margin until Nick
+// presses its Hide button or reloads the page. The Hide button calls resolvedByNick too.
 export interface ResolvedThreads {
   readonly behindMarker: (thread: Thread) => boolean
   readonly resolvedByNick: (thread: Thread) => void

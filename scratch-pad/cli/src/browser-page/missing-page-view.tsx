@@ -38,8 +38,14 @@ function warningText(waiting: number, queued: number): string {
 export function MissingPageView(props: MissingPageViewProps) {
   const { file, threads, outbox, actions } = props
   const [posted, setPosted] = useState<ReadonlyMap<string, Thread>>(new Map())
+  // This view doesn't have any markers so a card that Nick hides is left out of the view. Its count
+  // of messages is stored, because a reply reopens the thread and shows the card again.
+  const [hidden, setHidden] = useState<ReadonlyMap<string, number>>(new Map())
   const remember = (thread: Thread): void => {
     setPosted((current) => new Map([...current, [thread.id, thread]]))
+  }
+  const hide = (thread: Thread): void => {
+    setHidden((current) => new Map([...current, [thread.id, thread.messages.length]]))
   }
   const waiting = withPostedThreads(threads, posted)
   const withQueuedReplies = props.pageThreads.filter(
@@ -47,7 +53,9 @@ export function MissingPageView(props: MissingPageViewProps) {
       !waiting.some((each) => each.id === thread.id) &&
       queuedRepliesTo(outbox, thread.id).length > 0,
   )
-  const shown = [...waiting, ...withQueuedReplies]
+  const shown = [...waiting, ...withQueuedReplies].filter(
+    (thread) => hidden.get(thread.id) !== thread.messages.length,
+  )
   const queued = outbox.filter(
     (item): item is QueuedComment => item.kind === 'comment' && item.page === `pages/${file}`,
   )
@@ -78,6 +86,7 @@ export function MissingPageView(props: MissingPageViewProps) {
             active={false}
             onActivate={() => undefined}
             {...(actions === undefined ? {} : threadCardActions(actions, thread.id, remember))}
+            onHide={() => hide(thread)}
             outbox={
               actions === undefined
                 ? undefined

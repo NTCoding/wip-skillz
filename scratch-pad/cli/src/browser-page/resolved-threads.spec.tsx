@@ -149,6 +149,56 @@ describe('the resolved threads of a page', () => {
     expect(behindMarker('c-1')).toBe('false')
   })
 
+  it('hides the card of a note that the agent resolved while Nick was on the page and moves the focus to its marker when Nick presses Hide in a wide reading column', async () => {
+    vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockReturnValue(1200)
+    const fake = await renderIndex()
+    fake.threads.set('index.md', [retryQuestion, { ...toneNote, waitsFor: 'nobody' }])
+    act(() => fake.sendChange({ kind: 'thread', id: 'g-1' }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Hide g-1' }))
+    expect([behindMarker('g-1'), popupOf('g-1')]).toStrictEqual(['true', 'false'])
+    expect(document.activeElement).toBe(markerOf('Grammar / tone g-1'))
+  })
+
+  it('closes the card of a note that the agent resolved while Nick was on the page and moves the focus to its marker when Nick presses Hide in a narrow reading column', async () => {
+    const fake = await renderIndex()
+    fake.threads.set('index.md', [retryQuestion, { ...toneNote, waitsFor: 'nobody' }])
+    act(() => fake.sendChange({ kind: 'thread', id: 'g-1' }))
+    await userEvent.click(markerOf('Grammar / tone g-1'))
+    await userEvent.click(await screen.findByRole('button', { name: 'Hide g-1' }))
+    expect([behindMarker('g-1'), popupOf('g-1')]).toStrictEqual(['true', 'false'])
+    expect(document.activeElement).toBe(markerOf('Grammar / tone g-1'))
+  })
+
+  it('closes the card that Nick opened from its marker and moves the focus to the marker when he presses Hide in a wide reading column', async () => {
+    vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockReturnValue(1200)
+    await renderIndex(withResolvedQuestion())
+    await userEvent.click(markerOf('Comment c-1'))
+    await userEvent.click(screen.getByRole('button', { name: 'Hide c-1' }))
+    expect([behindMarker('c-1'), popupOf('c-1')]).toStrictEqual(['true', 'false'])
+    expect(document.activeElement).toBe(markerOf('Comment c-1'))
+  })
+
+  it('keeps the card of the active thread open when Nick hides the card of another thread', async () => {
+    const fake = fakeConnection()
+    fake.threads.set('index.md', [resolvedQuestion, { ...toneNote, waitsFor: 'nobody' }])
+    await renderIndex(fake, '#c-1')
+    fireEvent.click(screen.getByRole('button', { name: 'Hide g-1' }))
+    expect([popupOf('c-1'), popupOf('g-1')]).toStrictEqual(['true', 'false'])
+  })
+
+  it('closes the card that Nick opened from its marker when he presses Hide and shows the card again from the marker or in the margin after a reply', async () => {
+    await renderIndex(withResolvedQuestion())
+    await userEvent.click(markerOf('Comment c-1'))
+    await userEvent.click(screen.getByRole('button', { name: 'Hide c-1' }))
+    expect([behindMarker('c-1'), popupOf('c-1')]).toStrictEqual(['true', 'false'])
+    expect(document.activeElement).toBe(markerOf('Comment c-1'))
+    await userEvent.click(markerOf('Comment c-1'))
+    expect(popupOf('c-1')).toBe('true')
+    await userEvent.type(screen.getByRole('textbox', { name: 'Reply to reopen…' }), 'Why 8?')
+    await userEvent.click(screen.getByRole('button', { name: 'Reopen' }))
+    expect(behindMarker('c-1')).toBe('false')
+  })
+
   it('hides a resolved thread behind its marker and shows its card from the marker when the export is opened', async () => {
     window.history.replaceState(null, '', '/Users/jo/invoice-export/export.html')
     render(

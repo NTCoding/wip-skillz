@@ -214,6 +214,15 @@ export function PageWithThreads(props: PageWithThreadsProps) {
       props.resolvedThreads.resolvedByNick(thread)
     }
   }
+  // Nick's Hide button puts the card of a resolved thread behind its marker in the same way as his
+  // own resolve does. If the card is open below its text, it will be closed too, because the card
+  // is only open there while its thread is active.
+  const hide = (thread: Thread): void => {
+    props.resolvedThreads.resolvedByNick(thread)
+    if (thread.id === active) {
+      setActive(undefined)
+    }
+  }
   const startDraft = (kind: ThreadKindName, selection: BlockSelection): void => {
     setDraft({ kind, selection })
     setSelected(undefined)
@@ -269,6 +278,7 @@ export function PageWithThreads(props: PageWithThreadsProps) {
         active={thread.id === active}
         onActivate={() => setActive(thread.id)}
         {...(actions === undefined ? {} : threadCardActions(actions, thread.id, remember))}
+        onHide={() => hide(thread)}
         onAddToOutbox={
           actions === undefined || thread.type !== 'comment'
             ? undefined

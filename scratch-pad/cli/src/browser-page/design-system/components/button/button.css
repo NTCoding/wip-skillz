@@ -42,6 +42,15 @@
   line-height: var(--lh-sm);
 }
 
+/* The glyph of an icon has empty space around it inside the box of the icon. That's why a button
+   with an icon has less space on its left and between the icon and the text. The icon and the text
+   stay on one line, like the button "Outbox" in the narrow card of a thread. */
+.button--icon {
+  gap: var(--space-xs);
+  padding-left: var(--space-lg);
+  white-space: nowrap;
+}
+
 .button:disabled,
 .button[aria-disabled='true'] {
   cursor: not-allowed;

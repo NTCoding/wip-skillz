@@ -24,6 +24,7 @@ interface CardOptions {
   readonly state?: ThreadState
   readonly onReply?: (text: string) => Promise<void>
   readonly onResolve?: () => Promise<void>
+  readonly onHide?: () => void
   readonly kind?: 'comment' | 'grammar' | 'improvement'
   readonly readOnly?: boolean
   readonly messages?: readonly ThreadMessage[]
@@ -47,6 +48,7 @@ function renderCard(options: CardOptions = {}) {
       onResolve={
         options.readOnly === true ? undefined : (options.onResolve ?? (() => Promise.resolve()))
       }
+      onHide={options.onHide ?? (() => undefined)}
       quote={options.quote}
     />,
   )
@@ -96,6 +98,20 @@ describe('ThreadCard', () => {
     renderCard({ onResolve: () => Promise.reject(new ClosedThreadError('c-1 is closed.')) })
     await userEvent.click(screen.getByRole('button', { name: 'Resolve c-1' }))
     expect((await screen.findByRole('alert')).textContent).toBe('c-1 is closed.')
+  })
+
+  it('shows the hide button rather than the resolve button on a resolved thread and calls onHide when Nick presses it', async () => {
+    const onHide = vi.fn<() => void>()
+    const card = renderCard({ state: 'resolved', onHide })
+    expect(within(card).queryByRole('button', { name: 'Resolve c-1' })).toBeNull()
+    await userEvent.click(within(card).getByRole('button', { name: 'Hide c-1' }))
+    expect(onHide).toHaveBeenCalledWith()
+  })
+
+  it('shows the resolve button rather than the hide button when the thread is open', () => {
+    const card = renderCard()
+    expect(within(card).getByRole('button', { name: 'Resolve c-1' })).toBeDefined()
+    expect(within(card).queryByRole('button', { name: 'Hide c-1' })).toBeNull()
   })
 
   it('shows the first message and the outcome when the thread is resolved', () => {

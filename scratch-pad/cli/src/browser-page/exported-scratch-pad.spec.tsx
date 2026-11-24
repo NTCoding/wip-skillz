@@ -95,6 +95,15 @@ describe('ScratchPadApp in an export', () => {
     expect(screen.queryByRole('button', { name: /Resolve/u })).toBeNull()
   })
 
+  it('closes the card of a resolved thread and moves the focus to its marker when the reader presses Hide in the export', async () => {
+    renderExport('', exportedPadJson.replace('"waitsFor":"nick"', '"waitsFor":"nobody"'))
+    const marker = await screen.findByRole('button', { name: 'Comment c-1' })
+    await userEvent.click(marker)
+    await userEvent.click(screen.getByRole('button', { name: 'Hide c-1' }))
+    expect(document.querySelector('[data-key="c-1"]')?.getAttribute('data-popup')).toBe('false')
+    expect(document.activeElement).toBe(marker)
+  })
+
   it('doesn’t show the Inbox, the buttons of a decision or the comment button of an html block when the export is opened', async () => {
     renderExport()
     await screen.findByRole('heading', { level: 1, name: 'Invoice export' })

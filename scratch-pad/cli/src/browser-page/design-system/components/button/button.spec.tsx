@@ -36,6 +36,17 @@ describe('Button', () => {
     expect(screen.getByRole('button').className).toBe('button button--quiet button--small')
   })
 
+  it('draws the icon before the text when an icon is given', () => {
+    render(
+      <Button onClick={() => undefined} icon="plus">
+        Outbox
+      </Button>,
+    )
+    const button = screen.getByRole('button')
+    expect(button.className).toBe('button button--quiet button--icon')
+    expect(button.firstElementChild?.tagName).toBe('svg')
+  })
+
   it('ignores a press while its request is pending but keeps the focus', async () => {
     const onClick = vi.fn<() => void>()
     render(

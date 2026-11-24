@@ -4,7 +4,7 @@ import { Icon, type IconName } from '../icon/icon'
 import { IconButton } from '../icon-button/icon-button'
 import { MarginCard } from '../margin-card/margin-card'
 import { Message } from '../message/message'
-import { MessageBox, problemOf } from '../message-box/message-box'
+import { addToOutbox, MessageBox, problemOf } from '../message-box/message-box'
 import { SelectedTextQuote, type ThreadQuote } from '../selected-text-quote/selected-text-quote'
 import { ThreadKind, threadKindLabels, type ThreadKindName } from '../thread-kind/thread-kind'
 import './thread-card.css'
@@ -30,6 +30,8 @@ interface ThreadCardProps {
   readonly onReply?: ((text: string) => Promise<void>) | undefined
   readonly onAddToOutbox?: ((text: string) => Promise<void>) | undefined
   readonly onResolve?: (() => Promise<void>) | undefined
+  // Hides the card of a resolved thread behind its marker. Only a resolved card shows the button.
+  readonly onHide?: (() => void) | undefined
   readonly quote?: ThreadQuote | undefined
   // The replies of this thread that wait in the outbox, which are shown below the state
   readonly outbox?: ReactNode
@@ -87,9 +89,7 @@ function ReplyBox({ resolved, onReply, onAddToOutbox }: ReplyBoxProps) {
       submitLabel={resolved ? 'Reopen' : 'Reply'}
       onSubmit={onReply}
       secondSubmit={
-        onAddToOutbox === undefined
-          ? undefined
-          : { label: 'Add to outbox', onSubmit: onAddToOutbox }
+        onAddToOutbox === undefined ? undefined : { ...addToOutbox, onSubmit: onAddToOutbox }
       }
     />
   )
@@ -143,6 +143,7 @@ export function ThreadCard(props: ThreadCardProps) {
           setProblem(undefined)
           onResolve().catch((error: unknown) => setProblem(problemOf(error)))
         }
+  const hide = resolved ? props.onHide : undefined
   return (
     <MarginCard
       id={id}
@@ -153,9 +154,12 @@ export function ThreadCard(props: ThreadCardProps) {
       active={props.active}
       onFocus={props.onActivate}
       tools={
-        resolve === undefined ? undefined : (
-          <IconButton icon="check" label={`Resolve ${id}`} onClick={resolve} />
-        )
+        <>
+          {resolve !== undefined && (
+            <IconButton icon="check" label={`Resolve ${id}`} onClick={resolve} />
+          )}
+          {hide !== undefined && <IconButton icon="hide" label={`Hide ${id}`} onClick={hide} />}
+        </>
       }
     >
       {(fullSize) => (
