@@ -10,7 +10,9 @@ import './margin-lane.css'
 // too, like the card of a resolved thread. Its marker is placed in the lane like a card. If its
 // popup is true, the item is shown below its anchor over the other cards. If an item goes behind
 // its marker while its popup is true, like the card of a thread that Nick has just resolved,
-// onClosePopup is called and the focus moves to the marker of the item.
+// onClosePopup is called and the focus moves to the marker of the item. If the lane stops showing an
+// item while the focus is inside the item, like the card that Nick has just hidden or closed with
+// Escape, the focus will move to the marker of the item too.
 export interface MarginItem {
   readonly key: string
   readonly anchorLines: string | undefined
@@ -191,6 +193,18 @@ function scopeOf(lane: HTMLElement): Element {
   return lane.closest('[data-margin-scope]') ?? lane.ownerDocument.body
 }
 
+// A narrow reading column only shows the item whose popup is true. A wide reading column also
+// shows every item that isn't behind its marker.
+function isShown(item: MarginItem, wide: boolean): boolean {
+  return item.popup || (wide && item.behindMarker !== true)
+}
+
+function focusMarker(lane: HTMLElement, key: string): void {
+  lane
+    .querySelector<HTMLElement>(`:scope > [data-marker="${key}"] button`)
+    ?.focus({ preventScroll: true })
+}
+
 // The focus moves to the marker without a scroll, because the lane is already laid out by then. The
 // control that Nick clicked in the item is hidden with the item.
 function useCloseItemBehindMarker(
@@ -205,13 +219,22 @@ function useCloseItemBehindMarker(
         item.popup && item.behindMarker === true && behindMarker.current.get(item.key) === false,
     )
     behindMarker.current = new Map(items.map((item) => [item.key, item.behindMarker === true]))
-    if (lane === null || hidden === undefined || scopeOf(lane).clientWidth < wideReadingColumn) {
+    if (lane === null) {
       return
     }
-    onClosePopup?.()
-    lane
-      .querySelector<HTMLElement>(`:scope > [data-marker="${hidden.key}"] button`)
-      ?.focus({ preventScroll: true })
+    const wide = scopeOf(lane).clientWidth >= wideReadingColumn
+    if (wide && hidden !== undefined) {
+      onClosePopup?.()
+      focusMarker(lane, hidden.key)
+      return
+    }
+    const focusedKey = childrenWith(lane, 'data-key').find((element) =>
+      element.contains(lane.ownerDocument.activeElement),
+    )?.dataset['key']
+    const focused = items.find((item) => item.key === focusedKey)
+    if (focused !== undefined && !isShown(focused, wide)) {
+      focusMarker(lane, focused.key)
+    }
   })
 }
 

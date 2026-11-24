@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
-import { MessageBox, problemOf } from './message-box'
+import { addToOutbox, MessageBox, problemOf } from './message-box'
 
 class RefusedMessageError extends Error {}
 
@@ -93,7 +93,7 @@ describe('MessageBox', () => {
         label="Write a comment…"
         submitLabel="Send"
         onSubmit={onSubmit}
-        secondSubmit={{ label: 'Add to outbox', onSubmit: onQueue }}
+        secondSubmit={{ ...addToOutbox, onSubmit: onQueue }}
       />,
     )
     const field = screen.getByRole('textbox', { name: 'Write a comment…' })
@@ -110,11 +110,26 @@ describe('MessageBox', () => {
         label="Write a comment…"
         submitLabel="Send"
         onSubmit={() => Promise.resolve()}
-        secondSubmit={{ label: 'Add to outbox', onSubmit: () => Promise.resolve() }}
+        secondSubmit={{ ...addToOutbox, onSubmit: () => Promise.resolve() }}
         onCancel={() => undefined}
       />,
     )
     expect(screen.getByRole('button', { name: 'Add to outbox' })).toHaveProperty('disabled', true)
+  })
+
+  it('shows the icon and the short text on the second button whose name for a screen reader is its label', () => {
+    render(
+      <MessageBox
+        label="Write a comment…"
+        submitLabel="Send"
+        onSubmit={() => Promise.resolve()}
+        secondSubmit={{ ...addToOutbox, onSubmit: () => Promise.resolve() }}
+        onCancel={() => undefined}
+      />,
+    )
+    const button = screen.getByRole('button', { name: 'Add to outbox' })
+    expect(button.textContent).toBe('Outbox')
+    expect(button.querySelector('svg path')?.getAttribute('d')).toBe('M8 3v10M3 8h10')
   })
 
   it('starts with the initial text in the field and the cursor after it when it is given', () => {

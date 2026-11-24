@@ -17,6 +17,11 @@ export const Primary: Story = { args: { variant: 'primary', children: 'Send the 
 
 export const Disabled: Story = { args: { disabled: true } }
 
+// The button that adds a reply to the outbox, whose name for a screen reader is its label
+export const WithIcon: Story = {
+  args: { icon: 'plus', label: 'Add to outbox', children: 'Outbox' },
+}
+
 // The button that marks a task as done in the Inbox
 export const Small: Story = { args: { size: 'small', children: 'Mark as done' } }
 

@@ -1,12 +1,24 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react'
 import { Button } from '../button/button'
+import { type IconName } from '../icon/icon'
 import './message-box.css'
 
-// The second submit is a quiet button before the main one, such as "Add to outbox" before "Send".
-// Enter always submits with the main button.
+// The second submit is a quiet button before the main one, such as "Outbox" before "Send". The
+// button shows its icon before buttonText, which is short so that the button fits in a narrow card.
+// A screen reader reads out the label instead, like "Add to outbox". Enter always submits with the
+// main button.
 interface SecondSubmit {
   readonly label: string
+  readonly buttonText: string
+  readonly icon: IconName
   readonly onSubmit: (text: string) => Promise<void>
+}
+
+// The second submit of a box whose message can wait in the outbox, like a reply to a thread
+export const addToOutbox: Omit<SecondSubmit, 'onSubmit'> = {
+  label: 'Add to outbox',
+  buttonText: 'Outbox',
+  icon: 'plus',
 }
 
 interface MessageBoxProps {
@@ -90,12 +102,14 @@ export function MessageBox({
           {onCancel !== undefined && <Button onClick={onCancel}>Cancel</Button>}
           {secondSubmit !== undefined && (
             <Button
+              label={secondSubmit.label}
+              icon={secondSubmit.icon}
               onClick={() => {
                 void submit(secondSubmit.onSubmit)
               }}
               disabled={message === '' || pending}
             >
-              {secondSubmit.label}
+              {secondSubmit.buttonText}
             </Button>
           )}
           <Button

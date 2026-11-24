@@ -524,6 +524,13 @@ The template that shows the numbers is built in <task:t-2>.
   },
   {
     feature:
+      'The Hide button on the card of a resolved thread, which hides the card behind its marker. The card of the resolved comment c-3 on the invoice template shows the button when the card is opened from its marker. To see a card that the agent resolved while Nick was on the page, open the first retry. Then run the command done g-1 "Wrote which shops." with SCRATCH_PADS_HOME set to the folder that pnpm try prints. The card of g-1 stays in the margin until Nick presses Hide.',
+    // The grammar note g-1 still waits for the agent. That's why this example doesn't need to add
+    // anything.
+    add: () => undefined,
+  },
+  {
+    feature:
       'The title of the tab, which switches to "(6) Waiting for you · Invoice export" for 3 seconds every 15 seconds while Nick looks at another tab or another app. The count is the count on the Inbox button.',
     // Every item that the examples above add to the Inbox already waits for Nick. That's why this
     // example doesn't need to add anything.

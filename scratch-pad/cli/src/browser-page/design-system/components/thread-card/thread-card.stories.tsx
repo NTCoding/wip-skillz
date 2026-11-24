@@ -30,6 +30,7 @@ const meta = {
     onActivate: () => undefined,
     onReply: () => Promise.resolve(),
     onResolve: () => Promise.resolve(),
+    onHide: () => undefined,
   },
 } satisfies Meta<typeof ThreadCard>
 

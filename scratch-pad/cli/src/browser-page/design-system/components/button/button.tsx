@@ -1,4 +1,5 @@
 import { type ReactNode, type Ref } from 'react'
+import { Icon, type IconName } from '../icon/icon'
 import './button.css'
 
 // A button in a menu is one of the items of the menu. The menu moves the focus between its items
@@ -15,6 +16,8 @@ interface ButtonProps {
   // A small button is shown inside an item of a list, like the button that marks a task as done in
   // the Inbox.
   readonly size?: 'regular' | 'small'
+  // The icon before the text, like the plus of the button that adds a reply to the outbox
+  readonly icon?: IconName | undefined
   readonly disabled?: boolean
   // A pending button ignores a press until its request has finished. It isn't disabled, because the
   // browser moves the focus away from a button that is disabled. That would close a panel that the
@@ -28,8 +31,17 @@ interface ButtonProps {
   readonly menuItem?: MenuItemProps
 }
 
-function classNameOf(variant: 'primary' | 'quiet', size: 'regular' | 'small'): string {
-  return size === 'small' ? `button button--${variant} button--small` : `button button--${variant}`
+function classNameOf(
+  variant: 'primary' | 'quiet',
+  size: 'regular' | 'small',
+  icon: IconName | undefined,
+): string {
+  return [
+    'button',
+    `button--${variant}`,
+    ...(size === 'small' ? ['button--small'] : []),
+    ...(icon === undefined ? [] : ['button--icon']),
+  ].join(' ')
 }
 
 export function Button({
@@ -37,6 +49,7 @@ export function Button({
   onClick,
   variant = 'quiet',
   size = 'regular',
+  icon,
   disabled = false,
   pending = false,
   label,
@@ -49,7 +62,7 @@ export function Button({
       type="button"
       role={menuItem === undefined ? undefined : 'menuitem'}
       tabIndex={menuItem?.tabIndex}
-      className={classNameOf(variant, size)}
+      className={classNameOf(variant, size, icon)}
       aria-label={label}
       aria-describedby={describedBy}
       aria-disabled={pending ? true : undefined}
@@ -60,6 +73,7 @@ export function Button({
       }}
       disabled={disabled}
     >
+      {icon !== undefined && <Icon name={icon} />}
       {children}
     </button>
   )

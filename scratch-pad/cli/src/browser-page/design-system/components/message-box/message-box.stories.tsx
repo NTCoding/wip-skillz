@@ -1,5 +1,5 @@
 import { type Meta, type StoryObj } from '@storybook/react-vite'
-import { MessageBox } from './message-box'
+import { addToOutbox, MessageBox } from './message-box'
 
 const meta = {
   title: 'Design system/MessageBox',
@@ -22,7 +22,7 @@ export const WithOutbox: Story = {
     label: 'Write a comment…',
     submitLabel: 'Send',
     onCancel: () => undefined,
-    secondSubmit: { label: 'Add to outbox', onSubmit: () => Promise.resolve() },
+    secondSubmit: { ...addToOutbox, onSubmit: () => Promise.resolve() },
     initialText: 'Is 5 retries enough on a slow network?',
   },
 }

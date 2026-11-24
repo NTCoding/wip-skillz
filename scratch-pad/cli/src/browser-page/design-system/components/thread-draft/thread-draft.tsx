@@ -1,5 +1,5 @@
 import { MarginCard } from '../margin-card/margin-card'
-import { MessageBox } from '../message-box/message-box'
+import { addToOutbox, MessageBox } from '../message-box/message-box'
 import { ThreadKind, threadKindLabels, type ThreadKindName } from '../thread-kind/thread-kind'
 import './thread-draft.css'
 
@@ -37,9 +37,7 @@ export function ThreadDraft(props: ThreadDraftProps) {
         submitLabel="Send"
         onSubmit={onSend}
         secondSubmit={
-          onAddToOutbox === undefined
-            ? undefined
-            : { label: 'Add to outbox', onSubmit: onAddToOutbox }
+          onAddToOutbox === undefined ? undefined : { ...addToOutbox, onSubmit: onAddToOutbox }
         }
         onCancel={onCancel}
         focusOnMount

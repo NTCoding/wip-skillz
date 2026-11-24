@@ -209,10 +209,10 @@ describe('MarginLane', () => {
     expect(lane.children).toHaveLength(1)
   })
 
-  it('closes the popup of an item and moves the focus to its marker when the item goes behind its marker in a wide reading column', () => {
+  it('closes the popup of an item when the item goes behind its marker in a wide reading column and moves the focus to its marker even if the popup closes in the same update', () => {
     vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockReturnValue(1200)
     const onClosePopup = vi.fn<() => void>()
-    const lane = (behindMarker: boolean, close: (() => void) | undefined) => (
+    const lane = (popup: boolean, behindMarker: boolean, close?: () => void) => (
       <MarginLane
         label="Comments and notes"
         items={[
@@ -221,21 +221,26 @@ describe('MarginLane', () => {
             anchorLines: '3-3',
             content: <button type="button">Resolve c-1</button>,
             marker: <button type="button">Comment c-1</button>,
-            popup: true,
+            popup,
             behindMarker,
           },
         ]}
         onClosePopup={close}
       />
     )
-    const { rerender } = render(lane(false, onClosePopup))
-    rerender(lane(true, onClosePopup))
-    expect(onClosePopup).toHaveBeenCalledTimes(1)
-    expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Comment c-1' }))
-    rerender(lane(false, undefined))
-    screen.getByRole('button', { name: 'Resolve c-1' }).focus()
-    rerender(lane(true, undefined))
-    expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Comment c-1' }))
+    const marker = () => screen.getByRole('button', { name: 'Comment c-1' })
+    const resolve = () => screen.getByRole('button', { name: 'Resolve c-1' })
+    const { rerender } = render(lane(true, false, onClosePopup))
+    rerender(lane(true, true, onClosePopup))
+    expect([onClosePopup.mock.calls.length, document.activeElement]).toStrictEqual([1, marker()])
+    rerender(lane(true, false))
+    resolve().focus()
+    rerender(lane(true, true))
+    expect(document.activeElement).toBe(marker())
+    rerender(lane(true, false, onClosePopup))
+    resolve().focus()
+    rerender(lane(false, true, onClosePopup))
+    expect([onClosePopup.mock.calls.length, document.activeElement]).toStrictEqual([1, marker()])
   })
 
   it('leaves the popup of an item open when the item goes behind its marker in a narrow reading column or is behind its marker from the start', () => {
