@@ -13,6 +13,7 @@ set -uo pipefail
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 rules="$here/banned-constructions.txt"
 allow="$here/banned-constructions.allow"
+private="$HOME/.claude/hooks/banned-constructions.private.txt"
 soft="$here/banned-constructions.soft"
 warn="$here/banned-constructions.warn"
 [[ -r "$rules" ]] || exit 0
@@ -74,7 +75,8 @@ done
 [[ -n "$text" ]] || exit 0
 
 # Each line of the rules file is name@@regex@@exemption, the exemption
-# optional. A regex is full of "|", so the fields are split by hand.
+# optional. A regex is full of "|", so the fields are split by hand. A private
+# rules file in the same format is read too.
 while IFS= read -r entry; do
   [[ -n "${entry// }" ]] || continue
   [[ "${entry:0:1}" == "#" ]] && continue
@@ -120,4 +122,17 @@ while IFS= read -r entry; do
   [[ -n "$found" ]] || continue
   printf '%s\n' "$name"
   while IFS= read -r line; do printf '    %s\n' "$line"; done <<<"$found"
-done < "$rules"
+done < <(
+  if [[ -r "$private" ]]; then
+    # A private rule with the same short name as a rule in the rules file
+    # replaces it, so a private rule can widen or narrow a public one.
+    awk -F'@@' '
+      function short(l,  n) { n = $1; sub(/\. .*/, "", n); return n }
+      NR == FNR { if ($0 !~ /^#/ && $0 ~ /@@/) skip[short($0)] = 1; next }
+      !(short($0) in skip) { print }
+    ' "$private" "$rules"
+    cat "$private"
+  else
+    cat "$rules"
+  fi
+)
