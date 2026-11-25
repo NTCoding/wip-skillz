@@ -18,11 +18,21 @@ const fieldLabels: Readonly<Record<DecisionField, string>> = {
   pick: 'Pick',
 }
 
+// An option that Nick can choose on a decision page. The choice is the value that the browser
+// sends, like option-2. The label is the heading of the option on the page.
+export interface DecisionChoice {
+  readonly choice: string
+  readonly label: string
+}
+
 export interface DecisionBlock extends DecisionFields {
   readonly id: string
   readonly firstLine: number
   readonly lastLine: number
   readonly question: string | undefined
+  // Only the decision of a decision page has options. An inline block has a proposal and an
+  // alternative instead.
+  readonly options?: readonly DecisionChoice[] | undefined
 }
 
 interface FieldScan {

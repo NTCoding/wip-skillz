@@ -36,10 +36,29 @@ const pageLink = z.discriminatedUnion('kind', [
 
 const answer = z.union([z.object({ choice: z.string() }), z.object({ written: z.string() })])
 
+// Nick has asked the agent to change a decision. A review with an outcome is a decision that the
+// agent has reopened.
+const decisionReview = z.object({
+  id: z.string(),
+  page: z.string(),
+  line: z.number(),
+  question: z.string(),
+  round: z.number(),
+  reason: z.string(),
+  outcome: optionalText,
+  time: z.string(),
+})
+
 const decisionOnPage = z.object({
   id: z.string(),
   question: optionalText,
   answer: answer.nullable().transform((value) => value ?? undefined),
+  reviews: z.array(decisionReview),
+  // The options of the decision on a decision page. An inline block doesn't have any.
+  options: z
+    .array(z.object({ choice: z.string(), label: z.string() }))
+    .nullish()
+    .transform((value) => value ?? undefined),
 })
 
 export const viewedPageResponse = z.object({
@@ -202,6 +221,11 @@ const openDecision = z.object({
   context: contextSummary.nullable().transform((value) => value ?? undefined),
 })
 
+export const decisionsResponse = z.object({
+  open: z.array(openDecision),
+  reviews: z.array(decisionReview),
+})
+
 export const nickInboxResponse = z.object({
   threads: z.array(thread),
   decisions: z.array(openDecision),
@@ -237,6 +261,7 @@ export const exportedPadData = z.object({
   threads: z.array(thread),
   progressTracker: progressTrackerResponse,
   decisionLog: z.array(decisionLogEntry),
+  decisions: decisionsResponse,
   improvements: improvementsResponse,
 })
 
@@ -255,6 +280,8 @@ export type PageSummary = z.infer<typeof pageSummary>
 export type ViewedPage = z.infer<typeof viewedPageResponse>
 export type ProgressTracker = z.infer<typeof progressTrackerResponse>
 export type DecisionLogEntry = z.infer<typeof decisionLogEntry>
+export type DecisionReview = z.infer<typeof decisionReview>
+export type DecisionsOfPad = z.infer<typeof decisionsResponse>
 export type Improvements = z.infer<typeof improvementsResponse>
 export type PadChange = z.infer<typeof padChange>
 export type Answer = z.infer<typeof answer>

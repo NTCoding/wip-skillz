@@ -5,6 +5,7 @@ import { type ItemType } from '../items/item-id'
 import { type ItemLinks } from '../item-links/item-links'
 import { type PadDbWatch } from '../scratch-pad-folder/pad-db-watch'
 import { type ScratchPadFolder } from '../scratch-pad-folder/scratch-pad-folder'
+import { brokenDecisionPageLines } from './decision-page-commands'
 import { printedInboxText, recordAsPrinted, selectFromPadDb } from './inbox-commands'
 
 export interface WaitRequest {
@@ -29,6 +30,7 @@ export async function waitForAgentInbox(
       ? Number.POSITIVE_INFINITY
       : Date.now() + request.timeoutMilliseconds
   const watch = folder.watchPadDb()
+  const problems = new KnownProblems(folder)
   try {
     for (;;) {
       const timedOut = Date.now() >= deadline
@@ -36,10 +38,13 @@ export async function waitForAgentInbox(
       if (check.kind === 'printed') {
         return printedInboxText(folder, check.selection, false, await request.links())
       }
+      if (problems.haveNewOnes()) {
+        return printedInboxText(folder, nothingNew(folder, request), false, await request.links())
+      }
       if (timedOut || request.stopSignal.aborted) {
         return `the wait ended before a new item arrived in ${folder.name}`
       }
-      await nextChange(watch, Math.min(deadline, check.until), request)
+      await nextChange(watch, Math.min(deadline, check.until), request, () => problems.changed())
     }
   } finally {
     watch.close()
@@ -65,8 +70,49 @@ function printOnceNickIsQuiet(
   })
 }
 
-async function nextChange(watch: PadDbWatch, wakeAt: number, request: WaitRequest): Promise<void> {
-  while (!request.stopSignal.aborted && Date.now() < wakeAt && !watch.hasChanged()) {
+function brokenPagesText(folder: ScratchPadFolder): string {
+  return brokenDecisionPageLines(folder).join('\n')
+}
+
+// The problems of the decision pages that the agent already knows about. The agent is told again
+// when a page that was ready breaks or when the problems of a broken page change.
+class KnownProblems {
+  private known: string
+
+  constructor(private readonly folder: ScratchPadFolder) {
+    this.known = brokenPagesText(folder)
+  }
+
+  changed(): boolean {
+    return brokenPagesText(this.folder) !== this.known
+  }
+
+  // The problems have changed since the last call and the pages still have a problem
+  haveNewOnes(): boolean {
+    const now = brokenPagesText(this.folder)
+    const changed = now !== this.known
+    this.known = now
+    return changed && now !== ''
+  }
+}
+
+// The selection of an inbox that doesn't have any new item
+function nothingNew(folder: ScratchPadFolder, request: WaitRequest): AgentInboxSelection {
+  return folder.read((pad) => selectFromPadDb(pad, { types: request.types, includeSeen: false }))
+}
+
+async function nextChange(
+  watch: PadDbWatch,
+  wakeAt: number,
+  request: WaitRequest,
+  pagesChanged: () => boolean,
+): Promise<void> {
+  while (
+    !request.stopSignal.aborted &&
+    Date.now() < wakeAt &&
+    !watch.hasChanged() &&
+    !pagesChanged()
+  ) {
     await sleep(Math.min(request.checkMilliseconds, wakeAt - Date.now()))
   }
 }

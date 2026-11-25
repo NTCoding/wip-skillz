@@ -1,8 +1,7 @@
 import { act, fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
-import { type ViewedPage } from './api-responses'
-import { exportPad, exportPadAddresses, indexPage } from './browser-page-fixtures'
+import { exportPad, indexPage } from './browser-page-fixtures'
 import {
   answeredDecisions,
   keyedBlocks,
@@ -10,30 +9,7 @@ import {
   parsedPageBody,
   type PageElementContext,
 } from './page-elements'
-
-function contextFor(page: ViewedPage, overrides: Partial<PageElementContext> = {}) {
-  const context: PageElementContext = {
-    addresses: exportPadAddresses,
-    page,
-    onNavigate: () => undefined,
-    loadPreview: () => Promise.resolve(undefined),
-    findTask: () => undefined,
-    onAnswerDecision: () => Promise.resolve(),
-    onCommentOnBlock: () => undefined,
-    answersOnThisPage: new Map(),
-    ...overrides,
-  }
-  return context
-}
-
-function renderPage(page: ViewedPage, overrides: Partial<PageElementContext> = {}) {
-  const context = contextFor(page, overrides)
-  return render(<article>{pageElements(context, parsedPageBody(page.html), new Map())}</article>)
-}
-
-function withHtml(html: string): ViewedPage {
-  return { ...indexPage, html, links: [], decisions: [] }
-}
+import { answeredDecision, contextFor, renderPage, withHtml } from './page-elements-fixtures'
 
 describe('pageElements', () => {
   it('keeps the headings with their ids and the lines of each block when the page is converted', () => {
@@ -117,7 +93,7 @@ describe('pageElements', () => {
     ].join('')
     const page = {
       ...withHtml(html),
-      decisions: [{ id: 'd-1', question: undefined, answer: { choice: 'proposal' } }],
+      decisions: [answeredDecision('d-1', undefined, { choice: 'proposal' })],
     }
     renderPage(page)
     expect(screen.getByRole('note').textContent).toBe(
@@ -131,82 +107,12 @@ describe('pageElements', () => {
   it('shows the text that Nick wrote when Nick wrote his own answer', () => {
     const page = {
       ...withHtml('<div class="decision" data-decision="d-2" data-lines="3-7"></div>'),
-      decisions: [
-        { id: 'd-2', question: 'Who pays the fee?', answer: { written: 'The shop pays.' } },
-      ],
+      decisions: [answeredDecision('d-2', 'Who pays the fee?', { written: 'The shop pays.' })],
     }
     renderPage(page)
     expect(screen.getByRole('region', { name: 'Decision d-2' }).textContent).toContain(
       "Nick's answer: The shop pays.",
     )
-  })
-
-  it('returns the question, the lines, the fields, the answer and the paragraphs under the question of each answered decision', () => {
-    const html = [
-      '<h2 data-lines="1-1">Will the export job retry 8 times?</h2>',
-      '<p data-lines="3-3">The network of a shop can be slow.</p>',
-      '<p data-lines="5-5"><img src="steps.svg" alt="The 3 steps"></p>',
-      '<pre data-lines="7-9"><code>retries = 8</code></pre>',
-      '<p data-lines="11-11">The job retries 8 times now.</p>',
-      '<div class="decision" data-decision="d-1" data-lines="13-17">',
-      '<div class="decision-proposal"><p class="decision-label">Proposal</p><p>Raise it.</p></div>',
-      '</div>',
-    ].join('')
-    const page = {
-      ...withHtml(html),
-      decisions: [
-        {
-          id: 'd-1',
-          question: 'Will the export job retry 8 times?',
-          answer: { choice: 'proposal' },
-        },
-      ],
-    }
-    const [decision] = answeredDecisions(contextFor(page), parsedPageBody(html))
-    expect({ ...decision, proposal: undefined }).toStrictEqual({
-      id: 'd-1',
-      question: 'Will the export job retry 8 times?',
-      headingLines: '1-1',
-      blockLines: '13-17',
-      proposal: undefined,
-      alternative: null,
-      pick: null,
-      answer: 'proposal',
-      context: ['The network of a shop can be slow.', 'The job retries 8 times now.'],
-    })
-  })
-
-  it('doesn’t return the lines of an answered decision when its block doesn’t have any', () => {
-    const html =
-      '<h2 data-lines="1-1">Who pays the fee?</h2><div class="decision" data-decision="d-1"></div>'
-    const page = {
-      ...withHtml(html),
-      decisions: [{ id: 'd-1', question: 'Who pays the fee?', answer: { written: 'The shop.' } }],
-    }
-    const [decision] = answeredDecisions(contextFor(page), parsedPageBody(html))
-    expect([decision?.blockLines, decision?.answer]).toStrictEqual([undefined, 'The shop.'])
-  })
-
-  it('keeps an answered decision in the text when the decision has a warning or is inside another block', () => {
-    const html = [
-      '<h2 data-lines="1-1">Who pays the fee?</h2>',
-      '<div class="decision" data-decision="d-1">',
-      '<p class="named-block-warning">The decision doesn’t have a pick: line.</p>',
-      '</div>',
-      '<blockquote><h3>Who sends the file?</h3><div class="decision" data-decision="d-2"></div></blockquote>',
-    ].join('')
-    const page = {
-      ...withHtml(html),
-      decisions: [
-        { id: 'd-1', question: 'Who pays the fee?', answer: { choice: 'proposal' } },
-        { id: 'd-2', question: 'Who sends the file?', answer: { choice: 'alternative' } },
-      ],
-    }
-    renderPage(page)
-    expect(answeredDecisions(contextFor(page), parsedPageBody(html))).toStrictEqual([])
-    expect(
-      screen.getAllByRole('region').map((card) => card.getAttribute('aria-label')),
-    ).toStrictEqual(['Decision d-1', 'Decision d-2'])
   })
 
   it('shows a decision without a question when the page doesn’t know the id of the decision', () => {

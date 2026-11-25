@@ -1,7 +1,9 @@
 import { type Answer, type DecisionAnswer } from '../decisions/decision-answer'
+import { type DecisionReview } from '../decisions/decision-review'
 import { type DecisionBlock } from '../rendered-page/decision-block'
 import {
   nickAnswersDecision,
+  nickRequestsChanges,
   nickComments,
   nickDeletesImprovement,
   nickEditsImprovement,
@@ -19,6 +21,7 @@ import {
 } from '../nick-actions/nick-actions'
 import {
   decisionLogOf,
+  decisionsOfPad,
   improvementsOf,
   nickInboxItems,
   outboxOf,
@@ -46,8 +49,10 @@ import {
   commentRequestFrom,
   improvementEditFrom,
   RequestBody,
+  reviewRequestFrom,
   sectionHashesFrom,
   type AnswerRequest,
+  type ReviewRequest,
 } from './request-body'
 
 export type ApiResponse =
@@ -89,6 +94,14 @@ export class UnknownDecisionBlockError extends ScratchPadError {
   }
 }
 
+export class UnknownChoiceError extends ScratchPadError {
+  constructor(id: string, choice: string, page: string, valid: readonly string[]) {
+    super(
+      `Decision ${id} on ${page} doesn't have the choice ${choice}. The choices are ${valid.join(', ')}.`,
+    )
+  }
+}
+
 export class DecisionWithoutQuestionError extends ScratchPadError {
   constructor(id: string, page: string) {
     super(
@@ -117,12 +130,14 @@ function bodyOf(request: ApiRequest): RequestBody {
   return RequestBody.parse(request.body)
 }
 
-function nickAnswersDecisionBlock(
-  folder: ScratchPadFolder,
-  id: string,
-  request: AnswerRequest,
-): DecisionAnswer {
-  const page = viewPage(folder, request.page)
+interface DecisionBlockOnPage {
+  readonly block: DecisionBlock
+  readonly question: string
+  readonly page: string
+}
+
+function decisionBlockOn(folder: ScratchPadFolder, id: string, file: string): DecisionBlockOnPage {
+  const page = viewPage(folder, file)
   const block = page.decisions.find((decision) => decision.id === id)
   if (block === undefined) {
     throw new UnknownDecisionBlockError(id, page.page)
@@ -130,24 +145,61 @@ function nickAnswersDecisionBlock(
   if (block.question === undefined) {
     throw new DecisionWithoutQuestionError(id, page.page)
   }
+  return { block, question: block.question, page: page.page }
+}
+
+function nickAnswersDecisionBlock(
+  folder: ScratchPadFolder,
+  id: string,
+  request: AnswerRequest,
+): DecisionAnswer {
+  const { block, question, page } = decisionBlockOn(folder, id, request.page)
+  assertChoiceOnDecision(block, request.answer, page)
   return nickAnswersDecision(
     folder,
-    {
-      id: block.id,
-      page: page.page,
-      line: block.firstLine,
-      question: block.question,
-      answer: request.answer,
-    },
+    { id: block.id, page, line: block.firstLine, question, answer: request.answer },
     chosenOptionOf(block, request.answer),
   )
 }
 
+function nickRequestsDecisionBlockChanges(
+  folder: ScratchPadFolder,
+  id: string,
+  request: ReviewRequest,
+): DecisionReview {
+  const { block, question, page } = decisionBlockOn(folder, id, request.page)
+  return nickRequestsChanges(folder, {
+    id: block.id,
+    page,
+    line: block.firstLine,
+    question,
+    reason: request.reason,
+  })
+}
+
+// The text of the option that Nick chose. A decision page has options that are numbered, whereas
+// an inline block has a proposal and an alternative.
 function chosenOptionOf(block: DecisionBlock, answer: Answer): string | undefined {
   if (!('choice' in answer)) {
     return undefined
   }
-  return answer.choice === 'proposal' ? block.proposal : block.alternative
+  if (block.options === undefined) {
+    return answer.choice === 'proposal' ? block.proposal : block.alternative
+  }
+  return block.options.find((option) => option.choice === answer.choice)?.label
+}
+
+function assertChoiceOnDecision(block: DecisionBlock, answer: Answer, page: string): void {
+  if (!('choice' in answer)) {
+    return
+  }
+  const valid =
+    block.options === undefined
+      ? ['proposal', 'alternative']
+      : block.options.map((option) => option.choice)
+  if (!valid.includes(answer.choice)) {
+    throw new UnknownChoiceError(block.id, answer.choice, page, valid)
+  }
 }
 
 function threadBody(folder: ScratchPadFolder, thread: Thread): { readonly thread: unknown } {
@@ -201,6 +253,7 @@ const routes: readonly Route[] = [
   padRoute('GET', '/nick-inbox', (folder) => json(nickInboxItems(folder))),
   padRoute('GET', '/progress-tracker', (folder) => json(progressTrackerOf(folder))),
   padRoute('GET', '/decision-log', (folder) => json({ decisions: decisionLogOf(folder) })),
+  padRoute('GET', '/decisions', (folder) => json(decisionsOfPad(folder))),
   padRoute('GET', '/improvements', (folder) => json(improvementsOf(folder))),
   padRoute('GET', '/outbox', (folder) => json(outboxOf(folder))),
   padRoute('GET', '/read-marks', (folder) => json(readMarksOf(folder))),
@@ -218,6 +271,11 @@ const routes: readonly Route[] = [
   padRoute('POST', '/decisions/([^/]+)', (folder, request, id) =>
     json({
       decision: nickAnswersDecisionBlock(folder, id, answerRequestFrom(bodyOf(request))),
+    }),
+  ),
+  padRoute('POST', '/decisions/([^/]+)/request-changes', (folder, request, id) =>
+    json({
+      decision: nickRequestsDecisionBlockChanges(folder, id, reviewRequestFrom(bodyOf(request))),
     }),
   ),
   padRoute('POST', '/tasks/([^/]+)/done', (folder, _request, id) =>

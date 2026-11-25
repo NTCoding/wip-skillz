@@ -22,6 +22,26 @@ describe('decisionInboxLines', () => {
     ])
   })
 
+  it('prints the heading of the option that Nick chose on a decision page', () => {
+    const decision = aDecisionAnswer({ answer: { choice: 'option-2' } })
+    const lines = ['## Options', '### Option 1: Wait 30 seconds', '### Option 2: Double the wait']
+
+    expect(decisionInboxLines(decision, 'pages/1-idea.md', servedLinks, lines)[2]).toBe(
+      '  Nick chose: Option 2: Double the wait',
+    )
+    expect(decisionShowLines(decision, 'pages/1-idea.md', servedLinks, lines)[2]).toBe(
+      '  Nick chose: Option 2: Double the wait',
+    )
+  })
+
+  it('prints the text that Nick wrote in his own words', () => {
+    const decision = aDecisionAnswer({ answer: { written: 'Wait 1 minute.' } })
+
+    expect(decisionInboxLines(decision, 'pages/1-idea.md', servedLinks)[2]).toBe(
+      '  Nick wrote: Wait 1 minute.',
+    )
+  })
+
   it("leaves out the link when the server isn't running", () => {
     expect(decisionInboxLines(aDecisionAnswer({}), 'pages/index.md', unservedLinks)).toStrictEqual([
       '[d-1] decision · pages/index.md:9 · "Will the invoice template show the tax number?"',

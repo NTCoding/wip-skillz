@@ -46,6 +46,24 @@ export function pageFilesInOrder(files: readonly PageFile[]): PageFile[] {
   )
 }
 
+// The number for a new sub page of a page. A page of the top level is a sub page of the index
+// page, so the parent number is undefined for the index page. The new number follows the numbers of
+// the sub pages that the parent already has.
+export function nextSubPageNumber(
+  files: readonly PageFile[],
+  parentNumber: string | undefined,
+): string {
+  const prefix = parentNumber === undefined ? '' : `${parentNumber}.`
+  const last = files.flatMap((file) => {
+    if (!file.number?.startsWith(prefix)) {
+      return []
+    }
+    const rest = file.number.slice(prefix.length)
+    return /^\d+$/u.test(rest) ? [Number(rest)] : []
+  })
+  return `${prefix}${Math.max(0, ...last) + 1}`
+}
+
 export function parentNumberOf(number: string | undefined): string | undefined {
   const parts = number?.split('.') ?? []
   return parts.length < 2 ? undefined : parts.slice(0, -1).join('.')

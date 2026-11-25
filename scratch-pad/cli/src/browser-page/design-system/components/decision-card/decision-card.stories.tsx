@@ -23,6 +23,33 @@ export const WaitingForNick: Story = {}
 
 export const Answered: Story = { args: { answer: 'proposal' } }
 
+export const ChangesRequested: Story = {
+  args: { reviews: [{ reason: "The options don't say who the team is.", outcome: undefined }] },
+}
+
+export const Reopened: Story = {
+  args: {
+    reviews: [
+      {
+        reason: "The options don't say who the team is.",
+        outcome: 'Added who the team is to both options.',
+      },
+    ],
+  },
+}
+
+export const SecondRoundOfChangesRequested: Story = {
+  args: {
+    reviews: [
+      {
+        reason: "The options don't say who the team is.",
+        outcome: 'Added who the team is to both options.',
+      },
+      { reason: 'Say which person on the team reads the log.', outcome: undefined },
+    ],
+  },
+}
+
 export const WithContext: Story = {
   args: {
     context: (

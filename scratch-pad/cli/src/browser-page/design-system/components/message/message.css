@@ -45,3 +45,11 @@
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
+
+.message__text a {
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-color: var(--link-line);
+  text-decoration-thickness: var(--hairline);
+  text-underline-offset: var(--underline-offset-link);
+}

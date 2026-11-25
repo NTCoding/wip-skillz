@@ -29,6 +29,13 @@ describe('changesOfEvents', () => {
     expect(changesOfEvents([event(2, 'decision-asked', 'd-1')])).toStrictEqual([])
   })
 
+  it('returns the decision and the log of decisions when the agent makes a decision page ready', () => {
+    expect(changesOfEvents([event(1, 'decision-ready', 'd-4')])).toStrictEqual([
+      { kind: 'decision', id: 'd-4' },
+      { kind: 'decision-log' },
+    ])
+  })
+
   it('returns the decision and the log of decisions when Nick answers a decision', () => {
     expect(changesOfEvents([event(1, 'decision-answered', 'd-2')])).toStrictEqual([
       { kind: 'decision', id: 'd-2' },

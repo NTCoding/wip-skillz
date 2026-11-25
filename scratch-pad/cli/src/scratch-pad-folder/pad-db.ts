@@ -2,6 +2,7 @@ import { type DatabaseSync } from 'node:sqlite'
 import { type LastPrintedEvents } from '../agent-inbox/agent-inbox'
 import { type DecisionAnswer } from '../decisions/decision-answer'
 import { type DecisionLogEntry } from '../decisions/decision-log'
+import { type DecisionReview } from '../decisions/decision-review'
 import { type NewEvent, type ScratchPadEvent } from '../events/scratch-pad-event'
 import { type Improvement, type NewImprovement } from '../improvements/improvements'
 import { type NewQueuedItem, type QueuedItem } from '../outbox/outbox'
@@ -11,6 +12,7 @@ import { type Thread } from '../threads/thread'
 import { StoredAgentInbox } from './stored-agent-inbox'
 import { StoredDecisionAnswers } from './stored-decision-answers'
 import { StoredDecisionLog } from './stored-decision-log'
+import { StoredDecisionReviews } from './stored-decision-reviews'
 import { StoredEvents } from './stored-events'
 import { StoredImprovements } from './stored-improvements'
 import { StoredOutbox } from './stored-outbox'
@@ -23,6 +25,7 @@ export class PadDb {
   private readonly threads: StoredThreads
   private readonly decisionAnswers: StoredDecisionAnswers
   private readonly decisionLog: StoredDecisionLog
+  private readonly decisionReviews: StoredDecisionReviews
   private readonly improvements: StoredImprovements
   private readonly outbox: StoredOutbox
   private readonly events: StoredEvents
@@ -34,6 +37,7 @@ export class PadDb {
     this.threads = new StoredThreads(db, padName)
     this.decisionAnswers = new StoredDecisionAnswers(db, padName)
     this.decisionLog = new StoredDecisionLog(db, padName)
+    this.decisionReviews = new StoredDecisionReviews(db, padName)
     this.improvements = new StoredImprovements(db, padName)
     this.outbox = new StoredOutbox(db, padName)
     this.events = new StoredEvents(db, padName)
@@ -71,6 +75,18 @@ export class PadDb {
 
   writeDecisionAnswer(decision: DecisionAnswer): void {
     this.decisionAnswers.write(decision)
+  }
+
+  readDecisionReviews(): DecisionReview[] {
+    return this.decisionReviews.readAll()
+  }
+
+  readDecisionRounds(id: string): DecisionReview[] {
+    return this.decisionReviews.readRounds(id)
+  }
+
+  writeDecisionReview(review: DecisionReview): void {
+    this.decisionReviews.write(review)
   }
 
   readEvents(): ScratchPadEvent[] {

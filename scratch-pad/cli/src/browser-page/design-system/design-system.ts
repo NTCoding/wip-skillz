@@ -12,6 +12,7 @@ export {
 export {
   DecisionAnswerForm,
   type DecisionAnswer,
+  type DecisionOption,
 } from './components/decision-answer-form/decision-answer-form'
 export { DecisionCard } from './components/decision-card/decision-card'
 export { DecisionLog, type DecisionLogRow } from './components/decision-log/decision-log'
@@ -59,6 +60,10 @@ export {
   TableOfContents,
   type ContentsEntry,
 } from './components/table-of-contents/table-of-contents'
+export {
+  DecisionPageStatus,
+  type DecisionPageState,
+} from './components/decision-page-status/decision-page-status'
 export { StatusPill } from './components/status-pill/status-pill'
 export { TaskChips, type TaskChipRow } from './components/task-chips/task-chips'
 export { TaskLink } from './components/task-link/task-link'
@@ -84,3 +89,4 @@ export { TopBar, type CurrentSubtree } from './components/top-bar/top-bar'
 export { TopBarPanel } from './components/top-bar-panel/top-bar-panel'
 export { GalleryPanel } from './gallery/gallery-panel'
 export { type Navigate } from './navigation-click'
+export { NavigationProvider } from './navigation-context'

@@ -273,6 +273,8 @@ describe('the decisions that Nick has answered', () => {
           id: 'd-1',
           question: 'Will the export job retry 8 times?',
           answer: { choice: 'alternative' },
+          reviews: [],
+          options: undefined,
         },
       ],
     })

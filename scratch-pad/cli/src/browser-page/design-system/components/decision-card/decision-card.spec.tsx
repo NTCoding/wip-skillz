@@ -1,7 +1,7 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import { type ReactNode } from 'react'
 import { describe, expect, it } from 'vitest'
-import { DecisionCard } from './decision-card'
+import { DecisionCard, type DecisionCardReview } from './decision-card'
 
 function renderCard(
   answer: string | undefined,
@@ -82,5 +82,73 @@ describe('DecisionCard', () => {
   it('leaves the focus alone when the card is first shown with an answer', () => {
     renderCard('proposal', undefined)
     expect(document.activeElement).toBe(document.body)
+  })
+
+  it('leaves out the context and the 3 fields when the card is the card of a decision page', () => {
+    render(
+      <DecisionCard
+        id="d-1"
+        question={undefined}
+        context={<p>The problem.</p>}
+        proposal="Raise the retry limit to 8."
+        alternative="Keep the retry limit at 5."
+        pick="The proposal."
+        answer={undefined}
+        showFields={false}
+      />,
+    )
+    const card = screen.getByRole('region', { name: 'Decision d-1' })
+
+    expect(card.querySelectorAll('dt')).toHaveLength(0)
+    expect(card.textContent).not.toContain('The problem.')
+  })
+
+  describe('a decision that Nick has asked the agent to change', () => {
+    function renderReviewed(reviews: readonly DecisionCardReview[]) {
+      render(
+        <DecisionCard
+          id="d-1"
+          question="Will the export job retry 8 times?"
+          context={undefined}
+          proposal="Raise the retry limit to 8."
+          alternative="Keep the retry limit at 5."
+          pick="The proposal."
+          answer={undefined}
+          reviews={reviews}
+        />,
+      )
+      return screen.getByRole('region', { name: 'Decision d-1' })
+    }
+
+    it('shows that changes are requested with the reason of Nick', () => {
+      const card = renderReviewed([{ reason: 'Who is the team?', outcome: undefined }])
+      expect(card.textContent).toContain('Changes requested')
+      expect(card.textContent).toContain('Nick requested changes: Who is the team?')
+      expect(card.textContent).not.toContain('The agent changed the page')
+    })
+
+    it('shows that the decision waits for Nick again with the line of the agent when the agent has reopened it', () => {
+      const card = renderReviewed([
+        { reason: 'Who is the team?', outcome: 'Added who the team is.' },
+      ])
+      expect(card.textContent).toContain('Waiting for Nick')
+      expect(card.textContent).toContain('The agent changed the page: Added who the team is.')
+    })
+
+    it('lists every round oldest first with its reason and its outcome', () => {
+      const card = renderReviewed([
+        { reason: 'Who is the team?', outcome: 'Added who the team is.' },
+        { reason: 'Say which person.', outcome: undefined },
+      ])
+      expect(
+        within(card)
+          .getAllByRole('listitem')
+          .map((round) => round.textContent),
+      ).toStrictEqual([
+        'Nick requested changes: Who is the team?The agent changed the page: Added who the team is.',
+        'Nick requested changes: Say which person.',
+      ])
+      expect(card.textContent).toContain('Changes requested')
+    })
   })
 })

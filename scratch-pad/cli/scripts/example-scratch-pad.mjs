@@ -531,7 +531,155 @@ The template that shows the numbers is built in <task:t-2>.
   },
   {
     feature:
-      'The title of the tab, which switches to "(6) Waiting for you · Invoice export" for 3 seconds every 15 seconds while Nick looks at another tab or another app. The count is the count on the Inbox button.',
+      'A comment of Nick that contains a link to a page of the scratch pad, a link to another site and a bare address. The comment waits for the agent, so it adds nothing to the Inbox.',
+    add: async (demo) => {
+      await demo.comment('comment', '1-how-the-job-runs.md', {
+        selectedText: 'The network of a small shop can be slow in the evening.',
+        message:
+          'The [retry limit](2-retry-limit.md) page covers this, as does [the Node docs](https://nodejs.org/docs). See also https://example.com/retries.',
+      })
+    },
+  },
+  {
+    feature:
+      'A decision with changes requested and a decision that the agent has reopened. Open the Decisions page, which starts on Open, and press Changes requested. The decision d-4 is not in the Inbox because Nick has asked the agent to change it. The decision d-5 is open again after 2 rounds of changes. The card of d-5 lists both rounds oldest first, each with the reason of Nick and the line of the agent.',
+    add: async (demo) => {
+      demo.changePage(
+        '2-retry-limit.md',
+        (markdown) => `${markdown}
+## Who receives the email after the last retry?
+
+:::decision d-4
+context: The team reads the log in the morning. Read these in order:
+  1. [What the agent logs](#what-the-agent-logs) shows what the team reads.
+proposal: Send the email to the whole team.
+alternative: Send the email to the person on call.
+pick: proposal, because the team reads the log together.
+:::
+
+## Will the job retry a shop at night?
+
+:::decision d-5
+context: The storage of a shop is often down at night. Read these in order:
+  1. [What counts as a failure](#what-counts-as-a-failure) explains when the job retries a shop.
+proposal: Retry a failed shop at night.
+alternative: Retry a failed shop in the morning.
+pick: proposal, because the storage is often back after a few minutes.
+:::
+`,
+      )
+      const page = pageOf('2-retry-limit.md')
+      await demo.post('decisions/d-4/request-changes', {
+        page,
+        reason: "The options don't say who the team is.",
+      })
+      await demo.post('decisions/d-5/request-changes', {
+        page,
+        reason: 'Say how long the storage of a shop is down at night.',
+      })
+      demo.agent('reopen', 'd-5', 'Added how long the storage is down at night to the context.')
+      await demo.post('decisions/d-5/request-changes', {
+        page,
+        reason: 'Say which shops are down at night, because only some shops are.',
+      })
+      demo.agent(
+        'reopen',
+        'd-5',
+        'Added that only the shops in other time zones are down at night.',
+      )
+    },
+  },
+  {
+    feature:
+      'A decision page, which the agent creates with page --type=decision and fills in. The page "When does the job retry a shop?" is a sub page of the retry limit. The agent filled in the page and ran ready d-6, so the page is open. It is in the Inbox as d-6 and the row links to the page. The page shows the status under its title, a table of contents and a Decision section with a button for each of its 3 options. The second option has a before and after of code. The parent page links to the decision page.',
+    add: async (demo) => {
+      demo.agent('page', '2-retry-limit.md', 'night-retries.md', '--type=decision')
+      demo.changePage(
+        '2.2-night-retries.md',
+        (template) => `${template.split('\n').slice(0, 3).join('\n')}
+# When does the job retry a shop?
+The job retries a shop that has failed. This page decides when the retry starts.
+
+## Context
+The storage of a shop is often down at night. For example, shop 12 fails 3 nights a week between 01:00 and 02:00. The job starts at 01:00, so the first retry also fails.
+
+## Options
+
+### Option 1: Retry at once
+The job retries a failed shop straight after the failure.
+
+### Option 2: Retry after the storage is back
+The job waits until the storage of the shop answers. The current text of the step:
+
+\`\`\`text
+retry(shop)
+\`\`\`
+
+The proposed text of the step:
+
+\`\`\`text
+waitUntilStorageIsBack(shop)
+retry(shop)
+\`\`\`
+
+### Option 3: Retry in the morning
+The job retries every failed shop at 07:00.
+
+## Agent recommendation
+Option 2, because the storage is back after a few minutes and a shop gets its file before the morning.
+`,
+      )
+      demo.changePage(
+        '2-retry-limit.md',
+        (markdown) => `${markdown}
+The page [When does the job retry a shop?](night-retries.md) compares 3 options for the first retry.
+`,
+      )
+      demo.agent('ready', 'd-6')
+    },
+  },
+  {
+    feature:
+      'A draft decision page. The agent created the page with page --type=decision and has not filled in the template. Nick can open the page. It shows the status Draft without a table of contents or a Decision section, and the decision d-7 is not in the Inbox or on the Decisions page. check lists the placeholders and reports that the retry limit page does not link to the page. The command ready d-7 fails and lists the same problems.',
+    add: async (demo) => {
+      demo.agent('page', '2-retry-limit.md', 'storage-costs.md', '--type=decision')
+    },
+  },
+  {
+    feature:
+      'A decision page that was open and then broke the template. The agent made the page ready and then deleted the second option from the file. The page stays in the Inbox with the status Open and a button for the remaining option. The server shows the problems under the marker. The agent sees the same problems in check, inbox and wait.',
+    add: async (demo) => {
+      demo.agent('page', '2-retry-limit.md', 'tax-rounding.md', '--type=decision')
+      demo.changePage(
+        '2.4-tax-rounding.md',
+        (template) => `${template.split('\n').slice(0, 3).join('\n')}
+# Which module rounds the tax?
+The invoice and the export both round the tax. This page decides which module rounds it.
+
+## Context
+The invoice rounds each line and the export rounds the total. For example, 3 lines of 0.333 give 1.00 in the invoice and 0.99 in the export.
+
+## Options
+
+### Option 1: The invoice module
+The invoice module rounds every line.
+
+### Option 2: The export module
+The export module rounds the total.
+
+## Agent recommendation
+Option 1, because the invoice is the legal document.
+`,
+      )
+      demo.agent('ready', 'd-8')
+      demo.changePage('2.4-tax-rounding.md', (markdown) =>
+        markdown.replace(/### Option 2[\s\S]*?(?=## Agent recommendation)/u, ''),
+      )
+    },
+  },
+  {
+    feature:
+      'The title of the tab, which switches to "(9) Waiting for you · Invoice export" for 3 seconds every 15 seconds while Nick looks at another tab or another app. The count is the count on the Inbox button.',
     // Every item that the examples above add to the Inbox already waits for Nick. That's why this
     // example doesn't need to add anything.
     add: async () => {},

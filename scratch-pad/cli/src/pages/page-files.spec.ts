@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   isUnderNumber,
+  nextSubPageNumber,
   pageFileOf,
   pageFilesInOrder,
   parentNumberOf,
@@ -82,6 +83,33 @@ describe('pageFilesInOrder', () => {
       'pages/1-apple.md',
       'pages/1-board.md',
     ])
+  })
+})
+
+describe('nextSubPageNumber', () => {
+  const files = [
+    'pages/index.md',
+    'pages/1-first.md',
+    'pages/2-second.md',
+    'pages/2.1-wait.md',
+    'pages/2.2-limit.md',
+    'pages/2.2.1-deep.md',
+    'pages/2.9-nine.md',
+    'pages/notes.md',
+  ].map(pageFileOf)
+
+  it.each([
+    [undefined, '3'],
+    ['1', '1.1'],
+    ['2', '2.10'],
+    ['2.2', '2.2.2'],
+    ['2.1', '2.1.1'],
+  ])('gives the sub page of the page %s the number %s', (parent, number) => {
+    expect(nextSubPageNumber(files, parent)).toBe(number)
+  })
+
+  it('gives the first sub page of the index page the number 1 when there is not any numbered page', () => {
+    expect(nextSubPageNumber([pageFileOf('pages/index.md')], undefined)).toBe('1')
   })
 })
 

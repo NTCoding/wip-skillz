@@ -24,7 +24,14 @@ export interface AnswerRequest {
   readonly answer: Answer
 }
 
-const choices: readonly string[] = ['proposal', 'alternative']
+export interface ReviewRequest {
+  readonly page: string
+  readonly reason: string
+}
+
+// A decision page has a numbered option for each option on the page, like option-2. The server
+// checks the option against the page.
+const choicePattern = /^(?:proposal|alternative|option-[1-9]\d*)$/u
 
 export const longestMessage = 10_000
 
@@ -113,15 +120,19 @@ export function commentRequestFrom(body: RequestBody): CommentRequest {
 export function answerRequestFrom(body: RequestBody): AnswerRequest {
   const choice = body.optionalText('choice')
   const written = body.optionalText('written')
-  if (choice !== undefined && written === undefined && choices.includes(choice)) {
+  if (choice !== undefined && written === undefined && choicePattern.test(choice)) {
     return { page: body.text('page'), answer: { choice } }
   }
   if (choice === undefined && written !== undefined) {
     return { page: body.text('page'), answer: { written: withinMessageLimit('written', written) } }
   }
   throw new InvalidRequestBodyError(
-    'it needs either "choice" with proposal or alternative, or "written" with the answer',
+    'it needs either "choice" with proposal, alternative or option-N, or "written" with the answer',
   )
+}
+
+export function reviewRequestFrom(body: RequestBody): ReviewRequest {
+  return { page: body.text('page'), reason: body.messageText('reason') }
 }
 
 export function improvementEditFrom(body: RequestBody): ImprovementEdit {

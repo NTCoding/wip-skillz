@@ -4,7 +4,8 @@ import { logDecisionFromChat } from '../agent-commands/decision-log-commands'
 import { exportScratchPad } from '../agent-commands/export-commands'
 import { listPages, outlinePage } from '../agent-commands/page-commands'
 import { setGoalOfScratchPad } from '../agent-commands/progress-tracker-commands'
-import { finishItem, replyToThread, showItem } from '../agent-commands/thread-commands'
+import { createPage, makeDecisionPageReady } from '../agent-commands/decision-page-commands'
+import { finishItem, reopenItem, replyToThread, showItem } from '../agent-commands/thread-commands'
 import { waitForAgentInbox } from '../agent-commands/wait-commands'
 import { browserPageBundle } from '../local-server/browser-page-bundle'
 import { toolBuild } from '../local-server/tool-build'
@@ -192,6 +193,50 @@ export const scratchPadCommands: ReadonlyMap<string, ScratchPadCommand> = new Ma
         const id = requiredWord(input.words, 0, 'id', input.usage)
         const outcome = restOfWords(input.words, 1, 'outcome', input.usage)
         return withWaitReminder(finishItem(folder, id, outcome, await linksOf(input, folder)))
+      },
+    },
+  ],
+  [
+    'reopen',
+    {
+      usage: 'reopen <id> <outcome>',
+      summary:
+        'open a decision with changes requested again with one line about the change, so that it waits for Nick',
+      options: pad,
+      wordsBeforeText: 1,
+      run: async (input: CommandInput) => {
+        const folder = input.folder()
+        const id = requiredWord(input.words, 0, 'id', input.usage)
+        const outcome = restOfWords(input.words, 1, 'outcome', input.usage)
+        return withWaitReminder(reopenItem(folder, id, outcome, await linksOf(input, folder)))
+      },
+    },
+  ],
+  [
+    'ready',
+    {
+      usage: 'ready <id>',
+      summary:
+        'make a draft decision page ready after the server has checked the template. Nick can then decide the decision',
+      options: pad,
+      run: async (input: CommandInput) => {
+        const folder = input.folder()
+        const id = requiredWord(input.words, 0, 'id', input.usage)
+        return withWaitReminder(makeDecisionPageReady(folder, id, await linksOf(input, folder)))
+      },
+    },
+  ],
+  [
+    'page',
+    {
+      usage: 'page <parent> <file-name> [--type=decision]',
+      summary:
+        'create a blank sub page of a page, or a sub page from the template of a type, and print its path and link',
+      options: ['pad', 'type'],
+      run: async (input: CommandInput) => {
+        const folder = input.folder()
+        const request = { words: input.words, type: input.options.type, usage: input.usage }
+        return withWaitReminder(createPage(folder, request, await linksOf(input, folder)))
       },
     },
   ],

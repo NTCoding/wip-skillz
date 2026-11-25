@@ -6,6 +6,7 @@ import {
   threadsOnMissingPages,
   type CheckedDescription,
 } from '../page-check/page-check'
+import { readyDecisionPages } from '../decision-pages/ready-decision-pages'
 import { pageCheckText } from '../page-check/page-check-text'
 import { findPage } from '../pages/page-markdown'
 import { itemName, trackerItems, type TrackerItem } from '../progress-tracker/progress-tracker'
@@ -26,6 +27,7 @@ export function checkPages(
   const pages = folder.pages()
   const found = new Set(requested.map((page) => findPage(pages, page, folder.name)))
   const checkedPages = requested.length === 0 ? pages : pages.filter((page) => found.has(page))
+  const ready = readyDecisionPages(folder)
   const rendered = pages.map((page) => {
     const { file, lines } = folder.readPage(page)
     const markdown = lines.join('\n')
@@ -37,6 +39,7 @@ export function checkPages(
         markdown,
         readCustomFile: (custom) =>
           checkedPages.includes(page) ? folder.readCustomFile(custom) : undefined,
+        readyDecisionPages: ready,
       }),
     }
   })

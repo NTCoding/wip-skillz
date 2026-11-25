@@ -2,6 +2,7 @@ import { type z } from 'zod'
 import {
   decisionAnswerResponse,
   decisionLogResponse,
+  decisionsResponse,
   errorResponse,
   improvementDeleteResponse,
   improvementEditResponse,
@@ -21,6 +22,7 @@ import {
   viewedPageResponse,
   type Answer,
   type DecisionLogEntry,
+  type DecisionsOfPad,
   type Improvements,
   type NickInbox,
   type Outbox,
@@ -61,6 +63,7 @@ export interface ScratchPadReading {
   readonly nickInbox: () => Promise<NickInbox>
   readonly progressTracker: () => Promise<ProgressTracker>
   readonly decisionLog: () => Promise<DecisionLogEntry[]>
+  readonly decisions: () => Promise<DecisionsOfPad>
   readonly improvements: () => Promise<Improvements>
   readonly outbox: () => Promise<Outbox>
   readonly readMarks: () => Promise<ReadMarks>
@@ -73,6 +76,8 @@ export interface ScratchPadWriting {
   readonly replyToThread: (id: string, message: string) => Promise<Thread>
   readonly resolveThread: (id: string) => Promise<Thread>
   readonly answerDecision: (id: string, page: string, answer: Answer) => Promise<void>
+  // Nick asks the agent to change the page of a decision. He has to write a reason.
+  readonly requestDecisionChanges: (id: string, page: string, reason: string) => Promise<void>
   // Nick marks a task or a subtask that is assigned to him as done.
   readonly markTaskDone: (id: string) => Promise<void>
   readonly editImprovement: (number: number, edit: ImprovementEdit) => Promise<void>
@@ -179,6 +184,7 @@ export function scratchPadConnection(pad: string, network: BrowserNetwork): Scra
     progressTracker: () => readJson(network, `${api}/progress-tracker`, progressTrackerResponse),
     decisionLog: async () =>
       (await readJson(network, `${api}/decision-log`, decisionLogResponse)).decisions,
+    decisions: () => readJson(network, `${api}/decisions`, decisionsResponse),
     improvements: () => readJson(network, `${api}/improvements`, improvementsResponse),
     outbox: () => readJson(network, `${api}/outbox`, outboxResponse),
     readMarks: () => readJson(network, `${api}/read-marks`, readMarksResponse),
@@ -200,6 +206,14 @@ export function scratchPadConnection(pad: string, network: BrowserNetwork): Scra
         `${api}/decisions/${encodeURIComponent(id)}`,
         decisionAnswerResponse,
         postOf({ page, ...answer }),
+      )
+    },
+    requestDecisionChanges: async (id, page, reason) => {
+      await readJson(
+        network,
+        `${api}/decisions/${encodeURIComponent(id)}/request-changes`,
+        decisionAnswerResponse,
+        postOf({ page, reason }),
       )
     },
     markTaskDone: async (id) => {

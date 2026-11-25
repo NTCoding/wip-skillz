@@ -5,10 +5,20 @@ import { wholeBlockSelection, type BlockSelection } from './selected-block'
 
 export type PageContext = Omit<
   PageElementContext,
-  'page' | 'onAnswerDecision' | 'onCommentOnBlock' | 'answersOnThisPage'
+  | 'page'
+  | 'onAnswerDecision'
+  | 'onRequestDecisionChanges'
+  | 'onCommentOnBlock'
+  | 'answersOnThisPage'
 >
 
 type AnswerDecision = (id: string, page: string, answer: Answer) => Promise<void>
+type RequestDecisionChanges = (id: string, page: string, reason: string) => Promise<void>
+
+// Nick asks the agent to change the page of a decision. He has to write a reason.
+export interface DecisionChangeRequests {
+  readonly requestDecisionChanges: RequestDecisionChanges
+}
 
 interface ElementEvents {
   readonly startDraft: (kind: ThreadKindName, selection: BlockSelection) => void
@@ -23,6 +33,7 @@ export function elementContextOf(
   page: ViewedPage,
   choices: ReadonlyMap<string, Answer>,
   answerDecision: AnswerDecision | undefined,
+  changeRequests: DecisionChangeRequests | undefined,
   events: ElementEvents,
 ): PageElementContext {
   return {
@@ -38,6 +49,10 @@ export function elementContextOf(
               events.startDraft('comment', selection)
             }
           },
+    onRequestDecisionChanges:
+      changeRequests === undefined
+        ? undefined
+        : (id, reason) => changeRequests.requestDecisionChanges(id, page.page, reason),
     onAnswerDecision:
       answerDecision === undefined
         ? undefined

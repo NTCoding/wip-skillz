@@ -230,6 +230,8 @@ describe('ScratchPadApp with live changes', () => {
           id: 'd-1',
           question: 'Will the export job retry 8 times?',
           answer: { choice: 'proposal' },
+          reviews: [],
+          options: undefined,
         },
       ],
     })
@@ -316,9 +318,10 @@ describe('ScratchPadApp on the progress tracker and the decisions', () => {
     expect(screen.getByRole('status').textContent).toBe('There aren’t any tasks yet.')
   })
 
-  it('shows the log of decisions when Nick opens the decisions', async () => {
+  it('shows the log of decisions when Nick opens the decisions and presses Decided', async () => {
     renderApp(`/${exportPad}/decisions`)
     await shownPage('Decisions')
+    await userEvent.click(screen.getByRole('button', { name: /^Decided/ }))
     expect(screen.getByText('The export job runs every night.').tagName).toBe('P')
     expect(screen.getByRole('link', { name: 'Decisions' }).getAttribute('aria-current')).toBe(
       'page',
@@ -355,19 +358,12 @@ describe('ScratchPadApp on the progress tracker and the decisions', () => {
     )
   })
 
-  it('shows Decisions in the breadcrumb when Nick opens the decisions', async () => {
-    renderApp(`/${exportPad}/decisions`)
-    await shownPage('Decisions')
-    expect(screen.getByRole('navigation', { name: 'Breadcrumb' }).textContent).toBe(
-      'Invoice export/Decisions',
-    )
-  })
-
   it('says that the log is empty when there aren’t any decisions', async () => {
     const fake = fakeConnection()
     vi.spyOn(fake.connection, 'decisionLog').mockResolvedValue([])
     renderApp(`/${exportPad}/decisions`, fake)
     await shownPage('Decisions')
+    await userEvent.click(screen.getByRole('button', { name: /^Decided/ }))
     expect(screen.getByRole('status').textContent).toBe(
       'There aren’t any decisions in the log yet.',
     )

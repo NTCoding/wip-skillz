@@ -271,6 +271,72 @@ The 2 headings of the server aren't in index.md so they don't have any `data-lin
 
 A change to how the server finds a thread's text again belongs in `src/threads/thread-position.ts` rather than in the browser page. The server works out where each thread's text is now and returns that as the `position` of every thread from the API. `thread-anchors.ts` only turns that position into a block on the page.
 
+## How changes are requested on a decision
+
+Nick can press "Request changes" on the card of a decision. The button asks the agent to change the content around the decision or its wording. It opens a box for the reason. The server doesn't accept an empty reason.
+
+The table `decision_reviews` of pad.db stores every round of changes that Nick has requested on a decision. Each round has a number, which starts at 1 for each decision. Each round also has the reason of Nick. A round doesn't have an outcome until the agent runs `reopen`. The command stores the line that the agent wrote as the outcome. Every round stays as history. A second request doesn't replace the first request.
+
+The newest round decides the state of the decision. A decision with changes requested has a newest round without an outcome. A reopened decision has a newest round with an outcome. A new request on a decision with an open round returns an error. The command `reopen` only closes the open round. A decision never has both a row in the table `decisions` and an open round. It can have neither. The code is in `src/decisions/decision-review.ts`.
+
+The Inbox doesn't list a decision with changes requested. The card of the decision doesn't have an answer form either. A reopened decision is open again. The card shows the form again. The card lists every round oldest first. Each round has the reason of Nick and the line of the agent. The Decisions page only shows the newest round of each decision.
+
+The Decisions page has a filter button for each of these states:
+
+- Open
+- Changes requested
+- Decided
+
+The page is made of the components `FilterPills` and `ItemList`, which the Inbox / Outbox page uses too. There isn't an "All" button. The page opens on Open. Decided shows the log of decisions.
+
+| File                 | What it does                                                                                                                  |
+| -------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| `decision-form.tsx`  | Shows the form of a decision that Nick can still decide. The form passes the id of the decision to the functions of the page. |
+| `decisions-view.tsx` | Shows the Decisions page and its filter buttons. `DecisionsRoute` waits until the log and the decisions are read.             |
+
+## How a decision page works
+
+A decision page is a sub page that the agent writes from a template. The command `page <parent> <file-name> --type=decision` creates the file. The first block of the file is the marker `:::decision-page d-6`. The server recognises a decision page by the marker. The code that scans the page is in `src/decision-pages/decision-page.ts`. `renderPage` calls the scan each time that the page is rendered.
+
+The scan reports a problem for each exact placeholder of the template. Other text in angle brackets, like `List<Invoice>`, is content. It reports a missing section and a renamed section too. It also reports fewer than 2 options and an option without any text. The marker block shows the problems as notices. A page that was never ready and has a problem doesn't have a decision.
+
+A new decision page is a draft. The agent runs `ready d-6` after the page is finished. The command scans the page. Then the command appends a `decision-ready` event for the id. `readyDecisionPages` in `src/decision-pages/ready-decision-pages.ts` reads the ids from the events. `renderPage` receives the ids as `readyDecisionPages`. A page that isn't in that set is a draft.
+
+A draft page differs from a ready page in 3 ways:
+
+- `draftPageHtml` renders the status Draft without a table of contents or a Decision section.
+- The draft doesn't have a decision. The Inbox and the Decisions page don't list the draft because of that.
+- The marker block doesn't show the problems of the draft. The commands `check` and `ready` report the problems.
+
+A page that was ready has a decision even if a later edit breaks the template. This is how the code treats such a page:
+
+- `keptId` in `rendered-page.ts` returns the id of the marker for a ready page although the scan reports a problem.
+- A later edit doesn't remove the page from the Inbox or from the Decisions page.
+- A later edit doesn't change the answer of Nick.
+- `brokenDecisionPageLines` in `decision-page-commands.ts` builds the lines about the page for `inbox` and `wait`. The first line depends on the state of the decision.
+- `waitForAgentInbox` also ends when a ready page breaks.
+- The notification key of a decision is the page and the id of the decision. The browser shows one notification for each key.
+
+A ready page has the decision with the id of the marker. The decision has `options` instead of a proposal and an alternative. The server adds 3 parts to the HTML of the page:
+
+- an empty element for the status under the title
+- a table of contents of links to the headings
+- the Decision section at the end
+
+The browser fills in the status from the answer and the rounds of the decision. `decision-page-elements.tsx` renders the status with `DecisionPageStatus`. It also renders the Decision section with `DecisionCard` without the fields. The form of the section is `DecisionAnswerForm` with a button for each option. The choice of an option is `option-N`. A decision page isn't moved to the margin when Nick has decided, because the Decision section is at the end of the page.
+
+| File                                           | What it does                                                                        |
+| ---------------------------------------------- | ----------------------------------------------------------------------------------- |
+| `src/decision-pages/decision-page.ts`          | Writes the template, checks the page against the template and builds the added HTML |
+| `src/agent-commands/decision-page-commands.ts` | Creates the file of a page with `page --type=decision` and lists the broken pages   |
+| `decision-page-elements.tsx`                   | Renders the status and the Decision section of a decision page                      |
+
+## How a link in a comment works
+
+`Message` shows the text of a comment as plain text. A link is the exception. `MessageText` finds each `[text](address)` and each bare address with `markdown-it`. Only the rules for links are switched on in `markdown-it`. A Markdown character outside a link, like `*`, stays `*` on the page.
+
+An address in the scratch pad is opened in the browser page through the function that `NavigationProvider` supplies. An `http:`, `https:` or `mailto:` address on another site is opened in a new tab. Any other address is shown as text.
+
 ## How the read marks work
 
 The scratch pad remembers which pages and which sections Nick has read. A section starts at a heading of level 2 or 3 and ends before the next heading whose level is 3 or less. The read marks are Nick's own state. The agent never sees them and a click on "Mark as read" doesn't end `wait`.

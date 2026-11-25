@@ -30,7 +30,7 @@ describe('the read marks of a scratch pad', () => {
     expect(folder.read((pad) => pad.readReadMarks())).toStrictEqual({ pages: [], sections: [] })
   })
 
-  it('marks every page and section as read when a scratch pad of version 3 is migrated to version 7', () => {
+  it('marks every page and section as read when a scratch pad of version 3 is migrated to version 8', () => {
     const folder = exportJobScratchPad(temporaryHome())
     writeFileInPad(folder, 'pages/1-retry-limit.md', '# Retry limit\n\n## The default\n\n5.\n')
     runSqlOnPadDb(
@@ -45,6 +45,6 @@ describe('the read marks of a scratch pad', () => {
       ['pages/index.md', 'retry-policy'],
       ['pages/retry-limit.md', 'the-default'],
     ])
-    expect(pragma(folder, 'user_version')).toBe(7)
+    expect(pragma(folder, 'user_version')).toBe(8)
   })
 })

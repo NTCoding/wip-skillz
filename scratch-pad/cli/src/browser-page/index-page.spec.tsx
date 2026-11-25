@@ -46,7 +46,15 @@ describe('the index page from the server', () => {
         { level: 3, text: 'Retry limit', id: 'retry-limit', line: 6 },
         { level: 2, text: 'Table of contents', id: 'table-of-contents', line: 12 },
       ],
-      decisions: [{ id: 'd-1', question: 'Invoice export', answer: { choice: 'proposal' } }],
+      decisions: [
+        {
+          id: 'd-1',
+          question: 'Invoice export',
+          answer: { choice: 'proposal' },
+          reviews: [],
+          options: undefined,
+        },
+      ],
     })
     fake.threads.set('index.md', [])
     return fake

@@ -31,7 +31,11 @@ import {
   type QueuedItemActions,
 } from './queued-items'
 import { anchorLinesOf, decisionMarginItems } from './answered-decision-items'
-import { elementContextOf, type PageContext } from './page-element-context'
+import {
+  elementContextOf,
+  type DecisionChangeRequests,
+  type PageContext,
+} from './page-element-context'
 import { fileOfPage } from './browser-route'
 import { changedSectionItems, usePageMarks, type ReadMarkActions } from './changed-section-items'
 import { answeredDecisions, pageElements, parsedPageBody } from './page-elements'
@@ -44,7 +48,7 @@ import { type ResolvedThreads } from './resolved-threads'
 import { withTaskChips } from './task-references'
 import { placeThreads, type PlacedThread } from './thread-anchors'
 
-export interface PageActions extends QueuedItemActions, ReadMarkActions {
+export interface PageActions extends QueuedItemActions, ReadMarkActions, DecisionChangeRequests {
   readonly startThread: (thread: NewThread) => Promise<Thread>
   readonly replyToThread: (id: string, message: string) => Promise<Thread>
   readonly resolveThread: (id: string) => Promise<Thread>
@@ -242,13 +246,20 @@ export function PageWithThreads(props: PageWithThreadsProps) {
     await writing.queueComment(newThreadOf(current, page.page, message))
     setDraft(undefined)
   }
-  const elementContext = elementContextOf(context, page, choices, actions?.answerDecision, {
-    startDraft,
-    answered: (id, choice) => {
-      setChoices((current) => new Map([...current, [id, choice]]))
-      setActive(id)
+  const elementContext = elementContextOf(
+    context,
+    page,
+    choices,
+    actions?.answerDecision,
+    actions,
+    {
+      startDraft,
+      answered: (id, choice) => {
+        setChoices((current) => new Map([...current, [id, choice]]))
+        setActive(id)
+      },
     },
-  })
+  )
   const decisions = answeredDecisions(elementContext, body)
   const toggle = (key: string): void => {
     if (draft === undefined) {

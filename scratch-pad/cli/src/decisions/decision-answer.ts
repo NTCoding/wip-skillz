@@ -54,14 +54,22 @@ export function followDecision(decision: DecisionAnswer, outcome: string): Decis
   return { ...decision, outcome: line }
 }
 
-export function answerLine(answer: Answer): string {
-  return 'choice' in answer ? `Nick chose: ${answer.choice}` : `Nick wrote: ${answer.written}`
+// The label is the heading of the option that Nick chose on a decision page
+export function answerLine(answer: Answer, optionLabel?: string): string {
+  return 'choice' in answer
+    ? `Nick chose: ${optionLabel ?? answer.choice}`
+    : `Nick wrote: ${answer.written}`
 }
 
+// An inline block has a proposal and an alternative, so the line has the choice and the text of
+// the option. The label of an option on a decision page is its heading, which is written once.
 export function loggedAnswerLine(answer: Answer, chosenOption: string | undefined): string {
-  return 'choice' in answer && chosenOption !== undefined
-    ? `Nick chose the ${answer.choice}: ${chosenOption}`
-    : answerLine(answer)
+  if (!('choice' in answer) || chosenOption === undefined) {
+    return answerLine(answer)
+  }
+  return answer.choice.startsWith('option-')
+    ? answerLine(answer, chosenOption)
+    : `Nick chose the ${answer.choice}: ${chosenOption}`
 }
 
 function answerWords(answer: Answer): string {

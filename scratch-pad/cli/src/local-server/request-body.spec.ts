@@ -7,6 +7,7 @@ import {
   jsonObjectFrom,
   longestMessage,
   RequestBody,
+  reviewRequestFrom,
 } from './request-body'
 
 const anchorOnRetry = {
@@ -139,6 +140,40 @@ describe('commentRequestFrom', () => {
   })
 })
 
+describe('reviewRequestFrom', () => {
+  it('returns the page and the reason', () => {
+    expect(
+      reviewRequestFrom(
+        RequestBody.parse('{"page": "pages/index.md", "reason": "Who is the team?"}'),
+      ),
+    ).toStrictEqual({ page: 'pages/index.md', reason: 'Who is the team?' })
+  })
+
+  it('throws InvalidRequestBodyError when the reason is longer than 10,000 characters', () => {
+    const body = RequestBody.parse(
+      JSON.stringify({ page: 'pages/index.md', reason: 'a'.repeat(longestMessage + 1) }),
+    )
+    expect(() => reviewRequestFrom(body)).toThrow('"reason" has 10001 characters')
+  })
+})
+
+describe('answerRequestFrom for a decision page', () => {
+  it.each(['option-1', 'option-12'])('returns the choice %s', (choice) => {
+    expect(
+      answerRequestFrom(RequestBody.parse(JSON.stringify({ page: 'pages/index.md', choice }))),
+    ).toStrictEqual({ page: 'pages/index.md', answer: { choice } })
+  })
+
+  it.each(['option-0', 'option-', 'option-01', 'options-1'])(
+    'throws for the choice %s',
+    (choice) => {
+      expect(() =>
+        answerRequestFrom(RequestBody.parse(JSON.stringify({ page: 'pages/index.md', choice }))),
+      ).toThrow(InvalidRequestBodyError)
+    },
+  )
+})
+
 describe('answerRequestFrom', () => {
   it('throws InvalidRequestBodyError when the written answer is longer than 10,000 characters', () => {
     const body = RequestBody.parse(
@@ -169,7 +204,7 @@ describe('answerRequestFrom', () => {
   ])('throws InvalidRequestBodyError when the body is %s', (text) => {
     expect(() => answerRequestFrom(RequestBody.parse(text))).toThrow(InvalidRequestBodyError)
     expect(() => answerRequestFrom(RequestBody.parse(text))).toThrow(
-      'it needs either "choice" with proposal or alternative, or "written" with the answer',
+      'it needs either "choice" with proposal, alternative or option-N, or "written" with the answer',
     )
   })
 })

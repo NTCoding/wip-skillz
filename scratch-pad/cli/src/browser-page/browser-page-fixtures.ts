@@ -10,6 +10,7 @@ import {
   type ViewedPage,
 } from './api-responses'
 import { BrowserPageError } from './browser-page-error'
+import { decisionsOfPad } from './decision-fixtures'
 import { type NarrowWindow } from './sidebar-state'
 import { servedAddresses } from './browser-route'
 import { fakeOutbox } from './outbox-fixtures'
@@ -108,7 +109,15 @@ export const indexPage: ViewedPage = {
     { kind: 'page', href: '#retry-limit', page: 'pages/index.md', headingId: 'retry-limit' },
     { kind: 'other', href: 'https://example.com/retries' },
   ],
-  decisions: [{ id: 'd-1', question: 'Will the export job retry 8 times?', answer: undefined }],
+  decisions: [
+    {
+      id: 'd-1',
+      question: 'Will the export job retry 8 times?',
+      answer: undefined,
+      reviews: [],
+      options: undefined,
+    },
+  ],
 }
 
 export const invoiceTemplatePage: ViewedPage = {
@@ -315,6 +324,7 @@ const fakeActions = {
   resolveThread: (id: string) =>
     Promise.resolve<Thread>({ ...retryQuestion, id, waitsFor: 'nobody' }),
   answerDecision: () => Promise.resolve(),
+  requestDecisionChanges: vi.fn(() => Promise.resolve()),
   editImprovement: () => Promise.resolve(),
   deleteImprovement: () => Promise.resolve(),
 }
@@ -352,6 +362,7 @@ export function fakeConnection(): FakeConnection {
     ...outbox.actions,
     progressTracker: () => Promise.resolve(progressTracker),
     decisionLog: () => Promise.resolve(decisionLog),
+    decisions: () => Promise.resolve(decisionsOfPad),
     improvements: () => Promise.resolve(improvements),
     readMarks: () => Promise.resolve({ pages: [...readMarks] }),
     threadsOfPad: () =>
@@ -401,6 +412,7 @@ export const exportedPadJson = JSON.stringify(
     threads: [retryQuestion, toneNote],
     progressTracker,
     decisionLog,
+    decisions: decisionsOfPad,
     improvements,
   },
   (_key, value: unknown) => value ?? null,

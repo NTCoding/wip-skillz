@@ -1,4 +1,5 @@
 import { type DecisionAnswer } from '../decisions/decision-answer'
+import { roundsWaitingForAgent, type DecisionReview } from '../decisions/decision-review'
 import {
   lastEventNumberPerItem,
   latestEventNumber,
@@ -14,9 +15,11 @@ import { type Thread } from '../threads/thread'
 
 // A task is a task or a subtask that was assigned to Nick, which Nick has marked as done in the
 // browser. The started task is the next task, which the server started when Nick's task was done.
+// A decision review is a decision that Nick has asked the agent to change.
 export type AgentInboxItem =
   | { readonly kind: 'thread'; readonly thread: Thread }
   | { readonly kind: 'decision'; readonly decision: DecisionAnswer }
+  | { readonly kind: 'decision-review'; readonly review: DecisionReview }
   | {
       readonly kind: 'task'
       readonly task: TrackerItem
@@ -35,6 +38,7 @@ export interface ItemCount {
 export interface AgentInboxRequest {
   readonly threads: readonly Thread[]
   readonly decisions: readonly DecisionAnswer[]
+  readonly reviews: readonly DecisionReview[]
   readonly tracker: ProgressTracker
   readonly events: readonly ScratchPadEvent[]
   readonly lastPrinted: LastPrintedEvents
@@ -77,12 +81,16 @@ export function itemId(item: AgentInboxItem): string {
   if (item.kind === 'thread') {
     return item.thread.id
   }
-  return item.kind === 'decision' ? item.decision.id : item.task.id
+  if (item.kind === 'decision') {
+    return item.decision.id
+  }
+  return item.kind === 'decision-review' ? item.review.id : item.task.id
 }
 
 export function itemsWaitingForAgent(
   threads: readonly Thread[],
   decisions: readonly DecisionAnswer[],
+  reviews: readonly DecisionReview[],
 ): AgentInboxItem[] {
   return [
     ...threads
@@ -91,6 +99,10 @@ export function itemsWaitingForAgent(
     ...decisions
       .filter((decision) => decision.outcome === undefined)
       .map((decision): AgentInboxItem => ({ kind: 'decision', decision })),
+    ...roundsWaitingForAgent(reviews).map((review): AgentInboxItem => ({
+      kind: 'decision-review',
+      review,
+    })),
   ]
 }
 
@@ -145,18 +157,18 @@ export function selectAgentInbox(request: AgentInboxRequest): AgentInboxSelectio
   const latest = latestEventNumber(request.events)
   const lastEventOf = (item: AgentInboxItem): number =>
     lastEvents.get(itemId(item)) ?? Number.MAX_SAFE_INTEGER
-  const waiting = itemsWaitingForAgent(request.threads, request.decisions)
-  const tasksDone = tasksDoneByNick(request)
+  const waiting = itemsWaitingForAgent(request.threads, request.decisions, request.reviews)
+  const doneByNick = tasksDoneByNick(request)
   const ofRequestedTypes = waiting.filter((item) => request.types.includes(itemType(item)))
   const printedItems = request.includeSeen
     ? ofRequestedTypes
     : ofRequestedTypes.filter((item) => lastEventOf(item) > request.lastPrinted[itemType(item)])
-  const printed = [...printedItems, ...(request.types.includes('decision') ? tasksDone : [])]
+  const printed = [...printedItems, ...(request.types.includes('decision') ? doneByNick : [])]
   const lastPrintedFor = (type: ItemType): number =>
     request.types.includes(type) ? latest : request.lastPrinted[type]
   const notRequested = (types: readonly ItemType[]): ItemCount[] =>
     countsByType(
-      [...waiting, ...tasksDone].filter(
+      [...waiting, ...doneByNick].filter(
         (item) => types.includes(itemType(item)) && !request.types.includes(itemType(item)),
       ),
     )

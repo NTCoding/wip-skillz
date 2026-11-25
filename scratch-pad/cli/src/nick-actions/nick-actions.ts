@@ -6,6 +6,13 @@ import {
 } from '../decisions/decision-answer'
 import { logDecision } from '../decisions/decision-log'
 import {
+  assertCanBeDecided,
+  DecisionAlreadyAnsweredError,
+  requestChanges,
+  type DecisionReview,
+  type NewDecisionReview,
+} from '../decisions/decision-review'
+import {
   editImprovement,
   findImprovement,
   type Improvement,
@@ -156,6 +163,7 @@ export function nickAnswersDecision(
   const time = new Date().toISOString()
   const page = findPage(folder.pages(), input.page, folder.name)
   return folder.change((pad) => {
+    assertCanBeDecided(input.id, pad.readDecisionRounds(input.id))
     const decision = answerDecision({ ...input, page }, time)
     pad.writeDecisionAnswer(decision)
     const logged = logDecision(pad.readDecisionLog(), {
@@ -167,6 +175,25 @@ export function nickAnswersDecision(
     pad.saveDecisionLogEntry(logged.entry)
     pad.appendEvent({ time, kind: 'decision-answered', by: 'nick', item: decision.id })
     return decision
+  })
+}
+
+export function nickRequestsChanges(
+  folder: ScratchPadFolder,
+  input: NewDecisionReview,
+): DecisionReview {
+  const time = new Date().toISOString()
+  const page = findPage(folder.pages(), input.page, folder.name)
+  return folder.change((pad) => {
+    if (pad.readDecisionAnswers().some((answer) => answer.id === input.id)) {
+      throw new DecisionAlreadyAnsweredError(input.id)
+    }
+    const rounds = pad.readDecisionRounds(input.id)
+    assertCanBeDecided(input.id, rounds)
+    const review = requestChanges({ ...input, page }, rounds, time)
+    pad.writeDecisionReview(review)
+    pad.appendEvent({ time, kind: 'decision-changes-requested', by: 'nick', item: review.id })
+    return review
   })
 }
 
