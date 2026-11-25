@@ -30,7 +30,7 @@ dependency between 2 contexts is approved even though the reviewer hasn't seen
 the dependency.
 
 A passage is a `### ` title and all the paragraphs and code blocks under the
-title, up to the next `### ` or `## ` heading. The page shows each passage as a separate section. A piece is a sentence, a
+title, up to the next `### ` or `## ` heading. The page shows each passage as a separate slide. A piece is a sentence, a
 code block, a line of code or a row of a table.
 
 Nick needs to be able to tell the context of any piece from that piece alone.
@@ -41,18 +41,18 @@ The source is the markdown file that you write in step 4. The renderer is the
 script that turns the source into the HTML page in step 5. Both of them help
 to show the context of each piece:
 
-- **The source's front matter has one `context:` line per context.** Each
-  line starts with the folder of that context. If a code block shows a file
-  that isn't in any of those folders, the renderer fails.
+- **The source's front matter has one `context:` line per context.** Each line
+  starts with the folder of that context. A `folder:` line names a folder that
+  isn't a context, such as `docs`. If a code block shows a file that isn't in
+  any of those folders, the renderer fails.
 
   The renderer draws the name of the context as a coloured badge on every
   code block. It also marks every line that imports from another context's
   package.
 - **Write the name of a context in the text exactly as it is in its
-  `context:` line.** The renderer then draws the name with the same coloured
-  badge as on the code blocks so a context looks the same everywhere on the
-  page. "The billing context" becomes a badge, but "billing" on its own
-  doesn't.
+  `context:` line.** The renderer then draws the name in the colour of that
+  context so a context looks the same everywhere on the page. "The billing
+  context" is drawn in that colour, but "billing" on its own isn't.
 - **In each passage, write the context of a thing at its first mention.** The
   details are in "A thing mentioned without its context".
 - **When the rows of a table or a list are in different contexts, write the
@@ -71,34 +71,23 @@ request that only touches one context.
 
 ### 1. Read the merge request
 
-Fetch the head of the merge request and work out its base:
+Run `node "$skill/prepare-walkthrough.mjs" <iid>` from the repository of the
+merge request. `$skill` is the base directory of this skill, which is the
+folder that the harness prints when it loads the skill. The script makes the
+folder of the walkthrough, writes the front matter of walkthrough.md and
+prints every `context:` line and `folder:` line. It reads the merge request
+from GitLab.
 
-```sh
-glab mr view <iid> -F json                          # title, url, author, target branch
-git fetch origin merge-requests/<iid>/head <target branch>
-git merge-base origin/<target branch> FETCH_HEAD    # the base
-git diff --numstat <base> <head>
-```
-
-A merge request can be stacked on another one. The target branch of a
-stacked merge request can be rebased after the merge request was created from
-that branch. The merge base is then too far back. So the diff also shows every
-commit of the merge request underneath. GitLab then reports a conflict,
-which is `has_conflicts: true` in the JSON of `glab mr view`. In that
-case, take the parent of the first commit of the merge request as the base:
-
-```sh
-git cherry -v origin/<target branch> FETCH_HEAD     # "-" is already on the target branch, "+" is new
-first=$(git cherry origin/<target branch> FETCH_HEAD | grep '^+' | head -1 | cut -c3-)
-git rev-parse "$first^"                             # the base
-```
-
-`git log <merge base>..FETCH_HEAD` doesn't find that first commit because it
-lists the commits of the merge request underneath too. `git cherry` marks each
-commit whose change is already on the target branch with a `-`. So the first
-commit with a `+` is the first commit of this merge request. Read the list
-before you use the base. A commit of the merge request underneath can also
-have a `+` if the target branch was rebased with a conflict.
+Check the label of each context line, such as "app" for an app. Add a
+`context:` line for each context that the merge request calls but doesn't
+change. For a stacked merge request with a conflict, `prepare-walkthrough.mjs`
+also prints the list of `git cherry`. Read that list before you use the base,
+because a commit of the merge request underneath can also have a `+`. The
+script finds a context through its `package.json`. In a repository without
+`package.json` files, `prepare-walkthrough.mjs` writes a `folder:` line for
+each top folder.
+Write the `context:` lines by hand and delete the `folder:` line of each top
+folder that you write as a context.
 
 Read a file at the head with `git show <head>:<path>` rather than checking
 anything out.
@@ -138,25 +127,30 @@ isn't proved by the code".
 ### 4. Write the source
 
 The source is one markdown file, in the format described in "The source
-format" below. Save it in a folder that isn't deleted when the session ends:
+format" below. Write the rest of it in the walkthrough.md that
+prepare-walkthrough.mjs wrote in step 1.
 
-```sh
-dir=~/nick-walkthrough/<iid>-$(date +%Y%m%d-%H%M%S)
-mkdir -p "$dir"
-# write "$dir/walkthrough.md"
-```
+### 5. Check the prose, then render the page
 
-### 5. Render and open
+Run the rewrite-like-nick skill on `walkthrough.md` and ask it to check the
+file. It runs the prose scripts and fixes each hit. Render the page only once
+the scripts don't print any hits.
 
 Run the renderer from the merge request's repository. The renderer is in the
-base directory of this skill, which is the folder that the harness prints
-when it loads the skill:
+base directory of this skill, which is the folder that the harness prints when
+it loads the skill:
 
 ```sh
+dir=<the folder that prepare-walkthrough.mjs wrote>
 skill=<the base directory of this skill>
-node "$skill/render-walkthrough.mjs" "$dir/walkthrough.md" "$dir/walkthrough.html"
+node "$skill/render-walkthrough.mjs" "$dir/walkthrough.md" "$dir/walkthrough.html" --check
 open "$dir/walkthrough.html"
 ```
+
+With `--check`, the renderer opens every slide in headless Chrome. It prints
+each block, such as a table or an image, that runs past the right edge of its
+column. Fix each one in the source. If a change to the source doesn't fix the
+block, tell Nick which slide the block is on.
 
 The renderer checks every code block against the file in git. The file is
 read at the head of the merge request, or at the merge base if the block has
@@ -243,17 +237,22 @@ url: https://gitlab.com/<group>/<project>/-/merge_requests/412
 author: someone
 context: modules/exports = exports context = @shop/exports
 context: modules/billing = billing context = @shop/billing
+folder: docs
 base: <full sha of the merge base>
 head: <full sha of the head>
 ---
 
 # The change
 
-One paragraph that describes what the merge request does.
+One sentence about why the merge request exists, which the page draws as the
+heading of the overview.
+
+- POST /api/exports starts an export of the invoices of a shop.
+- GET /api/exports/<id> reads the state of an export.
 
 ## The export route returns a 503 after the last retry {503 after retries}
 
-A paragraph that introduces the point.
+A paragraph or a list that introduces the point.
 
 ### The export job stops after the 3rd failed upload
 
@@ -274,22 +273,41 @@ what you'd write in an `import` in another context to use this one. Leave the
 package out for a folder that isn't imported by name, such as an app or a
 tooling folder.
 
+A `folder:` line is `folder: <path prefix>`, as in `folder: docs`. Each file
+under that folder that isn't under a `context:` line belongs to the folder.
+The renderer draws the folder in grey rather than as a context.
+`prepare-walkthrough.mjs` writes these lines.
+
 Each passage in a `## ` point starts with a `### ` line, which is the
-passage's title. Everything under the title up to the next `### ` or `## `
-heading belongs to the passage. The page shows the title as a heading above
-the passage and numbers the passages of each point from 1.
+passage's title. In a point that has a `request` block, the title ends with a
+short name in braces, as in `### <title> {Sign-in cookie}`. The card of the
+passage contains the short name. In a point that has a table of contents, the
+card contains the label of the item instead. Everything under the title up to
+the next `### ` or `## ` heading belongs to the passage. The page shows each
+passage as one slide, which has the title as its heading. The passages of each
+point are numbered from 1.
 
 The title is a heading rather than the first sentence of a paragraph. So the
 paragraph under the title doesn't continue from the title. It starts its
 context again, as described in "Each point is built to be read on its own".
 
 Before the first `### ` title, a point only has an intro. The intro contains
-the paragraphs that introduce the point, a `steps` block or a table of
-contents and any `> ⚠️` blocks. The renderer fails on any other block that
+the paragraphs and the lists that introduce the point, a `request` block or a
+table of contents and any `> ⚠️` blocks. The renderer fails on any other block that
 isn't under a `### ` title.
 
-A `> ⚠️` block isn't a passage. It isn't numbered or listed in the `steps`
-block or the table of contents. A `> ⚠️` block also ends the passage above
+The intro paragraphs are shown on the overview slide of the point. The
+overview slide is described in "The page".
+
+The page doesn't show a table of contents as a list. The description of each
+item is shown in the panel that drops down from the timeline. For a passage
+without an item, the page shows the title of the passage and the first
+sentence of its first paragraph instead. The links at the bottom of a slide
+contain the number of the point and the number of the passage, as in "Next:
+1.2". Hovering over a link shows the title of that passage.
+
+A `> ⚠️` block isn't a passage. It isn't numbered or listed in the
+table of contents. A `> ⚠️` block also ends the passage above
 the block. That's why the next line after a `> ⚠️` block in the middle of a
 point is always a `### ` title.
 
@@ -306,6 +324,10 @@ The page shows the title as the heading of the block. The overview lists the
 title of every `> ⚠️` block as a section that is closed at first. A click on
 the title opens the section, which shows the text and a link to the block. The
 renderer fails on a `> ⚠️` block without a title.
+
+A `> ⚠️` block in the intro is shown on the overview slide of the point. A
+`> ⚠️` block under a passage is shown at the end of the text of that passage.
+The overview slide of the point then links to the block.
 
 Each passage has an id, which is used in links and in Nick's comments:
 
@@ -327,7 +349,7 @@ it is at the merge base rather than at the head, write `@base` after the path:
 ```ts modules/exports/src/application/export-invoice.handler.ts
 const policy = UploadRetryPolicy.fromAttempts(command.attempts)
 …
-return new UploadRetriesExhausted() //~ the error from point 3
+return new UploadRetriesExhausted() //~ `UploadRetriesExhausted` is the error from point 3
 ```
 ````
 
@@ -340,8 +362,17 @@ return new UploadRetriesExhausted() //~ the error from point 3
 - A code block without a path isn't checked. Use one for an example of a
   request or a response.
 - A `flow` block before the first `## ` heading is drawn as a sequence
-  diagram. Each line is `<from> -> <to>: <label> @<number of the point>`.
-  Write `-->` for an error or a response.
+  diagram. Each line is
+  `<from> -> <to>: <label> @<number of the point>.<number of the passage>`.
+  Write `-->` for an error or a response. Tag a response with the passage of
+  the call that it belongs to.
+
+  The lines that are tagged with the number of a point are also drawn as the
+  sequence diagram of that point. Each arrow shows the number of its passage.
+  A click on the number opens that passage. In a line of the `flow` block, write the
+  name of a context exactly as in the `context:` line, or leave out the last
+  word of the name, as in `billing` for `billing context`. The page then marks
+  that context in the sequence diagram while one of its passages is open.
 - A `types` block after the `flow` block is drawn as a type diagram under the
   sequence diagram. The type diagram shows how the types fit together, which
   the sequence diagram doesn't.
@@ -381,7 +412,9 @@ ExportOwner | InvoiceNotFound -> ExportPermission @3
 - When 2 boxes share a name, write `in <context>` after that name in every
   arrow, as in `OpenSessionInProcAdapter -> OpenSession in identity @3`. Leave
   every other name bare. The renderer fails on a bare name that 2 boxes share.
-- Read the kind of each type off its declaration in the code. Some of the
+- Read the kind of each type off its declaration in the code. For a type in a
+  TypeScript file, the render fails when the kind doesn't fit the declaration,
+  such as a value object that is declared as an interface. Some of the
   colours are taken from event storming, such as orange for a domain event
   and blue for a command:
 
@@ -397,6 +430,10 @@ ExportOwner | InvoiceNotFound -> ExportPermission @3
   | `SPI port` | dashed purple pill | the interface that a context calls when it needs something from outside, which an adapter implements |
   | `adapter` | pink | the class that implements an SPI port, often by calling another context's API port |
 
+  If the kind of a type isn't in this table, write the keyword of its
+  declaration, `interface` or `type`. The box is drawn in grey, or in white
+  with a grey outline when the diagram has a plain array.
+
 - Never draw an arrow straight from a type in one context to a type in
   another. When a type is passed from one context to another, draw each box
   that the type is passed through:
@@ -407,16 +444,22 @@ ExportOwner | InvoiceNotFound -> ExportPermission @3
   arrow because you think the code is wrong. If you think the code is wrong,
   write that in a point.
 
-If a point follows one call through the code, from the route down to the
-domain model, add an empty `steps` block to that point. The reader then sees
-every step of the point on one screen.
+Every point has a card diagram, which is built from the passages of the point.
+Each `### ` passage is one card, which is a numbered box that contains the
+short name of the passage. The cards are drawn in lanes. Each context has a
+separate lane.
 
-The renderer builds the chain of steps from the passages of the point. Each
-`### ` passage is one step, which is drawn as a numbered box that contains the
-title of the passage. The box also shows the context of the first code block
-in the passage that has a path. A passage without a code block like that has a
-box without a context. Each box links to its passage. That way the reader can
-jump straight to the code of any step.
+A card is in the lane of the context of the first code block in the passage
+that has a path. A passage without a code block like that has a card in a lane
+without a name. Arrows join the cards in the order of the passages. Each card
+opens its passage. That way the reader can jump straight to the code of any
+passage.
+
+Read the code of each point and decide whether the point follows one request
+through the code, such as an HTTP request from the route down to the domain
+model. If it does, add an empty `request` block to that point. The diagram of
+that point is then titled "The request". For any other point, the diagram is
+titled "The passages".
 
 Write the empty block after the point's intro paragraphs and before the first
 `### ` title:
@@ -426,7 +469,7 @@ Write the empty block after the point's intro paragraphs and before the first
 
 The export job in the exports context tries an upload 3 times at most.
 
-```steps
+```request
 ```
 
 ### `ExportController` reads the retry limit of the shop
@@ -439,11 +482,11 @@ The export job in the exports context tries an upload 3 times at most.
 …
 ````
 
-- The renderer fails on a `steps` block that has any lines. A step always has
-  the title of its passage. So the text of a step can't be different from the
-  title of its passage.
-- To change the text of a step, change the title of its passage.
-- The `> ⚠️` blocks aren't in the chain, because they aren't numbered.
+- The renderer fails on a `request` block that has any lines. A card has the
+  short name of its passage, or else the label of its item in the table of
+  contents. Both are described in "The source format".
+- To change the text of a card, change the short name of its passage.
+- The `> ⚠️` blocks aren't in the diagram, because they aren't numbered.
 
 The renderer also adds 3 things that you don't write in the source:
 
@@ -454,12 +497,15 @@ The renderer also adds 3 things that you don't write in the source:
 
 ### Notes on lines of code
 
-A note explains one line of a code block or a few lines of the block. Write
-` //~ ` at the end of the line, followed by the note:
+A note explains one line of a code block or a few lines of the block. Start
+with what the line means for the code around it, as in "`@Public()` means that
+anyone can call this route without a token". Explain how the framework handles
+the line only when the reviewer needs that to judge the change. Write ` //~ `
+at the end of the line, followed by the note:
 
 ````markdown
 ```ts modules/exports/src/application/export-invoice.handler.ts
-const policy = UploadRetryPolicy.fromAttempts(command.attempts) //~ the limit is read from the shop's settings
+const policy = UploadRetryPolicy.fromAttempts(command.attempts) //~ `fromAttempts` reads the limit from the shop's settings
 ```
 ````
 
@@ -469,7 +515,7 @@ The lines in between don't need a marker. A `…` line can also be one of them:
 
 ````markdown
 ```ts modules/exports/src/application/export-invoice.handler.ts
-if (policy.isExhausted(attempts)) { //~[ a 4th upload is never tried
+if (policy.isExhausted(attempts)) { //~[ `policy.isExhausted` stops a 4th upload
   return new UploadRetriesExhausted()
 } //~]
 ```
@@ -479,13 +525,24 @@ The renderer numbers the notes of each code block from 1. Each note is shown
 in 3 places:
 
 - A numbered badge is drawn in the gutter of the note's first line. Every line
-  of the note has a green wash.
-- A numbered list above the code block shows the text of each note and the
-  lines that the note is about.
-- A card is opened by hovering over the badge or by clicking the badge. The
-  card is drawn under the last line of the note, or above the first line when
-  there's more room above. That way the card is never drawn over the lines of
-  the note.
+  of the note has a wash in the colour of the context of the code block.
+- A row in the notes panel has the same number as the badge. The notes panel
+  is in the text of the passage, which is next to the code. A row shows the
+  lines and the name of the note. Every note starts open. A
+  click on the row opens or closes the note and lights the lines of the note
+  in the code. The header of the panel has an expand all icon and a collapse
+  all icon, which act on every note on the page.
+- A card shows the note next to its lines while the text of the passage is
+  folded. The card is opened by hovering over the badge or by clicking the
+  badge. The card is drawn under the last line of the note, or above the first
+  line when there's more room above. That way the card is never drawn over the
+  lines of the note.
+
+The renderer takes the first name in backticks from the text of a note. It
+only uses a name that is also in the lines the note is on. So start each note
+with the name of the thing that the note is about, as in "`policy.isExhausted`
+stops a 4th upload". A note without a name like that is named after the code
+of its first line.
 
 The renderer fails on a note on several lines that isn't written correctly:
 
@@ -498,18 +555,18 @@ The renderer fails on a note on several lines that isn't written correctly:
 ## The tabs
 
 Each `# ` heading in the source is a tab on the page. The renderer adds a 4th
-tab, "Every file", at the end. You can write these 3 tabs in the source:
+tab, "Every file", at the end. The first paragraph of each tab is drawn as the
+heading of the tab. Write that paragraph as one sentence. On the change tab,
+list each route or command that the merge request adds under the heading, when
+the merge request adds any. You can write these 3 tabs in the source:
 
 1. **The change.** This tab contains the points from step 2, in the order the
-   code runs. The text before the first `## ` heading is the overview. Put the
-   `flow` block there, followed by the `types` block.
-2. **Architecture.** This tab contains what changes between contexts rather
-   than inside one context:
-   - a new dependency between 2 contexts or 2 packages
-   - a new API port or SPI port
-   - a new export from the `index.ts` of a context
-   - a new table or a new queue that another context can read
-   - a new event that another context can read
+code runs. The text before the first `## ` heading is the overview. Put the
+`flow` block there, followed by the `types` block. 2. **Architecture.** This
+tab contains what changes between contexts rather than inside one context: - a
+new dependency between 2 contexts or 2 packages - a new API port or SPI port -
+a new export from the `index.ts` of a context - a new table or a new queue
+that another context can read - a new event that another context can read
 
    A new dependency in a `package.json` belongs here even though the file is
    config, because a reviewer reads the dependency as coupling between 2
@@ -530,9 +587,10 @@ warnings before he opens a point. A new dependency between contexts, a lower
 coverage threshold and a changed coding convention are all examples of a wide
 impact.
 
-Give each `## ` heading a short label in braces. The top of every point has a
+Give each `## ` heading a short label in braces. The top of every screen has a
 timeline, which is a row of numbered points. The full heading doesn't fit in
-the timeline so the label is shown there instead:
+the timeline so the label is shown there instead. The label is also the title
+of the sidebar of the point:
 
 ```markdown
 ## The export job retries a failed upload {Retry}
@@ -589,30 +647,28 @@ returns the 403, which has a note.
 
 ### Each point is built to be read on its own
 
-Build each point so that it can be read without the other points, because a
-point is one screen of the page and Nick will read the screens in any order.
-He'll also jump straight to any passage on a screen. That's why each passage
-is built so that it can be read without the passage above it too.
+Build each point so that it can be read without the other points, because Nick
+will open the points in any order. He'll also jump straight to any passage of
+a point, because each passage is a separate slide. That's why each passage is
+built so that it can be read without the passage above it too.
 
 1. **Open the point with an intro that describes what the point is about.**
    The intro doesn't refer to the previous point.
 2. **Write a breakdown after the intro** if the point has 3 or more passages.
    These are the usual cases, but use your judgment for each point:
-   - A point that follows one call through the code has a `steps` block
+   - A point that follows one request through the code has a `request` block
      after its intro paragraphs as described in "The source format".
    - Any other point has a table of contents, which is a numbered list after
-     its intro paragraphs. Each item is
-     `[<label>](#<passage id>): <description>`. The label is a noun phrase
-     that makes sense without any text around the label, such as "2 new SPI
-     ports". The description explains in plain words what the passage shows
-     and how the passage fits with the others.
-   - Like the `steps` block, the table of contents lists every passage of
-     the point in order. Item 1 links to passage 1, item 2 links to passage 2
-     and so on. The renderer will fail if the items aren't in the order of
-     the passages.
+     its intro paragraphs. Each item is `**<label>**: <description>`. The
+     label is a noun phrase that makes sense without any text around the
+     label, such as "2 new SPI ports". The description explains in plain words
+     what the passage shows and how the passage fits with the others.
+   - The table of contents lists every passage of the point in order. Item 1
+     is about passage 1, item 2 is about passage 2 and so on. The renderer
+     will fail if the number of items isn't the number of passages.
    - Don't start a label with "the" if the thing hasn't been
      introduced on the same screen yet. Don't write a sentence that has a
-     label as its subject and continues after the link either.
+     label as its subject and continues after the label either.
 3. **Make the title of each passage its point.** If you link to an earlier
    passage, write the link in the paragraph and write about the code rather
    than about the page. Never write "the passage on", "the introduction",
@@ -633,15 +689,15 @@ is built so that it can be read without the passage above it too.
 
 **Bad:**
 
-> 1. [The 2 ports](#t1p3.b3) are listed with the context that each one calls.
+> 1. **The 2 ports** are listed with the context that each one calls.
 
 "The 2 ports" haven't been introduced on the screen. The label is also the
 subject of the sentence.
 
 **Good:**
 
-> 1. [2 new SPI ports](#t1p3.b3): the ports that the exports context calls and
->    the context that each port's adapter calls.
+> 1. **2 new SPI ports**: the ports that the exports context calls and the
+>    context that each port's adapter calls.
 
 **Bad:**
 
@@ -707,7 +763,7 @@ goal. So the sentence wouldn't have any connection to anything they'd read.
 This entry doesn't apply to a point's heading, because the heading is the
 goal.
 
-### A paragraph that piles up every fact about the code under the paragraph
+### A paragraph that piles up every statement about the code under the paragraph
 
 The renderer fails on any paragraph that has more than 4 sentences, because a
 longer paragraph is a wall of text that's hard to read. In the entries above,
@@ -715,29 +771,32 @@ you're asked for the context and the dependency of everything in a block, as
 well as the reason why each thing is there. If you were to write all of that
 as one paragraph, you'd end up with about 8 sentences.
 
-The point is in the passage's `### ` title. Keep the facts that explain the
-point in the paragraph. Then move each other fact to the place where it
-belongs:
+The point is in the passage's `### ` title. Keep the statements that explain
+the point in the paragraph. Then move each other statement to the place where
+it belongs:
 
-- Turn facts of the same kind, such as one fact per dependency, into bullets.
-- Turn a fact about one line of the block into a ` //~ ` note on that line.
-- Move a fact about something else into a separate passage under a new
-  `### ` title. The new passage shows the code that the fact is about.
+- Turn statements of the same kind, such as one statement per dependency, into
+  bullets.
+- Turn a statement about one line of the block into a ` //~ ` note on that
+  line.
+- Move a statement about something else into a separate passage under a new
+  `### ` title. The new passage shows the code that the statement is about.
 
 Never get under the limit by joining sentences with "and" or by cutting a
 thing's context.
 
-### Steps and separate facts written as a paragraph
+### Steps and separate statements written as a paragraph
 
 Write each step of the code being discussed as a numbered list because humans
 find it easier to read a sequence of steps as a list instead of prose. Use
 your judgment, though. For example, 2 short steps can read fine as one
 sentence.
 
-Separate facts about the code are usually easier to read as bullet points
-too. A fact and the reason for it stay in one bullet, joined as one sentence.
-A reason on a separate bullet reads like a separate fact, because a reason
-only makes sense when it's joined to the sentence it explains.
+Separate statements about the code are usually easier to read as bullet
+points too. A statement and the reason for it stay in one bullet, joined as
+one sentence. A reason on a separate bullet reads like a separate statement,
+because a reason only makes sense when it's joined to the sentence it
+explains.
 
 1. Steps in a paragraph.
 
@@ -758,20 +817,20 @@ only makes sense when it's joined to the sentence it explains.
    > 2. It posts the file to the storage bucket.
    > 3. It checks the ETag of the response against the checksum of the file.
 
-2. Separate facts in a paragraph.
+2. Separate statements in a paragraph.
 
    **Bad:**
 
-   > `ExportController` is a new controller in the exports context. The
-   > `exportInvoice` route is tagged `@Public()` so the auth guard lets a
-   > caller without a token through. The retry limit is the number that is
-   > returned by the billing context.
+   > `ExportController` is a new controller in the exports context.
+   > `@Public()` means that anyone can call the `exportInvoice` route without
+   > a token. The retry limit is the number that is returned by the billing
+   > context.
 
    **Good:**
 
    > - `ExportController` is a new controller in the exports context.
-   > - The `exportInvoice` route is tagged `@Public()` so the auth guard lets
-   >   a caller without a token through.
+   > - `@Public()` means that anyone can call the `exportInvoice` route
+   >   without a token.
    > - The retry limit is the number that is returned by the billing context.
 
 3. A reason on a separate bullet.
@@ -826,12 +885,14 @@ in a block on the page.
 
 ### A code block that starts in the middle of a method
 
-Show the signature line of the method that contains the code, even when the
-point is only about a few lines in the middle. Replace each part that you
-leave out with `…`. End the block with the line that closes the method. A
-reviewer can only understand the lines once they know which method and which
-class the lines are in. The parameters of that method also explain where each
-variable comes from.
+In a TypeScript or JavaScript file, only copy the lines that the passage is
+about. The renderer adds the signature line of the enclosing method and the line that closes the method, with a `…` line on each side. When the
+first line that you copy is the signature, as in a whole short method, the
+renderer doesn't add anything. In a file in any other language, copy the
+signature line and the closing line yourself. Replace each part that you leave
+out with `…`. A reviewer can only understand the lines once they know which
+method and which class the lines are in. The parameters of that method also
+explain where each variable comes from.
 
 This mistake is usually made in a point about 2 or 3 lines of a long method.
 The block then starts at those lines. So the reader sees an `if` and a
@@ -886,7 +947,7 @@ might want to open. Examples are files and classes. Routes and tests are
 examples too.
 
 If there are only 2 names, leave them in the sentence. If each name has a
-second fact, such as the action that each handler checks, use a table instead
+second statement, such as the action that each handler checks, use a table instead
 of bullets.
 
 ### Using a vague word when there is a precise technical word
@@ -927,6 +988,11 @@ The kind isn't needed in "`OrderController` checks that the user owns the
 order in each of its write methods", because the word "its" already makes the
 kind clear. Every method of a controller is a controller method.
 
+When the code has a name for a thing, write that name in backticks, even when
+a writing rule bans the plain word for that thing. The writing hook doesn't
+check inline code. For example, write "maps each `SignInRefusal` in the
+identity context to `sign-in-refused`" rather than "maps the 5 sign-in
+rejections to `sign-in-refused`".
 ### A thing mentioned without its context
 
 The first time you mention a thing in a passage, write what kind of thing it
@@ -950,7 +1016,7 @@ shows the call.
 Say a method in the exports context contains `this.getInvoiceOwner.apply(…)`.
 The call looks local, but `getInvoiceOwner` is a port whose adapter calls the
 billing context. So that line creates a dependency between 2 contexts. For a
-reviewer it's the most important fact in the block, but the line on its own
+reviewer it's the most important line in the block, but the line on its own
 doesn't show the dependency.
 
 A dependency like this one is why every piece of the page shows its context.
@@ -979,11 +1045,13 @@ followed by a block with only the body of `#exportForOwner`.
 
 **Good:**
 
-> The new `#exportForOwner` method in the exports context is where the
-> exports context starts to depend on the billing context. The dependency is
-> new in this merge request and is on the Architecture tab. The method reads
-> the owner of the invoice from the billing context through
-> `GetInvoiceOwner`, which is a new SPI port in the exports context.
+> The new `#exportForOwner` method in the exports context calls the billing
+> context:
+>
+> - `#exportForOwner` calls the new SPI port `GetInvoiceOwner` in the exports
+>   context to read the owner of the invoice from the billing context.
+> - The exports context didn't depend on the billing context before this merge
+>   request. The Architecture tab lists the new dependency.
 
 followed by a block with the `import` of `GetInvoiceOwner`, the constructor
 line where `GetInvoiceOwner` is injected and then `#exportForOwner`.
@@ -1031,7 +1099,7 @@ Show every change at the boundary of a context, even if it's only one line,
 because a reviewer nearly always wants to see these changes. A new port, a new
 export from an `index.ts` and a new dependency in a `package.json` are each a
 contract between 2 contexts. Show the declaration of a new port and write
-which context calls which.
+which context calls which. The render fails on an added line in an `index.ts` or a `package.json` that isn't shown in any code block. The renderer prints each of those lines.
 
 A private method, a new file inside one context or a renamed local variable
 isn't a boundary change. Show a change like that only where the point would
@@ -1066,26 +1134,53 @@ them.
 
 ## The page
 
-Nick will read the page on a laptop. `walkthrough.css` and
+Nick will read the page on a laptop. `walkthrough.css`, `walkthrough.js` and
 `render-walkthrough.mjs` are built around the constraints of a laptop screen,
-which are listed below. If you change either file, keep to these constraints:
+which are listed below. If you change one of these files, keep to these
+constraints:
 
 - **The code is always fully visible**, because Nick can't review a line that
   he can't see. A long line wraps. A code block never scrolls sideways and
   it's never clipped.
-- **Text is above its code rather than beside the code.** A laptop screen is
-  too narrow for a column of text next to a column of code. The code would be
-  squeezed into half of the width.
-- **The page has one column**, because a laptop screen doesn't have room for a
-  sidebar next to the code.
+- **A point is shown as slides. Each slide is one passage.** A reader who saw
+  7 points and 40 code blocks on one scrolling page wouldn't know where to
+  start. The heading of a slide is the number and the title of the passage, as
+  in "1.1 The export job stops after 3 failed uploads". The line above a slide
+  only shows which passage is open, as in "Passage 2 of 4". So the arrows never move. Nick moves between the slides with the links at the top and at
+  the bottom of a slide, or with the left and right arrow keys.
+- **The first slide of a point is the overview of the point.** It has these
+  parts:
+  - the heading of the point, followed by the number of contexts and the
+    number of passages in small grey text
+  - the intro of the point
+  - the card diagram of the passages, which has a switch to the sequence
+    diagram of the point
+  - a table of the passages, which shows the context of each passage and how
+    many files and notes the passage has
+- **On the slide of a passage, the text is on the left and the code is on the
+  right.** The text is the title and the paragraphs of the passage. The text
+  also has a notes panel for each code block. An arrow on the left of the text
+  folds the text so that the code has the whole width. A teal tab then opens
+  the text again.
+- **A sidebar lists the passages of the open point.** The open passage also
+  lists its files and how many notes each file has. The sidebar folds into a
+  rail that is 40px wide, which still shows the number of each passage. A teal
+  arrow at the top of the rail opens the sidebar again.
+- **A header above the slide of a passage shows where the passage is in the
+  point.** The header is folded at first. It contains the card diagram and the
+  sequence diagram of the point. The open passage is marked in both diagrams.
+- **A diagram is never squeezed into its space.** A card is never narrower
+  than 180px so that its title can be read. A diagram that is a little too
+  wide is scaled down as a whole. A wider diagram is drawn at its full size.
+  Nick then zooms and pans the diagram.
 - **Body text is dark on white.** Grey text on a grey background is hard to
   read. Only a label, such as a line number or a path, is grey.
-- **There's one point per screen**, because a reader who saw 7 points and 40
-  code blocks on one scrolling page wouldn't know where to start.
-- **The timeline is on every screen.** Showing one point per screen hides the
-  overall story. That's why the row of numbered points is at the top of every
-  screen. The timeline shows which point is open, which ones have been read
-  and which ones have a warning.
+- **The timeline is on every screen.** Showing one passage per screen hides
+  the overall story. That's why the row of numbered points is at the top of
+  every screen. The timeline shows which point is open, which ones have been
+  read and which ones have a warning. A click on a point of the timeline drops
+  down a panel that lists the passages of that point. A click on a passage in
+  the panel opens that passage.
 - **The overview shows the whole change at a glance.** It has these parts:
   - the summary
   - every warning from every tab
@@ -1094,16 +1189,14 @@ which are listed below. If you change either file, keep to these constraints:
 
   A warning that's only visible inside a point is a defect.
 - **The colour of a context is a faint tint.** Each context has a separate
-  hue. The badge is a light tint of that hue with dark text. A strong
-  colour on every badge would draw the eye away from the text and the code.
+  hue. The badge on a code block is a light tint of that hue with dark text.
+  The lane of a context has the same hue. So do the notes on the code of that
+  context. A strong colour on every badge would draw the eye away from the
+  text and the code.
 
-Look at the page before you show it to Nick. Take a screenshot at the size of
-a laptop screen and read the screenshot:
-
-```sh
-"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" --headless=new \
-  --window-size=1440,900 --screenshot="$dir/check.png" "file://$dir/walkthrough.html#t1p2"
-```
+Before you show the page to Nick, open `walkthrough.html` at the size of a
+laptop screen and look at the page. `#t1p2` opens the overview slide of a
+point and `#t1p2.b1` opens the slide of a passage.
 
 ## Rules
 

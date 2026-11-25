@@ -1,25 +1,32 @@
 const KEY = 'nick-walkthrough:' + RUN
 
-let state = { notes: {}, read: {}, comments: [] }
+let state = { notes: {}, read: {}, comments: [], ui: {} }
 try {
   const kept = JSON.parse(localStorage.getItem(KEY) || '{}')
-  state = { notes: kept.notes || {}, read: kept.read || {}, toc: kept.toc, comments: kept.comments || [] }
+  state = { notes: kept.notes || {}, read: kept.read || {}, comments: kept.comments || [], ui: kept.ui || {} }
 } catch {}
 const save = () => { try { localStorage.setItem(KEY, JSON.stringify(state)) } catch {} }
 
+const $ = (sel, root = document) => root.querySelector(sel)
 const $$ = (sel, root = document) => [...root.querySelectorAll(sel)]
 const said = id => (state.notes[id] || '').trim()
 const numbered = () => $$('.point[data-n]')
+const openPane = () => $$('.pane').find(p => !p.hidden)
+const openPoint = () => $$('.point', openPane()).find(p => !p.hidden)
+const slideOf = point => Number(point.dataset.cur || 0)
 
 const pointOf = c => document.getElementById(c.at)?.closest('.point')
 
 function paint () {
-  for (const step of $$('.step')) step.classList.toggle('said', state.comments.some(c => c.at === step.id))
+  for (const mark of $$('[data-say]')) {
+    const count = state.comments.filter(c => document.getElementById(c.at)?.closest('.slide')?.id === mark.dataset.say).length
+    mark.textContent = count ? `${count} 💬` : ''
+  }
   for (const point of numbered()) {
     const count = state.comments.filter(c => pointOf(c) === point).length
-    const link = document.querySelector(`[data-toc="${point.id}"]`)
+    const link = $(`[data-toc="${point.id}"]`)
     link?.classList.toggle('done', Boolean(state.read[point.id]))
-    const badge = document.querySelector(`[data-badge="${point.id}"]`)
+    const badge = $(`[data-badge="${point.id}"]`)
     if (badge) badge.textContent = count ? `${count} 💬` : ''
   }
   nRead.textContent = numbered().filter(p => state.read[p.id]).length
@@ -28,6 +35,8 @@ function paint () {
   nSaid.textContent = total
   nComments.textContent = state.comments.length
   brief.textContent = total ? `Collect all my feedback (${total})` : 'Collect all my feedback'
+  // A count of comments under a point makes the timeline taller.
+  measure()
 }
 
 for (const tick of $$('.read input')) {
@@ -35,60 +44,409 @@ for (const tick of $$('.read input')) {
   tick.addEventListener('change', () => { state.read[tick.dataset.id] = tick.checked; save(); paint() })
 }
 
+// ── the points of a tab ──
+// The tab bar and the timeline are pinned to the top of the window. The sidebar and the dropdown start under them.
+const stickTop = () => $('.tabbar').offsetHeight + ($('.line', openPane())?.offsetHeight ?? 0)
+function measure () {
+  const root = document.documentElement.style
+  root.setProperty('--tb', `${$('.tabbar').offsetHeight}px`)
+  root.setProperty('--st', `${stickTop()}px`)
+  root.setProperty('--ft', `${$('footer').offsetHeight}px`)
+}
+
 function showTab (n) {
   for (const tab of $$('.tab')) tab.setAttribute('aria-selected', String(tab.dataset.tab === String(n)))
   for (const pane of $$('.pane')) pane.hidden = pane.dataset.tab !== String(n)
+}
+
+function reveal (point) {
+  const pane = point.closest('.pane')
+  showTab(pane.dataset.tab)
+  for (const other of $$('.point', pane)) other.hidden = other !== point
+  for (const link of $$('[data-toc]', pane)) link.classList.toggle('here', link.dataset.toc === point.id)
+  closeDropdown()
+  measure()
+}
+
+// A point is shown as slides. Slide 0 is the overview of the point and slide n is the passage n.
+function go (point, n, scroll) {
+  const last = $$('.slide', point).length
+  n = Math.max(0, Math.min(last, n))
+  point.dataset.cur = n
+  closePop()
+  for (const s of $$('.slide, .overview-slide', point)) s.classList.toggle('cur', Number(s.dataset.s) === n)
+  $('.slide-top', point).hidden = n === 0
+  for (const b of $$('[data-to]', point)) {
+    if (b.closest('.sfoot')) continue
+    b.classList.toggle('cur', Number(b.dataset.to) === n)
+    b.classList.toggle('done', Number(b.dataset.to) < n)
+  }
+  for (const li of $$('.sb-li', point)) li.classList.toggle('cur', Number(li.dataset.li) === n)
+  const slide = $(`.slide[data-s="${n}"]`, point)
+  const count = $('.scount', point)
+  count.innerHTML = slide ? `Passage <b>${n}</b> of ${last}` : `<b>Overview</b> of the ${last} passage${last === 1 ? '' : 's'}`
+  $('.sstep[data-d="-1"]', point).disabled = n === 0
+  $('.sstep[data-d="1"]', point).disabled = n === last
+  const who = slide?.dataset.w
+  for (const g of $$('.sq-who', point)) g.classList.toggle('cur', who !== undefined && g.dataset.w === who)
+  for (const g of $$('.sq', point)) g.classList.toggle('cur', who !== undefined && (g.dataset.a === who || g.dataset.z === who))
+  markDropdown()
+  if (point === openPoint()) history.replaceState(null, '', '#' + (slide ? slide.id : point.id))
+  layout(point)
+  const nav = $('.snav', point)
+  if (scroll && nav.getBoundingClientRect().top < stickTop()) scrollTo(0, nav.getBoundingClientRect().top + scrollY - stickTop() - 8)
 }
 
 function show (id) {
   const el = document.getElementById(id)
   const point = el?.closest('.point')
   if (!point) return
-  const pane = point.closest('.pane')
-  showTab(pane.dataset.tab)
-  for (const other of $$('.point', pane)) other.hidden = other !== point
-  for (const link of $$('[data-toc]', pane)) link.classList.toggle('here', link.dataset.toc === point.id)
-  const points = $$('.point', pane)
-  const at = points.indexOf(point)
-  const prev = point.querySelector('.prev'); const next = point.querySelector('.next')
-  if (prev) prev.disabled = at <= 0
-  if (next) next.hidden = at === points.length - 1
-  history.replaceState(null, '', '#' + point.id)
-  if (el === point) window.scrollTo({ top: 0 })
+  reveal(point)
+  const slide = el.closest('.slide')
+  if (point.classList.contains('slides')) go(point, slide ? Number(slide.dataset.s) : 0)
+  else history.replaceState(null, '', '#' + point.id)
+  if (el === point || el === slide) window.scrollTo({ top: 0 })
   else el.scrollIntoView({ block: 'center' })
 }
 
 function move (by) {
-  const pane = $$('.pane').find(p => !p.hidden)
-  const points = $$('.point', pane)
+  const points = $$('.point', openPane())
   const at = points.findIndex(p => !p.hidden)
   const to = points[Math.max(0, Math.min(at + by, points.length - 1))]
-  if (to) show(to.id)
+  if (to && to !== points[at]) show(to.id)
 }
 
+// ── the dropdown of the timeline ──
+const ddp = document.createElement('div')
+ddp.className = 'ddp'
+document.body.append(ddp)
+let ddFor
+
+function closeDropdown () {
+  ddp.classList.remove('open')
+  ddFor = undefined
+  for (const a of $$('.line a.dd-on')) a.classList.remove('dd-on')
+}
+
+function markDropdown () {
+  if (!ddFor) return
+  const point = document.getElementById(ddFor)
+  const open = $(`.slide[data-s="${slideOf(point)}"]`, point)
+  for (const li of $$('li[data-go]', ddp)) li.classList.toggle('cur', !point.hidden && open?.id === li.dataset.go)
+}
+
+function toggleDropdown (id) {
+  const wasOpen = ddFor === id
+  closeDropdown()
+  const template = $(`template[data-dd="${id}"]`)
+  if (wasOpen || !template) return
+  ddFor = id
+  $(`.line a[data-toc="${id}"]`)?.classList.add('dd-on')
+  ddp.innerHTML = template.innerHTML
+  ddp.style.top = `${stickTop() - 1}px`
+  ddp.classList.add('open')
+  markDropdown()
+}
+
+// ── the folds and the diagrams ──
+function setSidebar (on) {
+  document.body.classList.toggle('sb-off', !on)
+  for (const b of $$('.sb-col')) { b.setAttribute('aria-label', on ? 'Hide the passages' : 'Show the passages'); b.title = b.getAttribute('aria-label') }
+  state.ui.sidebar = on
+  save(); layout()
+}
+
+function setText (on) {
+  document.body.classList.toggle('text-off', !on)
+  closePop()
+  for (const b of $$('.tcol')) { b.setAttribute('aria-label', on ? 'Hide the text' : 'Show the text'); b.title = b.getAttribute('aria-label') }
+  state.ui.text = on
+  save(); layout()
+}
+
+// The view and the fold of "The request" are the same on every slide of every point.
+function setView (view) {
+  for (const d of $$('.dsw')) d.dataset.v = view
+  state.ui.view = view
+  save(); layout()
+}
+
+function setFold (closed) {
+  for (const d of $$('.dsw.fold')) {
+    d.classList.toggle('closed', closed)
+    const b = $('.dsw-fold', d)
+    b.setAttribute('aria-label', closed ? 'Show the diagram' : 'Hide the diagram'); b.title = b.getAttribute('aria-label')
+  }
+  state.ui.fold = closed
+  save(); layout()
+}
+
+// The arrows of a card diagram join the cards in the order of the passages. They are drawn from the places of the cards,
+// which depend on how the titles wrap.
+function drawFlows () {
+  for (const f of $$('.fl')) {
+    if (!f.offsetParent) continue
+    const boxes = $$('.fl-box', f).sort((a, b) => a.dataset.i - b.dataset.i)
+    let out = ''
+    for (let i = 0; i < boxes.length - 1; i++) {
+      const a = boxes[i]; const c = boxes[i + 1]
+      const x1 = a.offsetLeft + a.offsetWidth + 2; const y1 = a.offsetTop + a.offsetHeight / 2
+      const x2 = c.offsetLeft - 8; const y2 = c.offsetTop + c.offsetHeight / 2
+      const d = Math.abs(y1 - y2) < 4 ? `M${x1} ${y1}H${x2}` : `M${x1} ${y1}H${(x1 + x2) / 2}V${y2}H${x2}`
+      out += `<path d="${d}" fill="none" stroke="#64748b" stroke-width="1.5"/><polygon fill="#64748b" points="${x2 + 8},${y2} ${x2},${y2 - 4.5} ${x2},${y2 + 4.5}"/>`
+    }
+    $('.fl-svg', f).innerHTML = out
+  }
+}
+
+// A diagram that is wider than its space is never squeezed into that space. A diagram that is a little too wide is scaled
+// down as a whole, to 80% at the least. A wider diagram is drawn at its full size. The reader then zooms and pans the diagram.
+const SMALLEST_FIT = 0.8
+class Zoom {
+  constructor (el) {
+    this.el = el; this.view = $('.zp-view', el); this.inner = $('.zp-in', el); this.tools = $('.zp-tools', el); this.label = $('.zp-pc', el)
+    this.s = 1; this.x = 0; this.y = 0; this.auto = true
+    this.view.addEventListener('pointerdown', e => this.grab(e))
+    this.view.addEventListener('click', e => { if (this.dragged) { e.stopPropagation(); e.preventDefault(); this.dragged = false } }, true)
+    this.view.addEventListener('wheel', e => this.wheel(e), { passive: false })
+    this.tools.addEventListener('click', e => this.press(e.target.closest('[data-zp]')?.dataset.zp))
+  }
+
+  refresh () {
+    if (!this.view.offsetParent) return
+    const w = this.inner.scrollWidth; const h = this.inner.offsetHeight; const vw = this.view.clientWidth
+    this.wide = w > vw + 1
+    if (this.auto) this.s = this.wide && vw / w >= SMALLEST_FIT ? vw / w : 1
+    const active = this.wide || this.s !== 1
+    this.el.classList.toggle('over', active)
+    this.tools.hidden = !active
+    if (!active) { this.x = 0; this.y = 0; this.inner.style.transform = ''; this.view.style.height = ''; return }
+    const vh = Math.min(h * this.s, Math.max(260, innerHeight * 0.7))
+    this.x = Math.min(0, Math.max(vw - w * this.s, this.x))
+    this.y = Math.min(0, Math.max(vh - h * this.s, this.y))
+    this.inner.style.transform = `translate(${this.x}px, ${this.y}px) scale(${this.s})`
+    this.view.style.height = `${vh}px`
+    this.label.textContent = `${Math.round(this.s * 100)}%`
+  }
+
+  zoom (s, cx = this.view.clientWidth / 2, cy = 0) {
+    s = Math.max(0.3, Math.min(2.5, s))
+    this.auto = false
+    this.x = cx - (cx - this.x) * s / this.s
+    this.y = cy - (cy - this.y) * s / this.s
+    this.s = s
+    this.refresh()
+  }
+
+  press (action) {
+    if (action === 'in') this.zoom(this.s * 1.25)
+    else if (action === 'out') this.zoom(this.s / 1.25)
+    else if (action === 'reset') this.zoom(1)
+    else if (action === 'fit') { this.auto = false; this.x = 0; this.y = 0; this.s = Math.min(1, this.view.clientWidth / this.inner.scrollWidth); this.refresh() }
+  }
+
+  // The open passage is always in view, whatever the reader panned to before.
+  bring (el) {
+    if (!el || !this.view.offsetParent) return
+    this.refresh()
+    if (!this.wide && this.s === 1) return
+    const left = el.offsetLeft * this.s; const right = left + el.offsetWidth * this.s; const vw = this.view.clientWidth
+    if (left + this.x < 16) this.x = 16 - left
+    else if (right + this.x > vw - 16) this.x = vw - 16 - right
+    this.refresh()
+  }
+
+  grab (e) {
+    if (e.button !== 0 || !this.el.classList.contains('over')) return
+    const from = { px: e.clientX, py: e.clientY, x: this.x, y: this.y }
+    const drag = m => {
+      if (!this.dragged && Math.hypot(m.clientX - from.px, m.clientY - from.py) < 5) return
+      this.dragged = true
+      this.el.classList.add('drag')
+      this.x = from.x + m.clientX - from.px; this.y = from.y + m.clientY - from.py
+      this.refresh()
+    }
+    const drop = () => {
+      removeEventListener('pointermove', drag); removeEventListener('pointerup', drop)
+      this.el.classList.remove('drag')
+      // A click follows a drag only when the pointer is still over the diagram. So the mark of the drag is cleared after
+      // that click.
+      setTimeout(() => { this.dragged = false }, 0)
+    }
+    addEventListener('pointermove', drag); addEventListener('pointerup', drop)
+  }
+
+  wheel (e) {
+    const box = this.view.getBoundingClientRect()
+    if (e.ctrlKey || e.metaKey) {
+      e.preventDefault()
+      this.zoom(this.s * Math.exp(-e.deltaY / 300), e.clientX - box.left, e.clientY - box.top)
+    } else if (this.el.classList.contains('over') && Math.abs(e.deltaX) > Math.abs(e.deltaY)) {
+      e.preventDefault()
+      this.x -= e.deltaX
+      this.refresh()
+    }
+  }
+}
+const zooms = $$('.zp').map(el => new Zoom(el))
+
+let framed = false
+function layout (point = openPoint()) {
+  if (point) for (const z of zooms) if (point.contains(z.el)) z.bring($('.fl-box.cur', z.el))
+  if (framed) return
+  framed = true
+  requestAnimationFrame(() => { framed = false; for (const z of zooms) z.refresh(); drawFlows() })
+}
+
+// ── notes on the code ──
+// A note is a badge on the code and a row in the notes panel of the text. Both have the number of the note. Both are lit
+// together.
+const rowOf = (g, k) => $(`.ghp-row[data-g="${g}"][data-k="${k}"]`)
+const pinned = (g, k) => Boolean(rowOf(g, k)?.classList.contains('pin')) || (pop?.pin && pop.g === g && pop.k === k)
+function light (g, k, on) {
+  for (const x of $$(`[data-g="${g}"][data-k="${k}"], [data-g="${g}"] [data-k="${k}"]`)) x.classList.toggle('on', on)
+  const pre = $(`.code[data-g="${g}"] pre`)
+  pre?.classList.toggle('focus', Boolean(pre.querySelector('.ln.on')))
+}
+
+function openRow (row, open) {
+  row.classList.toggle('open', open)
+  row.classList.toggle('pin', open)
+  light(row.dataset.g, row.dataset.k, open)
+}
+
+function toggleRow (row) {
+  const was = row.classList.contains('open')
+  if (!was) row.closest('.ghp').classList.remove('collapsed')
+  openRow(row, !was)
+}
+
+function hoverable (sel, gOf) {
+  for (const el of $$(sel)) {
+    el.addEventListener('mouseenter', () => light(gOf(el), el.dataset.k, true))
+    el.addEventListener('mouseleave', () => { if (!pinned(gOf(el), el.dataset.k)) light(gOf(el), el.dataset.k, false) })
+  }
+}
+hoverable('pre .ln.mk', el => el.closest('.code').dataset.g)
+hoverable('.ghp-row', el => el.dataset.g)
+
+// While the text is folded, a badge opens its note in a card under the last line of the note, or above the first line
+// when there's more room above. That way the card is never drawn over the lines of the note.
+let pop; let popTimer
+function closePop () {
+  clearTimeout(popTimer)
+  if (!pop) return
+  const { el, g, k } = pop
+  el.remove()
+  pop = undefined
+  if (!pinned(g, k)) light(g, k, false)
+}
+
+function showPop (badge, pin) {
+  clearTimeout(popTimer)
+  const code = badge.closest('.code'); const g = code.dataset.g; const k = badge.dataset.k
+  if (pop && pop.g === g && pop.k === k) { pop.pin = pop.pin || pin; return }
+  closePop()
+  const row = rowOf(g, k)
+  if (!row) return
+  const el = document.createElement('div')
+  el.className = 'pop'
+  if (code.dataset.ctx) el.dataset.ctx = code.dataset.ctx
+  el.innerHTML = `<div class="pop-h"><span class="ghp-n">${k}</span><span class="pop-t"></span><span class="pop-at"></span></div><div class="pop-x">${$('.ghp-exp', row).innerHTML}</div>`
+  $('.pop-t', el).textContent = $('.ghp-name', row).textContent
+  $('.pop-at', el).textContent = $('.ghp-at', row).textContent
+  code.append(el)
+  pop = { el, g, k, pin }
+  light(g, k, true)
+  const lines = $$(`.ln.mk[data-k="${k}"]`, code)
+  const box = code.getBoundingClientRect(); const first = lines[0].getBoundingClientRect(); const last = lines.at(-1).getBoundingClientRect()
+  const h = el.offsetHeight; const below = innerHeight - $('footer').offsetHeight - last.bottom; const above = first.top - stickTop()
+  const under = below >= h + 16 || below >= above
+  el.classList.add(under ? 'below' : 'above')
+  el.style.top = `${under ? last.bottom - box.top + 8 : first.top - box.top - h - 8}px`
+  el.addEventListener('mouseenter', () => clearTimeout(popTimer))
+  el.addEventListener('mouseleave', () => { if (!pop?.pin) popTimer = setTimeout(closePop, 250) })
+}
+
+for (const badge of $$('pre button.nb')) {
+  badge.addEventListener('mouseenter', () => { if (document.body.classList.contains('text-off')) showPop(badge, false) })
+  badge.addEventListener('mouseleave', () => { if (pop && !pop.pin) popTimer = setTimeout(closePop, 250) })
+}
+
+// ── clicks and keys ──
 document.addEventListener('click', e => {
   const tab = e.target.closest('.tab')
   if (tab) {
     showTab(tab.dataset.tab)
-    const pane = $$('.pane').find(p => !p.hidden)
-    const open = $$('.point', pane).find(p => !p.hidden) ?? pane.querySelector('.point')
-    show(open.id)
+    const pane = openPane()
+    const point = $$('.point', pane).find(p => !p.hidden) ?? $('.point', pane)
+    reveal(point)
+    history.replaceState(null, '', '#' + ($('.slide.cur', point)?.id ?? point.id))
+    layout(point)
     return
   }
 
-  const jump = e.target.closest('[data-toc], [data-go]')
-  if (jump) { e.preventDefault(); show(jump.dataset.toc || jump.dataset.go); return }
+  if (e.target.closest('.ddp-x')) { closeDropdown(); return }
+
+  const toc = e.target.closest('[data-toc]')
+  if (toc) {
+    e.preventDefault()
+    if (toc.classList.contains('ov')) show(toc.dataset.toc)
+    else toggleDropdown(toc.dataset.toc)
+    return
+  }
+
+  const jump = e.target.closest('[data-go]')
+  if (jump) { e.preventDefault(); show(jump.dataset.go); return }
+  if (ddFor && !e.target.closest('.ddp')) closeDropdown()
 
   const hop = e.target.closest('[data-step]')
   if (hop) {
     e.preventDefault()
-    const point = hop.closest('.pane').querySelector(`.point[data-n="${hop.dataset.step}"]`)
+    const point = $(`.point[data-n="${hop.dataset.step}"]`, hop.closest('.pane'))
     if (point) show(point.id)
     return
   }
 
-  if (e.target.closest('.next')) { move(1); return }
-  if (e.target.closest('.prev')) { move(-1); return }
+  const file = e.target.closest('.sb-file')
+  if (file) {
+    const point = file.closest('.point')
+    go(point, Number(file.closest('.sb-li').dataset.li))
+    const code = $(`.slide.cur .code[data-g="${file.dataset.file}"]`, point)
+    if (code) scrollTo(0, code.getBoundingClientRect().top + scrollY - stickTop() - 16)
+    return
+  }
+
+  const to = e.target.closest('[data-to]')
+  if (to) { go(to.closest('.point'), Number(to.dataset.to), true); return }
+  const step = e.target.closest('.sstep')
+  if (step) { const point = step.closest('.point'); go(point, slideOf(point) + Number(step.dataset.d), true); return }
+
+  if (e.target.closest('.sb-col')) { setSidebar(document.body.classList.contains('sb-off')); return }
+  if (e.target.closest('.tcol')) { setText(document.body.classList.contains('text-off')); return }
+  const view = e.target.closest('.dtab')
+  if (view) { setView(view.dataset.v); return }
+  const fold = e.target.closest('.dsw-fold')
+  if (fold) { setFold(!fold.closest('.dsw').classList.contains('closed')); return }
+
+  const all = e.target.closest('.ghp-all')
+  if (all) {
+    for (const row of $$('.ghp-row')) row.classList.toggle('open', all.dataset.open === 'true')
+    return
+  }
+  const head = e.target.closest('.ghp-h')
+  if (head) { head.closest('.ghp').classList.toggle('collapsed'); return }
+  const line = e.target.closest('.ghp-line')
+  if (line) { toggleRow(line.closest('.ghp-row')); return }
+  const badge = e.target.closest('pre button.nb')
+  if (badge) {
+    if (!document.body.classList.contains('text-off')) { toggleRow(rowOf(badge.closest('.code').dataset.g, badge.dataset.k)); return }
+    const same = pop && pop.pin && pop.k === badge.dataset.k && pop.g === badge.closest('.code').dataset.g
+    closePop()
+    if (!same) showPop(badge, true)
+    return
+  }
+  if (pop?.pin && !e.target.closest('.pop')) closePop()
 
   const unfold = e.target.closest('.unfold')
   if (unfold) { unfold.closest('.code').classList.remove('folded'); unfold.remove(); return }
@@ -107,11 +465,15 @@ document.addEventListener('click', e => {
 })
 
 document.addEventListener('keydown', e => {
-  if (e.metaKey || e.ctrlKey || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'INPUT') return
-  if (e.key === 'j' || e.key === 'ArrowRight') { move(1); e.preventDefault() }
-  else if (e.key === 'k' || e.key === 'ArrowLeft') { move(-1); e.preventDefault() }
-  else if (e.key === 'r') {
-    const tick = $$('.point').find(p => !p.hidden && p.offsetParent)?.querySelector('.read input')
+  if (e.key === 'Escape') { closeDropdown(); closePop(); return }
+  if (e.metaKey || e.ctrlKey || e.altKey || out.open || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'INPUT') return
+  const point = openPoint()
+  if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
+    if (!point?.classList.contains('slides')) return
+    go(point, slideOf(point) + (e.key === 'ArrowRight' ? 1 : -1), true)
+    e.preventDefault()
+  } else if (e.key === 'j') { move(1); e.preventDefault() } else if (e.key === 'k') { move(-1); e.preventDefault() } else if (e.key === 'r') {
+    const tick = $('.read input', point)
     if (tick) { tick.checked = !tick.checked; tick.dispatchEvent(new Event('change')) }
   }
 })
@@ -159,88 +521,23 @@ brief.addEventListener('click', () => { outText.value = feedback(); out.showModa
 doCopy.addEventListener('click', () => { outText.select(); navigator.clipboard?.writeText(outText.value) })
 shut.addEventListener('click', () => out.close())
 
-for (const pane of $$('.pane')) {
-  const first = pane.querySelector('.point')
-  if (first) for (const other of $$('.point', pane)) other.hidden = other !== first
-}
-const start = location.hash.slice(1)
-addEventListener('load', () => { if (document.getElementById(start)?.classList.contains('point') ?? true) window.scrollTo(0, 0) })
-show(document.getElementById(start) ? start : document.querySelector('.point').id)
-paint()
-
-// ── notes on the code ──
-const light = (el, on) => { for (const x of $$(`[data-k="${el.dataset.k}"]`, el.closest('.noted'))) x.classList.toggle('on', on) }
-for (const li of $$('.nn li')) {
-  li.addEventListener('mouseenter', () => light(li, true))
-  li.addEventListener('mouseleave', () => light(li, false))
-}
-
-const cardOf = b => b.closest('.code').querySelector(`.pc[data-k="${b.dataset.k}"]`)
-const badgeOf = card => card.closest('.code').querySelector(`button.nb[data-k="${card.dataset.k}"]`)
-const rowOf = (code, i) => code.querySelector(`.ln[data-i="${i}"]`)
-// The tab bar and the timeline of the open point are pinned to the top of the window. A card above a line has to stay below them.
-const stuck = () => document.querySelector('.tabbar').offsetHeight + ($$('.line').find(l => l.offsetParent)?.offsetHeight ?? 0)
-
-// A card opens under the last line of its note, or above the first line when there's more room above. That way the card
-// is never drawn over the lines of its note.
-function place (card) {
-  const code = card.closest('.code')
-  const box = code.getBoundingClientRect()
-  const first = rowOf(code, card.dataset.first).getBoundingClientRect()
-  const last = rowOf(code, card.dataset.last).getBoundingClientRect()
-  const h = card.offsetHeight
-  const below = innerHeight - last.bottom
-  const under = below >= h + 12 || below >= first.top - stuck()
-  card.classList.toggle('below', under)
-  card.classList.toggle('above', !under)
-  card.style.top = `${under ? last.bottom - box.top + 8 : first.top - box.top - h - 8}px`
-}
-
-let hide
-function toggle (badge, on) {
-  const keep = on || badge.classList.contains('pin')
-  if (keep) for (const other of $$('pre button.nb')) if (other !== badge && cardOf(other).classList.contains('open')) { other.classList.remove('pin'); toggle(other, false) }
-  const card = cardOf(badge)
-  card.classList.toggle('open', keep)
-  if (keep) place(card)
-  light(badge, keep)
-  const pre = badge.closest('pre')
-  pre.classList.toggle('focus', Boolean(pre.querySelector('.ln.on')))
-}
-function closeCards () { for (const b of $$('pre button.nb')) { b.classList.remove('pin'); toggle(b, false) } }
-
-for (const b of $$('pre button.nb')) {
-  b.addEventListener('mouseenter', () => { clearTimeout(hide); toggle(b, true) })
-  b.addEventListener('mouseleave', () => { hide = setTimeout(() => toggle(b, false), 250) })
-  b.addEventListener('click', () => { b.classList.toggle('pin'); toggle(b, b.classList.contains('pin')) })
-}
-for (const card of $$('.pc')) {
-  card.addEventListener('mouseenter', () => clearTimeout(hide))
-  card.addEventListener('mouseleave', () => { hide = setTimeout(() => toggle(badgeOf(card), false), 250) })
-}
-addEventListener('keydown', e => { if (e.key === 'Escape') closeCards() })
-let queued = false
-const replace = () => { queued = false; $$('.pc.open').forEach(place) }
-addEventListener('scroll', () => { if (!queued) { queued = true; requestAnimationFrame(replace) } }, { passive: true })
-addEventListener('resize', replace)
-
 // ── comments on selected text ──
 // Nick selects any text on the page and clicks Comment. The comment is saved with the id of the passage that contains the
 // text and the selected text itself, which is found again on the page after a reload.
-const SKIP = '.no, .nb, button, textarea, .pc, .cm-tool, .cm-card'
-const wrap = document.querySelector('.wrap')
+const SKIP = '.no, .nb, button, textarea, .pop, .cm-tool, .cm-card, .sb, .snav, .sfoot, .zp-tools'
+const wrap = $('.wrap')
 const order = id => { const el = document.getElementById(id); return el ? $$('.point, .step, .attn').indexOf(el) : -1 }
 const sortedComments = () => [...state.comments].sort((a, b) => order(a.at) - order(b.at) || a.made - b.made)
 
 // The place of a comment is the closest element with an id that contains the text, such as a "### " passage.
-const placeOf = node => (node.nodeType === 1 ? node : node.parentElement)?.closest('.step[id], .attn[id], .point[id]')
+const placeOf = node => (node.nodeType === 1 ? node : node.parentElement)?.closest('.attn[id], .step[id], .point[id]')
 function titleOf (id) {
   const el = document.getElementById(id)
   if (!el) return id
   const point = el.closest('.point')
-  const pointTitle = point?.querySelector('.phead h2')?.textContent.trim()
+  const pointTitle = $('.phead h2', point)?.textContent.trim()
   if (el.classList.contains('step')) return `${META.find(m => m.id === id)?.label ?? id}, under "${pointTitle}"`
-  if (el.classList.contains('attn')) return `the warning "${el.querySelector('.attn-t')?.textContent.trim()}", under "${pointTitle}"`
+  if (el.classList.contains('attn')) return `the warning "${$('.attn-t', el)?.textContent.trim()}", under "${pointTitle}"`
   if (pointTitle) return pointTitle
   const tab = $$('.tab').find(t => t.dataset.tab === el.closest('.pane')?.dataset.tab)
   return `the overview of the tab "${tab?.firstChild.textContent.trim()}"`
@@ -249,14 +546,14 @@ function titleOf (id) {
 // Every character that isn't white space, with the text node and the offset it comes from. White space is left out
 // because a selection across lines of code has line breaks that the text nodes don't have.
 function characters (root) {
-  const out = []
+  const found = []
   const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
     acceptNode: n => n.parentElement.closest(SKIP) ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT,
   })
   for (let n = walker.nextNode(); n; n = walker.nextNode()) {
-    for (let i = 0; i < n.data.length; i++) if (!/\s/.test(n.data[i])) out.push({ ch: n.data[i], node: n, i })
+    for (let i = 0; i < n.data.length; i++) if (!/\s/.test(n.data[i])) found.push({ ch: n.data[i], node: n, i })
   }
-  return out
+  return found
 }
 
 function highlight (c) {
@@ -341,7 +638,7 @@ function openCard (c, rect) {
     <div class="cm-acts">${old ? '' : '<button type="button" class="cm-del">Delete</button>'}<span class="spacer"></span><button type="button" class="cm-cancel">Cancel</button><button type="button" class="cm-save primary">${old ? 'Comment' : 'Save'}</button></div>`
   card.hidden = false
   placeAt(card, rect, 8)
-  const field = card.querySelector('.cm-field')
+  const field = $('.cm-field', card)
   field.focus()
   field.setSelectionRange(field.value.length, field.value.length)
   const close = () => { card.hidden = true; for (const m of $$('mark.cm-hl.on')) m.classList.remove('on') }
@@ -352,9 +649,9 @@ function openCard (c, rect) {
     if (old) { state.comments.push(c); if (!highlight(c)) c.lost = true }
     save(); paint(); renderList(); close()
   }
-  card.querySelector('.cm-save').onclick = submit
-  card.querySelector('.cm-cancel').onclick = close
-  const del = card.querySelector('.cm-del')
+  $('.cm-save', card).onclick = submit
+  $('.cm-cancel', card).onclick = close
+  const del = $('.cm-del', card)
   if (del) del.onclick = () => { remove(c.id); close() }
   field.onkeydown = e => {
     if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); submit() }
@@ -363,7 +660,7 @@ function openCard (c, rect) {
   for (const m of $$(`mark.cm-hl[data-c="${c.id}"]`)) m.classList.add('on')
 }
 
-tool.querySelector('button').addEventListener('click', () => {
+$('button', tool).addEventListener('click', () => {
   if (!picked) return
   const rect = picked.range.getBoundingClientRect()
   const c = { id: `c${Date.now().toString(36)}`, at: picked.at, quote: picked.quote, made: Date.now() }
@@ -385,10 +682,14 @@ function remove (id) {
   save(); paint(); renderList()
 }
 
+// A comment can be on text that is folded away, such as a note that isn't open. The page opens that text first.
 function jump (c) {
   show(c.at)
-  const mark = document.querySelector(`mark.cm-hl[data-c="${c.id}"]`)
+  const mark = $(`mark.cm-hl[data-c="${c.id}"]`)
   if (!mark) return
+  if (mark.closest('.r-text') && document.body.classList.contains('text-off')) setText(true)
+  const row = mark.closest('.ghp-row')
+  if (row && !row.classList.contains('open')) toggleRow(row)
   mark.scrollIntoView({ block: 'center' })
   for (const m of $$(`mark.cm-hl[data-c="${c.id}"]`)) m.classList.add('on')
   setTimeout(() => { for (const m of $$(`mark.cm-hl[data-c="${c.id}"]`)) m.classList.remove('on') }, 1600)
@@ -413,15 +714,15 @@ document.getElementById('cmList').addEventListener('click', e => {
   if (e.target.closest('.cm-go')) { e.preventDefault(); jump(c); return }
   if (e.target.closest('.cm-del')) { remove(c.id); return }
   if (e.target.closest('.cm-edit')) {
-    item.querySelector('.cm-text').outerHTML = `<textarea class="cm-field" rows="3">${esc(c.text)}</textarea>`
-    item.querySelector('.cm-acts').innerHTML = '<button type="button" class="cm-cancel">Cancel</button><button type="button" class="cm-save primary">Save</button>'
-    const field = item.querySelector('.cm-field')
+    $('.cm-text', item).outerHTML = `<textarea class="cm-field" rows="3">${esc(c.text)}</textarea>`
+    $('.cm-acts', item).innerHTML = '<button type="button" class="cm-cancel">Cancel</button><button type="button" class="cm-save primary">Save</button>'
+    const field = $('.cm-field', item)
     field.focus()
     field.setSelectionRange(field.value.length, field.value.length)
     return
   }
   if (e.target.closest('.cm-save')) {
-    const text = item.querySelector('.cm-field').value.trim()
+    const text = $('.cm-field', item).value.trim()
     if (text) { c.text = text; save(); paint() }
     renderList()
     return
@@ -430,6 +731,49 @@ document.getElementById('cmList').addEventListener('click', e => {
 })
 
 addEventListener('keydown', e => { if (e.key === 'Escape') { tool.hidden = true; card.hidden = true } })
+
+// ── start ──
+const start = location.hash.slice(1)
+for (const pane of $$('.pane')) {
+  const first = $('.point', pane)
+  if (first) for (const other of $$('.point', pane)) other.hidden = other !== first
+}
+for (const point of $$('.point.slides')) go(point, 0)
+if (state.ui.sidebar === false) setSidebar(false)
+if (state.ui.text === false) setText(false)
+if (state.ui.view) setView(state.ui.view)
+if (state.ui.fold === false) setFold(false)
 for (const c of state.comments) c.lost = !highlight(c)
 renderList()
+
+show(document.getElementById(start) ? start : $('.point').id)
 paint()
+// After the page has loaded, the browser scrolls to the element of the hash. That scroll hides the title of the point so
+// the page scrolls back to the top.
+addEventListener('load', () => { measure(); layout(openPoint()); if (!document.getElementById(start)?.classList.contains('attn')) scrollTo(0, 0) })
+addEventListener('resize', () => { measure(); closePop(); layout(openPoint()) })
+
+// The renderer opens the page with "?check" to find each block that runs past the right edge of its column. The result is
+// in the page.
+if (new URLSearchParams(location.search).has('check')) {
+  const tooWide = new Set()
+  for (const point of $$('.point.slides')) {
+    reveal(point)
+    for (const slide of $$('.slide, .overview-slide', point)) {
+      go(point, Number(slide.dataset.s))
+      const columns = slide.classList.contains('overview-slide') ? [slide] : $$('.r-code, .r-text', slide)
+      for (const column of columns) {
+        const edge = column.getBoundingClientRect().right
+        for (const el of $$('table, pre, img, svg', column)) {
+          if (el.closest('.zp')) continue
+          const over = Math.round(el.getBoundingClientRect().right - edge)
+          if (over > 1) tooWide.add(`${titleOf(slide.id || point.id)}${slide.id ? '' : ', overview'}: a ${el.tagName.toLowerCase()} runs ${over} pixels past the right edge`)
+        }
+      }
+    }
+  }
+  const result = document.createElement('pre')
+  result.id = 'layout-check'
+  result.textContent = JSON.stringify([...tooWide])
+  document.body.append(result)
+}
