@@ -1,0 +1,2 @@
+# Approved false positives, one whole line each. Written by a person only.
+# This public copy is empty. check-constructions.sh also reads the file of the same name in ~/.claude/hooks/.
