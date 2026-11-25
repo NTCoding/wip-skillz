@@ -387,6 +387,22 @@ You can always add a subtask, even to a task that is assigned to Nick. In that c
 
 If none of the subtasks are Nick's, run `task unassign <number>` to remove the assignment from the task. `subtask unassign <number>` removes the assignment from a subtask in the same way.
 
+### Create a subtask when you need Nick's input
+
+If you are blocked and require Nick's input on a piece of work, create a subtask under the task that the work belongs to and assign it to him with `subtask assign`. Link to the page in `--do`. Then create a second subtask for you to continue from Nick's input.
+
+If no task on the progress tracker fits the work, add a parent task with `task add` first. Then add the 2 subtasks under that parent task.
+
+This is an example:
+
+```text
+$ scratch-pad subtask add --pad 2026-11-21-invoice-export 3 "Give input on the retry limit"
+$ scratch-pad subtask assign --pad 2026-11-21-invoice-export 3.1 \
+    --do "Read the retry limit page and comment or mark this as done." \
+    --why "The next step depends on Nick's input."
+$ scratch-pad subtask add --pad 2026-11-21-invoice-export 3 "Apply Nick's input on the retry limit"
+```
+
 ### Find out that Nick has done a task
 
 Nick marks a task that is assigned to him as done in the browser. The server then starts the next task in the same way as `task done` does. After that, `wait` and `inbox` will print the task among the decisions. If the server has started a task, the last line of the item will describe that task. This is an example:
