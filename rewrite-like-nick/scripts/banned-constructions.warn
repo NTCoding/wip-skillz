@@ -1,0 +1,3 @@
+# Rules that only warn. check-constructions.sh skips them unless it is
+# given --warn or --all, so they never block a write or a reply.
+Preposition chain

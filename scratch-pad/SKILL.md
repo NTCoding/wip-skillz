@@ -145,21 +145,37 @@ You can give a page a new number at any time. However, the rest of the file name
 
 ### Ask Nick to decide something
 
-Write the question as a heading and put a `:::decision` block with its own id under the heading. Nick then picks the proposal or the alternative with a button, or he writes a reply of his own instead. This is an example of a question on a page, with invented content:
+Design the solution first and show it on the page under the question, such as the code as it will read or a screenshot. Then put a `:::decision` block with its own id under the design. The `proposal:` line states the change in one plain sentence and then links to the design. Nick reads the sentence to know what he's deciding on. He judges the change from the design, because he can't judge a design from one line of text. Nick then picks the proposal or the alternative with a button, or he writes a reply of his own instead. This is an example of a question on a page, with invented content:
 
 <!-- prettier-ignore -->
-```markdown
+````markdown
 ## Will the export job retry 8 times?
+
+### ⬅️ Before: the retry limit in export-job.ts
+
+```ts
+// src/export/export-job.ts:12
+const retryLimit = 5
+```
+
+### ➡️ After: the retry limit in export-job.ts
+
+The limit will be raised from 5 to 8:
+
+```ts
+// src/export/export-job.ts:12
+const retryLimit = 8 // changed
+```
 
 :::decision d-1
 context: A slow network in the evening can make an upload fail. Read these in order:
   1. [How the job runs](how-the-job-runs.md#how-the-job-runs) shows where the upload happens.
   2. [The retry limit](retry-limit.md) explains why the limit is 5 today.
-proposal: Raise the retry limit to 8.
+proposal: The export job will retry a failed upload 8 times rather than 5. [The design](#️-after-the-retry-limit-in-export-job-ts)
 alternative: Keep the retry limit at 5.
 pick: proposal, because the network of a shop can be slow.
 :::
-```
+````
 
 Start the `context:` with a few words about the problem. Then add a numbered list of links to the sections that Nick should read before he decides, in the order that he should read them. After each link, write why the section matters for the decision.
 

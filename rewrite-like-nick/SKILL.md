@@ -34,11 +34,12 @@ phase 4.
 ### Phase 2. Diagnose
 
 First run this over the document and keep the output for the diagnosis.
-It lists the countable tells with their line numbers. A hit is not a
-verdict. Judge each one, and say why any that stays, stays.
+It prints each line that the regex of a writing rule matches. The line number
+is at the start of each line. `$skill` is the base directory of this skill. A
+hit isn't a verdict. Judge each one. If a hit stays, say why it stays.
 
 ```bash
-grep -n -o -i -E "—|;|not just|not only|it's not [^.]*, it's|serves as|stands as|underscores|highlights|showcases|crucial|pivotal|delve|important to note|in summary|overall,|moreover|furthermore|leverage|robust|seamless" <file>
+"$skill/scripts/check-prose.sh" <file>
 ```
 
 Show Nick the themes that are wrong with the document, as a numbered list.
@@ -147,10 +148,22 @@ each paragraph as a whole and check that its sentences are not all the same
 length.
 
 Then hand the file to a subagent that has read the output style, this
-skill and `passages.md` and nothing else of this conversation, and ask it
-for the sentences a person would not say out loud. Fix those too. The
-writer and the reviewer are not the same agent, because the writer reads
-its own sentences as fine.
+skill and `passages.md`. The subagent hasn't read anything else of this
+conversation. It reads the file as its reader would, one section at a time.
+It lists each of these sentences with the number of its line:
+
+- a sentence that a person wouldn't say out loud to a colleague
+- a sentence that doesn't follow from the sentence before. Write the
+  question that the reader would ask, like "how does this relate to the
+  sentence before?"
+- a sentence that uses a thing that the reader hasn't met yet, like "the
+  table" when no table has been shown
+- several independent statements that are written as prose although each
+  one could be a bullet
+
+Fix every sentence that the subagent lists. The writer and the reviewer aren't
+the same agent, because the writer reads its own sentences as fine. The check
+mode below runs the same reviewer once `scripts/check-prose.sh` is clean.
 
 Show the `git diff`. Do not commit, do not push, do not undo a commit, unless
 Nick names that action. His answer to a question is an answer to that
@@ -158,6 +171,15 @@ question, never approval of a proposal bundled with it.
 
 Nick reviews the diff and corrects sentences. Fix them, show the diff again.
 Each rejected sentence is offered for *Learning*.
+
+### A check of a file that another skill wrote
+
+When another skill asks you to check a file, such as nick-walkthrough with
+`walkthrough.md`, only run `"$skill/scripts/check-prose.sh"` on the file and fix
+each hit. Skip the diagnosis and the calibration, because a fix to one hit
+doesn't change the tone of the document. Run the script again until it doesn't
+print any hits. Then hand the file to the reviewer that phase 4 describes and
+fix every sentence that the reviewer lists.
 
 ## What to look for
 

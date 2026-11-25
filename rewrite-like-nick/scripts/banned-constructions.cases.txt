@@ -1,0 +1,401 @@
+# Test sentences for banned-constructions.txt, one per line, as
+# BAD|<sentence> or GOOD|<sentence>. A BAD sentence must be caught by at
+# least one construction, and a GOOD one by none of them.
+BAD|I have changed nothing.
+BAD|I have NOT changed anything yet, and the branch holds nothing.
+BAD|The folder's own README says story 3.20 fills it.
+BAD|a save overwriting somebody else's work with nobody noticing
+BAD|A service writes no config file of its own.
+BAD|Nothing has changed on the remote.
+BAD|the save that beat it
+BAD|Of the 6 complaints, 4 are about rules that are on no file anywhere.
+BAD|No files were changed by the run.
+BAD|Mostly placeholders, and each one names the story that fills it.
+GOOD|I haven't changed anything.
+GOOD|The folder's own README explains that it is filled by story 3.20.
+GOOD|It didn't change any ticket.
+GOOD|The generator reads the tags and writes the two configs.
+GOOD|check-constructions.sh reads it from stdin and returns a status code.
+GOOD|There are 3 kinds of adapter.
+GOOD|banned-constructions.sh is registered in .claude/settings.json and it fires on Stop.
+GOOD|Run nvm use first, because .npmrc sets engine-strict.
+GOOD|Each one is filled by the story it names.
+BAD|I didn't push anything, and the branch is still on 9f2da113.
+GOOD|The test suite is green so the change is ready for review.
+GOOD|The pipeline is green and the branch is ready to merge.
+GOOD|Nick merges it so I don't.
+GOOD|The generator emits the two dialects from the tags array.
+GOOD|I'll add the rule to the hook and show you the diff.
+BAD|The README links to the runbook and does not repeat it.
+BAD|The ADR says the repository owns it.
+GOOD|There is no hook that reads my text before it is displayed.
+GOOD|There was no reason in the seed.
+BAD|The route answers nextPageToken, and the next request sends it back as pageToken.
+BAD|A port answers its caller.
+BAD|An API answers in the shape that the screen renders.
+BAD|The endpoint will answer with a 409.
+BAD|The handler answered a 500 instead.
+GOOD|The route returns a nextPageToken parameter.
+GOOD|I answered your question in the MR thread.
+GOOD|You answered that one already.
+GOOD|The answer is in ADR-0014.
+BAD|PATCH /products/{id} returns a 409 when the version conflicts.
+BAD|A person answers, and a route, an API, a response, a port or a function does not.
+BAD|The gate runs on CI, and it does not run locally.
+BAD|I added the rule, and I did not commit it.
+BAD|The scanners are on CI, and they are not in verify.
+GOOD|A person answers, but a route doesn't.
+GOOD|The gate runs on CI, however it doesn't run locally.
+GOOD|The gate runs on CI. It doesn't run locally.
+BAD|The README links to the runbook and does not repeat it.
+BAD|The suite is green, and the hook is registered.
+BAD|The gate runs on CI and it does not run locally.
+BAD|The suite is green and the hook does not fire.
+BAD|npm run verify runs the gates and the scanners are not in it.
+BAD|It reads the transcript and does not write anything.
+BAD|The hook skips fenced blocks and never reads a code span.
+GOOD|The gate runs on CI but it doesn't run locally.
+GOOD|The README links to the runbook rather than duplicating its content.
+GOOD|The Stop hook only reads the transcript.
+GOOD|check-constructions.sh skips fenced blocks instead of reading a code span.
+GOOD|It reads the transcript and writes a report.
+GOOD|The suite is green and banned-constructions.sh is registered.
+BAD|Story 3.29, #41, designs it and builds it
+BAD|Story 3.14 settles which layer sets the time.
+BAD|The description makes 3 false claims.
+BAD|ADR-0013 decides the shape of the route.
+BAD|Epic 9 owns the runbooks.
+GOOD|Story 3.29, #41, contains the design and the build.
+GOOD|The folder's own readme explains that it is filled by story 3.20.
+GOOD|The purpose of story 3.14 is to decide which layer sets the time.
+GOOD|Story 3.29 needs a design.
+GOOD|The team designs the route and builds it in story 3.29.
+BAD|so a git command or a worktree move does not touch it
+BAD|The gate is not green and it has not run.
+BAD|I cannot tell yet.
+GOOD|The gate isn't green and it hasn't run.
+GOOD|I can't tell yet.
+GOOD|The route is designed and built by story 3.29.
+BAD|Story 3.29 builds the route.
+BAD|The story binds the customer.
+BAD|The adapter binds the order to the payment.
+BAD|This is the binding between the basket and the customer.
+GOOD|The keybinding for the pane is ctrl+].
+GOOD|Data binding is handled by the framework.
+BAD|A wrong refusal costs me one rewrite, and a miss puts the prose in front of the team.
+BAD|The reports service contains one handler per route, and each one has its own tests.
+BAD|The hook went live, and it caught me straight away.
+GOOD|A false positive costs me one rewrite. A miss puts the prose in front of the team.
+GOOD|The reports service contains one handler per route. Each one has its own tests.
+GOOD|It reads the transcript and writes a report.
+BAD|The regex, the name and the exemption are the three fields.
+GOOD|I didn't push anything. The branch is still on 9f2da113.
+GOOD|The suite is green. banned-constructions.sh is registered.
+BAD|The regex, the name, and the exemption are the three fields.
+BAD|3.21 is merged, and !58 is on the train.
+BAD|The pipeline is green, and the merge train merges it without me.
+BAD|I will start on them once 3.22 lands.
+GOOD|3.21 is merged. !58 is on the train.
+GOOD|The pipeline is green so the merge train merges it without me.
+GOOD|I'll start on them once 3.22 is merged.
+BAD|The deployable named no 503.
+BAD|It is new in the deployable's catalogue.
+BAD|so the document carries them and a generated client narrows on them
+BAD|The spec says the route returns a 400.
+BAD|the screen picks its own words from the problem type
+BAD|beside the owner's 400
+GOOD|The catalogue API never declared a 503.
+GOOD|so the OpenAPI document contains them
+GOOD|The catalogue OpenAPI spec documents a 400 response for the route.
+GOOD|the order list screen picks its own words from the Problem Details type
+GOOD|beside the 400 the shop owner receives
+GOOD|The TypeScript client we generate from that spec has a type for each one.
+GOOD|The route now lists all 3 in its OpenAPI spec.
+BAD|ADR-0014 answers a shop the caller isn't a member of with a 404.
+BAD|and ADR-0014 answer a shop
+BAD|The route will answer a 404.
+BAD|ADR-0014 says a shop a member can't see gets a 404.
+GOOD|The answer is in ADR-0014.
+GOOD|I'll answer that in the thread.
+GOOD|That is the only answer we have.
+BAD|is a different thing, and the second row settles it
+BAD|The second row settles it.
+GOOD|His point settles the debate.
+GOOD|is a different thing. It is confirmed by the second row.
+GOOD|The difference is clarified by the second row.
+GOOD|Section 8 of ADR-0014 records that decision.
+BAD|Every entry in it is a failure that the request itself caused.
+BAD|the outage this caused.
+BAD|a 409 the version conflict caused, rather than a 500
+GOOD|Every entry is a failure that was caused by the request.
+GOOD|The request caused the failure.
+GOOD|What caused the outage?
+GOOD|a 409 that was caused by the version conflict, rather than a 500
+BAD|🤖 Generated with [Claude Code](https://claude.com/claude-code)
+BAD|Generated with Claude Code
+GOOD|The main goal of this MR is to stop the order list failing silently.
+BAD|Send every currency, each one once.
+BAD|I ran the tests, all of them.
+BAD|Send every currency, and send each one only once.
+GOOD|Send every currency. Send each one only once.
+GOOD|There is one entry per route, keyed by its kind.
+BAD|Five admin routes have no spec at the API app.
+BAD|The handler sits at the catalogue service.
+BAD|The token is read at the backend.
+GOOD|Five admin routes don't have a spec in the API app.
+GOOD|The save-product handler is in the catalogue service.
+GOOD|Look at the OpenAPI spec of the catalogue API.
+GOOD|The pipeline failed at 09:14.
+GOOD|The generator runs at the start of the gate.
+BAD|the columns a report uses
+BAD|the errors the handler returns
+GOOD|It contains the invalid fields declared by a failure.
+GOOD|the columns used by a report
+GOOD|the errors returned by the save-product handler
+GOOD|This means a story needs its own card.
+GOOD|The rule requires a comment to name the thing it describes.
+GOOD|It contains the invalid fields declared by a failure.
+GOOD|The generator reads the tags and writes the two configs.
+BAD|It contains the refused fields a declared failure names.
+GOOD|The generator reads the tags and writes the two configs.
+GOOD|Writes the way Nick writes, with every rule stated as a construction.
+BAD|The story says which customer the basket belongs to.
+BAD|Story 3.29 states the route is public.
+BAD|The card explains why the field is there.
+GOOD|The story defines which customer the basket belongs to.
+GOOD|The story raises the question of which customer the basket belongs to.
+GOOD|The card includes the field.
+GOOD|ADR-0014 specifies that a 409 is returned.
+GOOD|The rule requires that a comment is checked.
+GOOD|The folder's own README explains that.
+BAD|That function replaces 2 duplicated lines and brings it to exactly 12.
+BAD|The port refuses a 12th entry.
+BAD|This adapter is new.
+GOOD|checkStock replaces 2 duplicated lines and brings it to exactly 12.
+BAD|The save-product port refuses a 12th entry.
+GOOD|the hook that audits every file write
+GOOD|Put the negator on the function word.
+BAD|It contains the refused fields a declared failure names.
+BAD|The column names the order it belongs to.
+BAD|Story 3.29 names the route.
+BAD|The story names the customer the basket belongs to.
+GOOD|It contains the invalid fields declared by a failure.
+GOOD|The column is for the order id.
+GOOD|The story defines which customer the basket belongs to.
+GOOD|The column names are in the OpenAPI spec.
+BAD|The call reaches the supplying context.
+BAD|everything reaches main through a merge request
+BAD|The value reached the response unchanged.
+BAD|the version reaching the store
+GOOD|The orders-payments adapter calls the supplying context.
+GOOD|every change is merged into main through a merge request
+GOOD|The value is put in the response unchanged.
+GOOD|the version written to the store
+GOOD|Don't reach for the shorter word out of habit.
+GOOD|a port whose own type is out of reach of its only caller
+GOOD|The event is received by the listener.
+BAD|The reader sees the 409 when the version conflicts.
+
+BAD|The regex, the name and the exemption are the three fields.
+BAD|One OpenAPI document per context and one per admin, and neither derives from another.
+BAD|It reads the tags, and it writes the two configs.BAD|the story that adds it.
+GOOD|the story it is added by
+BAD|An integer, as the screen sent it.
+BAD|The version the currency read returned, as the screen sent it back.
+BAD|The review uses it as they gave it.
+BAD|the tiers, as the user typed them
+GOOD|An integer, as sent by the checkout screen.
+GOOD|As soon as the test passes, merge the branch.
+GOOD|Leave it as it is.
+GOOD|Treat the new card as the same work and resume the old session.
+GOOD|The agent can't act as an admin until it is granted the role.
+GOOD|It shows the page as it will be seen by the customer.
+BAD|The parameter is passed on as the screen sent it.
+BAD|The board as the mirror holds it.
+GOOD|An integer, in the format it was sent by the screen.
+GOOD|An integer, as sent by the screen.
+BAD|An integer, as the screen sent it.
+BAD|An arrow the sprint doesn't touch keeps its label from the code.
+GOOD|An arrow that isn't touched by the sprint has its label from the code.
+GOOD|The story is defined by the epic.
+GOOD|An integer, as sent by the screen.
+GOOD|It's not touched in this sprint.
+GOOD|Tell the user the deterministic path didn't apply.
+BAD|and the sprint doesn't build it
+BAD|The sprint builds the invoice screen.
+GOOD|The invoice screen is built by the sprint.
+BAD|Story 3.29 won't build the route.
+GOOD|The route isn't built by story 3.29.
+BAD|The sprint adds the currency field.
+GOOD|The currency field is added by the sprint.
+BAD|It logs in with an IAM token instead of a password, as AD-9 asks.
+BAD|store-access exists today, and the sprint doesn't build it
+BAD|Should the 3 stories name where their new fields are stored?
+GOOD|Should the 3 stories define where their new fields are stored?
+BAD|These stories should name the order.
+GOOD|The column names are in the schema.
+GOOD|Write the story name in the title.
+BAD|The story stores them.
+BAD|The sprint doesn't store the version.
+GOOD|The story defines where they are stored.
+BAD|The threads about the retry minimum get their replies once you have decided on them.
+GOOD|The threads about the retry minimum will be replied to once you have decided on them.
+BAD|Each thread gets its reply after the review.
+BAD|Settled. A card for the split is added when the product needs it.
+GOOD|A card will be added when this is required.
+BAD|The request is refused when the version conflicts.
+BAD|The runbook is written once the store exists.
+BAD|Here are the 7 tasks in the order they will be built.
+BAD|I will push it after lunch.
+GOOD|Here are the 7 tasks in the order they'll be built.
+GOOD|Jo will build the export job.
+GOOD|Will it fail on CI?
+BAD|Jo will merge the branch, once the tests pass.
+BAD|The export runs at night, when the server is quiet.
+BAD|Ask Sam, if the build fails again.
+GOOD|Jo will merge the branch once the tests pass.
+GOOD|When the tests pass, Jo will merge the branch.
+BAD|The README says the folder is filled by the build.
+GOOD|The README describes how the folder is filled by the build.
+BAD|I'm adding a retry to the export job, with its limit and a test.
+BAD|Each check is updated, with their reasons and a fixture.
+GOOD|I'm adding a retry to the export job, which includes a limit and a test.
+GOOD|Replace the file with its new version.
+BAD|Jo has approved the plan, so I've started the migration.
+GOOD|Jo has approved the plan so I've started the migration.
+BAD|The export job gets a retry limit.
+BAD|The branch gets merged tomorrow.
+GOOD|The branch will be merged tomorrow.
+BAD|The codebase gets harder to navigate.
+BAD|It's the one line you haven't seen before.
+BAD|This is the one place where the limit is set.
+GOOD|It's the only line you haven't previously seen.
+GOOD|I'd pick the one that is already tested.
+GOOD|On the one hand the retry is cheap.
+BAD|A skill never changes it.
+BAD|The agent never edits them.
+GOOD|It is never changed by a skill.
+GOOD|It's never changed by a skill.
+GOOD|A skill never changes the status of a card.
+BAD|I'll do it on their yes.
+BAD|Pin it on a yes.
+BAD|Nick merges it on Nick's yes.
+GOOD|Once Nick approves it, I'll work on the task.
+GOOD|If they approve the report, I'll pin the report to my sidebar.
+BAD|If there isn't any story left, stop.
+BAD|There wasn't any card for it.
+GOOD|If there aren't any stories left, stop.
+GOOD|There isn't anything left.
+BAD|Should the build refuse this code?
+BAD|The Build Refused the commit.
+BAD|I saw the build refusing the merge.
+BAD|The build fails when a condition isn't met.
+BAD|The check will refuse the merge request.
+BAD|lint:check refuses it.
+BAD|The build refused the image.
+BAD|The hook sends a refusal.
+GOOD|The check will fail.
+GOOD|The build will fail if the token is missing.
+GOOD|The reviewer refused the change.
+GOOD|It will be refused by Nick.
+GOOD|The request will fail if the version conflicts.
+BAD|If a condition isn't met, a check fails.
+BAD|The build fails when the token is missing.
+BAD|When the version conflicts, the repository throws an error.
+BAD|The Stop hook blocks a reply if it contains a banned word.
+GOOD|If a condition isn't met, a check will fail.
+GOOD|The Stop hook will block a reply if it contains a banned word.
+GOOD|When the version conflicts, the repository will throw an error.
+BAD|When you run the tests, Vitest prints a report.
+BAD|If the tests pass, Jo merges the branch.
+BAD|Jo merges the branch if the tests pass.
+BAD|If the token is missing, the build stops.
+GOOD|When you run the tests, Vitest will print a report.
+GOOD|If the tests pass, Jo will merge the branch.
+GOOD|When I ran the tests, Vitest printed a report.
+GOOD|Please tell me if you want the proposal.
+GOOD|If the tests fail, run them again.
+GOOD|Run the gate again from when the lock changed, even if it passed.
+BAD|The test that would prove it is missing.
+BAD|Here is the log line that would prove it.
+BAD|I haven't run the check which would prove the fix works.
+BAD|A screenshot would prove it.
+GOOD|The test that confirms the bug is missing.
+GOOD|The log line shows the timeout.
+GOOD|The test proves the save is rejected.
+BAD|The reviewer approves it.
+BAD|Did you run it? The tests pass.
+BAD|## Why we need it
+GOOD|It is the test that confirms the bug.
+GOOD|The reviewer approves the merge request.
+GOOD|The edit is small, but it changes the schema.
+GOOD|It will fail on CI.
+BAD|Most of the behaviour is already on main so we'll only change the code of the shop in 3 places. An empty shop segment will receive the same 404 as a malformed slug. Each logged 404 will be written as one JSON line.
+BAD|We'll only change the code in three places. An empty segment will receive the same 404.
+GOOD|Most of the behaviour is already on main so we'll only change the code of the shop in 3 places:
+BAD|We'll only change the code in 3 places: the route, the store and the log.
+BAD|Write one point per key point, table cell and paragraph.
+BAD|The check is fast, cheap and reliable.
+BAD|It reads the tags, the regex and the exemption.
+BAD|Use it for a story, an epic or a card.
+GOOD|The check is fast and reliable.
+GOOD|Without it, each context and each feature can end up with its own approach.
+GOOD|Thanks Sam, good catch.
+GOOD|If the token is missing, the build and the deploy will fail.
+BAD|Give a test file these rows:
+BAD|Give a test file one row for each requirement that its tests prove.
+BAD|Give each change its own heading.
+GOOD|Add these rows for a test file:
+GOOD|Give each option a reason, then recommend one.
+BAD|Each card is written with its title and its link.
+BAD|Only its first line and its last line are wrong.
+BAD|Each card is written with its title and link.
+BAD|I read what the existing merge request builds.
+BAD|A merge request builds nothing.
+BAD|This is the route that the sprint builds.
+GOOD|John builds sheds.
+GOOD|The nightly builds.
+GOOD|The CI job runs 3 builds.
+BAD|The design spec builds the route.
+BAD|Each design spec it builds on is published.
+GOOD|A person builds the route from the design spec.
+BAD|The build reads the story card.
+BAD|The build then reads the story card.
+BAD|Each build will read the plan first.
+GOOD|The agent reads the story card at the start of the build.
+GOOD|The story card is read at the start of the build.
+GOOD|I read the build log.
+BAD|The agent builds one task of a design spec.
+BAD|Builds a task with task-runner.
+BAD|The task-runner builds each task in its own session.
+BAD|The task builds the refund route.
+BAD|Each task will build one route.
+BAD|A task is built by the task-runner.
+GOOD|The agent implements one task of a design spec.
+GOOD|The task-runner works on each task in its own session.
+GOOD|The task is handled by the task-runner.
+GOOD|The refund route is built in the second task.
+GOOD|The agent carries out the task.
+GOOD|The task is carried out by the agent.
+BAD|The release notes carry 3 sections.
+BAD|It replaces all of the old details, so you have to write the details again in full, not only the part that changed.
+GOOD|It replaces all of the old details so you have to write the details again in full, not just the part that changed.
+BAD|Run improvement edit or improvement delete with its number.
+GOOD|Run improvement edit or improvement delete and provide the improvement's number.
+# The rules for a bullet made of a name, "rule of the skill" and a preposition chain.
+GOOD|Rules are in a skill or part of a skill.
+GOOD|- I'm adding a retry to the export job, which includes a limit and a test.
+GOOD|- **Heavy subject.** Start the sentence with the thing it is about, which is
+GOOD|- The renderer draws the table in the right-hand column, which is too narrow for a path.
+GOOD|I'll walk through this in 3 steps: 1. [How the check stops a transaction spanning 2 contexts](#1-how)
+GOOD|Line 82 of walkthrough.md is the note.
+GOOD|The first section of the page explains the problem.
+GOOD|The first 2 guesses are designed on other pages.
+GOOD|The two other rules were written for the same reason.
+GOOD|1. Approved
+GOOD|Never hedge the facts.
+GOOD|this isn't a fact, it's a noun, with a fact about that noun glued together by a comma.
+BAD|Under a rule of the skill, every block starts at the signature of the method and ends at the closing line.
+BAD|The page takes the name of each note from the first name in backticks in the note that is also on the lines of the note.
+BAD|- `StartSignInForScreenHandler`, which makes the call
+BAD|@WithNoSession puts the route in the list of routes that are let through the session check of the api app without a session
