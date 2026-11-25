@@ -181,15 +181,6 @@ doesn't change the tone of the document. Run the script again until it doesn't
 print any hits. Then hand the file to the reviewer that phase 4 describes and
 fix every sentence that the reviewer lists.
 
-### A check of a file that another skill wrote
-
-When another skill asks you to check a file, such as nick-walkthrough with
-`walkthrough.md`, only run `"$skill/scripts/check-prose.sh"` on the file and fix
-each hit. Skip the diagnosis and the calibration, because a fix to one hit
-doesn't change the tone of the document. Run the script again until it doesn't
-print any hits. Then hand the file to the reviewer that is described in phase 4
-and fix every sentence that it lists.
-
 ## What to look for
 
 The themes that made Nick reject a document. Check each one.
