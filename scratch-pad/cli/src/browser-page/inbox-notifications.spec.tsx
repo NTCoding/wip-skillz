@@ -228,6 +228,32 @@ describe('the desktop notifications of the Inbox', () => {
     )
   })
 
+  it('doesn’t show a notification again when a decision stays in the Inbox and its question changes', async () => {
+    const fake = fakeConnection()
+    const { notifications } = fakeNotifications('granted')
+    await openPad(fake, notifications)
+    await inboxChanges(
+      fake,
+      { ...indexInbox, decisions: [...indexInbox.decisions, taxNumberDecision] },
+      4,
+    )
+    await waitFor(() => expect(notifications.show).toHaveBeenCalledTimes(1))
+    await inboxChanges(
+      fake,
+      {
+        ...indexInbox,
+        decisions: [
+          ...indexInbox.decisions,
+          { ...taxNumberDecision, question: 'Does the template show the tax number?', line: 12 },
+        ],
+      },
+      4,
+    )
+    await waitFor(() => expect(fake.connection.nickInbox).toHaveBeenCalledTimes(2))
+
+    expect(notifications.show).toHaveBeenCalledTimes(1)
+  })
+
   it('shows the number of the new items when several items start to wait at the same time', async () => {
     const fake = fakeConnection()
     const { notifications } = fakeNotifications('granted')

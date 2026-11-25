@@ -7,6 +7,7 @@ import {
 import { itemCountText } from '../agent-inbox/agent-inbox-text'
 import { countedNoun, listOfCounts } from '../counted-noun'
 import { type DecisionAnswer } from '../decisions/decision-answer'
+import { type DecisionReview } from '../decisions/decision-review'
 import { type ScratchPadEvent } from '../events/scratch-pad-event'
 import {
   linkLines,
@@ -25,6 +26,7 @@ interface StatusOfScratchPad {
   readonly tracker: ProgressTracker
   readonly threads: readonly Thread[]
   readonly decisions: readonly DecisionAnswer[]
+  readonly reviews: readonly DecisionReview[]
   readonly events: readonly ScratchPadEvent[]
   readonly lastPrinted: LastPrintedEvents
   readonly nickInbox: {
@@ -36,7 +38,7 @@ interface StatusOfScratchPad {
 export function statusText(status: StatusOfScratchPad): string {
   // A task that Nick has done waits for the agent until inbox or wait has printed the task
   const forAgent = countsByType([
-    ...itemsWaitingForAgent(status.threads, status.decisions),
+    ...itemsWaitingForAgent(status.threads, status.decisions, status.reviews),
     ...tasksDoneByNick(status),
   ])
   const decisions = status.nickInbox.decisions.length

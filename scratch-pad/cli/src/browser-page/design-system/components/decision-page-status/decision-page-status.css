@@ -1,0 +1,24 @@
+.decision-page-status {
+  margin: var(--space-0);
+  color: var(--text-2);
+  font-family: var(--font-ui);
+  font-size: var(--fs-ui);
+  line-height: var(--lh-ui);
+}
+
+.decision-page-status strong {
+  color: var(--decision-ink);
+  font-weight: var(--fw-medium);
+}
+
+.decision-page-status[data-state='draft'] strong {
+  color: var(--text-2);
+}
+
+.decision-page-status[data-state='changes-requested'] strong {
+  color: var(--thread-sent);
+}
+
+.decision-page-status[data-state='decided'] strong {
+  color: var(--decision-done-ink);
+}

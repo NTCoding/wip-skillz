@@ -44,12 +44,14 @@ describe('scratchPadConnection', () => {
       html: '<p>5 retries</p>',
       headings: [],
       links: [{ kind: 'other', href: 'https://example.com', line: 1 }],
-      decisions: [{ id: 'd-1', question: null, answer: null }],
+      decisions: [{ id: 'd-1', question: null, answer: null, reviews: [], options: null }],
     }
     const network = networkReturning(jsonResponse(page))
     const viewed = await scratchPadConnection(exportPad, network).page('retry limit.md')
     expect(network.fetched).toStrictEqual([`${api}/pages/retry%20limit.md`])
-    expect(viewed.decisions).toStrictEqual([{ id: 'd-1', question: undefined, answer: undefined }])
+    expect(viewed.decisions).toStrictEqual([
+      { id: 'd-1', question: undefined, answer: undefined, reviews: [], options: undefined },
+    ])
   })
 
   it('reads the results of the search from the address with the encoded query when Nick searches', async () => {

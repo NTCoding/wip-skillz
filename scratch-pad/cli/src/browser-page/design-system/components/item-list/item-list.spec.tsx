@@ -54,6 +54,27 @@ describe('ItemList', () => {
     expect(screen.getByText('Changed 20 Nov, 21:20').dataset['late']).toBe('false')
   })
 
+  it('shows the second line under the last message when a row has one', () => {
+    render(
+      <ItemList
+        groups={[
+          {
+            title: undefined,
+            count: 1,
+            rows: [{ ...sent, lastExtra: 'The agent: Added who the team is.' }],
+          },
+        ]}
+        onNavigate={() => undefined}
+      />,
+    )
+    expect(
+      [
+        screen.getByText('Nick: Does a guest see an empty field?'),
+        screen.getByText('The agent: Added who the team is.'),
+      ].map((line) => line.tagName),
+    ).toStrictEqual(['P', 'P'])
+  })
+
   it('shows the rows without a heading when the group doesn’t have a title', () => {
     render(
       <ItemList

@@ -38,6 +38,7 @@ function startedBy(by: 'nick' | 'agent', number: number, item: string): ScratchP
 const request: AgentInboxRequest = {
   threads: [comment, grammarNote],
   decisions: [decision],
+  reviews: [],
   tracker,
   events: [opened(1, 'd-1'), opened(2, 'g-1'), opened(3, 'c-1')],
   lastPrinted: nothingPrinted,
@@ -54,6 +55,7 @@ describe('itemsWaitingForAgent', () => {
         aThread({ id: 'c-3', waitsFor: 'nobody' }),
       ],
       [decision, aDecisionAnswer({ id: 'd-2', outcome: 'Showed the tax number.' })],
+      [],
     )
 
     expect(items.map(itemId)).toStrictEqual(['c-1', 'd-1'])
@@ -65,6 +67,7 @@ describe('countsByType', () => {
     const items = itemsWaitingForAgent(
       [grammarNote, comment, aThread({ id: 'g-2', type: 'grammar' })],
       [decision],
+      [],
     )
 
     expect(countsByType(items)).toStrictEqual([
@@ -76,7 +79,7 @@ describe('countsByType', () => {
 
   it('counts the tasks that Nick has done after the decisions', () => {
     const items = [
-      ...itemsWaitingForAgent([grammarNote, comment], [decision]),
+      ...itemsWaitingForAgent([grammarNote, comment], [decision], []),
       ...tasksDoneByNick({ ...request, events: [doneBy('nick', 4, 't-5')] }),
     ]
 
@@ -89,7 +92,7 @@ describe('countsByType', () => {
   })
 
   it('leaves out the types without any items', () => {
-    expect(countsByType(itemsWaitingForAgent([grammarNote], []))).toStrictEqual([
+    expect(countsByType(itemsWaitingForAgent([grammarNote], [], []))).toStrictEqual([
       { type: 'grammar', count: 1 },
     ])
   })

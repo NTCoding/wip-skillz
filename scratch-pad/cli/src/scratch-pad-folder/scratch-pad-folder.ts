@@ -57,6 +57,12 @@ export class ScratchPadExistsError extends ScratchPadError {
   }
 }
 
+export class PageFileExistsError extends ScratchPadError {
+  constructor(file: string) {
+    super(`${file} already exists, so a new page can't be written to the same file.`)
+  }
+}
+
 export class ScratchPadFolder {
   constructor(
     readonly path: string,
@@ -104,6 +110,16 @@ export class ScratchPadFolder {
             .map((name) => pageFileOf(`${pagesFolder}/${name}`)),
         )
       : []
+  }
+
+  // Writes the file of a new page. The file is a path in the folder of the pages, like
+  // pages/2.1-retry-wait.md. A file that exists is never overwritten.
+  writeNewPage(file: string, text: string): void {
+    const path = join(this.path, file)
+    if (existsSync(path)) {
+      throw new PageFileExistsError(file)
+    }
+    writeFileSync(path, text)
   }
 
   pages(): string[] {

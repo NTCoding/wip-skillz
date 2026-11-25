@@ -24,7 +24,7 @@ afterEach(() => {
 })
 
 describe('the descriptions of the tasks', () => {
-  it('keeps the tasks of version 4 without a description when pad.db is migrated to version 7', () => {
+  it('keeps the tasks of version 4 without a description when pad.db is migrated to version 8', () => {
     const folder = exportJobScratchPad(temporaryHome())
     runSqlOnPadDb(
       folder,
@@ -44,6 +44,6 @@ describe('the descriptions of the tasks', () => {
         subtasks: [],
       },
     ])
-    expect(pragma(folder, 'user_version')).toBe(7)
+    expect(pragma(folder, 'user_version')).toBe(8)
   })
 })

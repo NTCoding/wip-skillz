@@ -50,8 +50,12 @@ export function pageCheckProblems(
         .flatMap((file) => numberProblems(file, files)),
       ...[
         ...checked.rendered.problems,
+        ...parentLinkProblems(checked, pages, files),
         ...checked.rendered.decisions
-          .filter((decision) => !answeredDecisions.includes(decision.id))
+          .filter(
+            (decision) =>
+              decision.options === undefined && !answeredDecisions.includes(decision.id),
+          )
           .flatMap(contextProblems),
         ...checked.rendered.links.flatMap((link) => linkProblems(link, pages, taskIds)),
         ...duplicates.filter((duplicate) => duplicate.page === checked.file),
@@ -61,6 +65,37 @@ export function pageCheckProblems(
         .map((problem) => ({ page: checked.file, line: problem.line, text: problem.text })),
       ...proseProblems(checked).map((text) => ({ page: checked.file, line: undefined, text })),
     ])
+}
+
+// The agent links to a decision page from the page above it. Without the link, Nick can't find the
+// decision page from the page that it belongs to. The page above a top level page is the index page.
+function parentLinkProblems(
+  checked: CheckedPage,
+  pages: readonly CheckedPage[],
+  files: readonly PageFile[],
+): PageProblem[] {
+  const { decisionPage } = checked.rendered
+  const file = files.find((each) => each.page === checked.page)
+  if (decisionPage === undefined || file === undefined) {
+    return []
+  }
+  const parentNumber = parentNumberOf(file.number)
+  const parent =
+    parentNumber === undefined
+      ? indexPage
+      : files.find((each) => each.number === parentNumber)?.page
+  const parentPage = pages.find((each) => each.page === parent)
+  const linked = parentPage?.rendered.links.some(
+    (link) => link.kind === 'page' && link.page === checked.page,
+  )
+  return parentPage === undefined || linked === true
+    ? []
+    : [
+        {
+          line: decisionPage.markerLine,
+          text: `the decision page isn't linked from its parent page ${parentPage.file}. Add a link to ${fileOfPage(checked.page)} on the parent page`,
+        },
+      ]
 }
 
 function numberProblems(file: PageFile, files: readonly PageFile[]): ScratchPadProblem[] {

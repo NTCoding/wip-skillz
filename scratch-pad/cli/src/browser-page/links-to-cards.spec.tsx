@@ -20,7 +20,13 @@ async function renderDecidedDecisionAt(path: string): Promise<void> {
   fake.pages.set('index.md', {
     ...indexPage,
     decisions: [
-      { id: 'd-1', question: 'Will the export job retry 8 times?', answer: { choice: 'proposal' } },
+      {
+        id: 'd-1',
+        question: 'Will the export job retry 8 times?',
+        answer: { choice: 'proposal' },
+        reviews: [],
+        options: undefined,
+      },
     ],
   })
   const decisionText = {

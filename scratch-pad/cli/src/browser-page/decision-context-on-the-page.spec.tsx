@@ -21,7 +21,15 @@ const decisionWithContext: ViewedPage = {
   links: [
     { kind: 'page', href: 'retry-limit.md', page: 'pages/retry-limit.md', headingId: undefined },
   ],
-  decisions: [{ id: 'd-2', question: 'Will the job retry 8 times?', answer: undefined }],
+  decisions: [
+    {
+      id: 'd-2',
+      question: 'Will the job retry 8 times?',
+      answer: undefined,
+      reviews: [],
+      options: undefined,
+    },
+  ],
 }
 
 describe('the context of a decision on the page', () => {
@@ -34,6 +42,7 @@ describe('the context of a decision on the page', () => {
       loadPreview: () => Promise.resolve(undefined),
       findTask: () => undefined,
       onAnswerDecision: () => Promise.resolve(),
+      onRequestDecisionChanges: undefined,
       onCommentOnBlock: () => undefined,
       answersOnThisPage: new Map(),
     }

@@ -97,3 +97,35 @@
   line-height: var(--lh-ui);
   font-weight: var(--fw-medium);
 }
+
+.decision-card__reviews {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xl);
+  margin: var(--space-4xl) var(--space-0) var(--space-0);
+  padding: var(--space-0);
+  list-style: none;
+  color: var(--text);
+  font-family: var(--font-ui);
+  font-size: var(--fs-ui);
+  line-height: var(--lh-ui);
+}
+
+.decision-card__reviews[data-waiting='true'] {
+  color: var(--thread-sent);
+}
+
+.decision-card__review {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.decision-card__review-reason,
+.decision-card__review-outcome {
+  margin: var(--space-0);
+}
+
+.decision-card__review-reason {
+  font-weight: var(--fw-medium);
+}

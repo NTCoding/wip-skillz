@@ -11,7 +11,6 @@ import { fileOfPage, type PadAddresses } from './browser-route'
 import {
   AgentNote,
   CodeBlock,
-  DecisionAnswerForm,
   DecisionCard,
   HtmlBlock,
   ImageBlock,
@@ -23,6 +22,8 @@ import {
   type Navigate,
   type PreviewContent,
 } from './design-system/design-system'
+import { DecisionForm } from './decision-form'
+import { canBeAnswered, decisionPageElement } from './decision-page-elements'
 import { taskLabel, taskReferenceScheme, type FindTask } from './task-references'
 
 export interface PageElementContext {
@@ -34,6 +35,7 @@ export interface PageElementContext {
     section: string | undefined,
   ) => Promise<PreviewContent | undefined>
   readonly onAnswerDecision: ((id: string, answer: DecisionAnswer) => Promise<void>) | undefined
+  readonly onRequestDecisionChanges: ((id: string, reason: string) => Promise<void>) | undefined
   readonly onCommentOnBlock: ((lines: string) => void) | undefined
   readonly answersOnThisPage: ReadonlyMap<string, Answer>
   readonly findTask: FindTask
@@ -164,10 +166,12 @@ function answeredDecisionOf(
 
 export function answeredDecisions(context: PageElementContext, body: Element): AnsweredDecision[] {
   const conversion = { ...context, highlightedText: new Map(), movedDecisions: new Set<string>() }
-  return [...body.querySelectorAll(':scope > .decision')].flatMap((element) => {
-    const decision = answeredDecisionOf(element, conversion)
-    return decision === undefined ? [] : [decision]
-  })
+  return [...body.querySelectorAll(':scope > .decision:not(.decision-page-decision)')].flatMap(
+    (element) => {
+      const decision = answeredDecisionOf(element, conversion)
+      return decision === undefined ? [] : [decision]
+    },
+  )
 }
 
 function decisionElement(element: Element, key: Key, context: ConversionContext): ReactNode {
@@ -177,8 +181,7 @@ function decisionElement(element: Element, key: Key, context: ConversionContext)
   }
   const decision = context.page.decisions.find((each) => each.id === id)
   const answer = decision?.answer ?? context.answersOnThisPage.get(id)
-  const answerable = answer === undefined && decision?.question !== undefined
-  const { onAnswerDecision } = context
+  const answerable = canBeAnswered(decision, answer !== undefined)
   const fields = decisionFields(element, context)
   const warnings = [...element.querySelectorAll(':scope > .named-block-warning')]
   return (
@@ -196,11 +199,10 @@ function decisionElement(element: Element, key: Key, context: ConversionContext)
         alternative={fields.alternative}
         pick={fields.pick}
         answer={answer === undefined ? undefined : answerText(answer)}
+        reviews={decision?.reviews}
       >
         {warnings.map((warning, index) => nodeElement(warning, index, context))}
-        {answerable && onAnswerDecision !== undefined && (
-          <DecisionAnswerForm onAnswer={(chosen) => onAnswerDecision(id, chosen)} />
-        )}
+        {answerable && <DecisionForm id={id} actions={context} />}
       </DecisionCard>
     </div>
   )
@@ -319,6 +321,10 @@ function nodeElement(node: ChildNode, key: Key, context: ConversionContext): Rea
   const tag = node.tagName.toLowerCase()
   if (skippedTags.has(tag)) {
     return null
+  }
+  const decisionPart = decisionPageElement(node, key, context)
+  if (decisionPart !== undefined) {
+    return decisionPart
   }
   if (node.classList.contains('decision')) {
     return decisionElement(node, key, context)

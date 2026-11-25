@@ -1,13 +1,7 @@
 import { type ReactNode } from 'react'
-import {
-  type DecisionLogEntry,
-  type Improvements,
-  type ProgressTracker,
-  type ViewedPage,
-} from './api-responses'
+import { type Improvements, type ProgressTracker, type ViewedPage } from './api-responses'
 import { fileOfPage, improvementAnchor } from './browser-route'
 import {
-  DecisionLog,
   ImprovementList,
   Notice,
   ReadingColumn,
@@ -56,6 +50,7 @@ function markdownElements(
     ...context,
     page,
     onAnswerDecision: undefined,
+    onRequestDecisionChanges: undefined,
     onCommentOnBlock: undefined,
     answersOnThisPage: new Map(),
   }
@@ -179,19 +174,6 @@ export function ProgressTrackerView(props: ProgressTrackerViewProps) {
         />
       )}
       <TaskSections {...props} />
-    </ReadingColumn>
-  )
-}
-
-export function DecisionLogView({ entries }: { readonly entries: readonly DecisionLogEntry[] }) {
-  return (
-    <ReadingColumn>
-      <h1>Decisions</h1>
-      {entries.length === 0 ? (
-        <Notice tone="info">There aren’t any decisions in the log yet.</Notice>
-      ) : (
-        <DecisionLog entries={entries} />
-      )}
     </ReadingColumn>
   )
 }

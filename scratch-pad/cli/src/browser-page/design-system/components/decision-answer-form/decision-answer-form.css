@@ -12,6 +12,17 @@
   gap: var(--space-md);
 }
 
+/* The label of an option on a decision page is the name of the option, so the label can be long.
+   A long label wraps inside its button. The padding is the space that a one line button leaves
+   above and below the text, which keeps the height of a one line button at --control-h. */
+.decision-answer-form__choices .button {
+  height: auto;
+  min-height: var(--control-h);
+  padding-block: var(--space-sm);
+  text-align: left;
+  white-space: normal;
+}
+
 .decision-answer-form__problem {
   margin: var(--space-0);
   color: var(--warning-ink);

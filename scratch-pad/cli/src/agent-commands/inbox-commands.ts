@@ -6,6 +6,7 @@ import { type ItemLinks } from '../item-links/item-links'
 import { type PadDb } from '../scratch-pad-folder/pad-db'
 import { type ScratchPadFolder } from '../scratch-pad-folder/scratch-pad-folder'
 import { statusText } from '../status/status-text'
+import { brokenDecisionPageLines } from './decision-page-commands'
 
 interface InboxRequest {
   readonly types: readonly ItemType[]
@@ -29,6 +30,7 @@ export function selectFromPadDb(pad: PadDb, request: InboxRequest): AgentInboxSe
   return selectAgentInbox({
     threads: pad.readThreads(),
     decisions: pad.readDecisionAnswers(),
+    reviews: pad.readDecisionReviews(),
     tracker: pad.readProgressTracker(),
     events: pad.readEvents(),
     lastPrinted: pad.readLastPrintedEvents(),
@@ -47,11 +49,14 @@ export function printedInboxText(
   includeSeen: boolean,
   links: ItemLinks,
 ): string {
-  return agentInboxText(selection, {
-    links,
-    includeSeen,
-    readPage: (page) => folder.readPage(page),
-  })
+  return [
+    agentInboxText(selection, {
+      links,
+      includeSeen,
+      readPage: (page) => folder.readPage(page),
+    }),
+    ...brokenDecisionPageLines(folder),
+  ].join('\n')
 }
 
 export function scratchPadStatus(folder: ScratchPadFolder, links: ItemLinks): string {
@@ -63,6 +68,7 @@ export function scratchPadStatus(folder: ScratchPadFolder, links: ItemLinks): st
       tracker: pad.readProgressTracker(),
       threads: pad.readThreads(),
       decisions: pad.readDecisionAnswers(),
+      reviews: pad.readDecisionReviews(),
       events: pad.readEvents(),
       lastPrinted: pad.readLastPrintedEvents(),
       nickInbox,

@@ -17,6 +17,7 @@ const scratchPad = {
   padPath: '/pads/2026-03-14-export-job',
   links: servedLinks,
   tracker: trackerWithTasks(['done', 'in-progress', 'to-do']),
+  reviews: [],
   events: [],
   lastPrinted: nothingPrinted,
   nickInbox: { threads: [], decisions: [] },

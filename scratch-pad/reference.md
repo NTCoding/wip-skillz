@@ -18,6 +18,9 @@ Every command prints a few short lines. If a command fails, it will exit with a 
 | `show <id>`                                        | Prints one whole thread or decision                                                                                                                                                                                                                                        |
 | `reply <id> <text>`                                | Adds your reply to a thread, which then waits for Nick                                                                                                                                                                                                                     |
 | `done <id> <outcome>`                              | Closes a note or a decision with one line about what you changed                                                                                                                                                                                                           |
+| `page <parent> <file-name> [--type=decision]`      | Creates a blank sub page of the parent page. With `--type=decision` the page is written from the template of a decision page. It prints the path and the link. `decision` is the only type.                                                                                |
+| `ready <id>`                                       | Makes a draft decision page ready after the server has checked the template. Nick can then decide the decision.                                                                                                                                                            |
+| `reopen <id> <outcome>`                            | Opens a decision with changes requested again with one line about what you changed. The decision then waits for Nick.                                                                                                                                                      |
 | `pages`                                            | Lists the pages with their titles and their open threads, in the order of their numbers                                                                                                                                                                                    |
 | `outline <page>`                                   | Prints the headings of a page with their line numbers                                                                                                                                                                                                                      |
 | `check [page...]`                                  | Prints each problem in the given pages or in every page. A broken link is one example of a problem.                                                                                                                                                                        |
@@ -49,7 +52,7 @@ You can pass a page to a command with or without its number. So `1.1-retry-limit
 
 The types for `--type` are `comment`, `decision`, `grammar` and `improvement`. You can pass several of them with a comma between them. Without `--type`, `inbox` and `wait` print the comments and the decisions in full but only one line for the grammar notes and the improvement notes, because those notes are read by a subagent.
 
-`--all` prints an item again for as long as the item waits for you. A thread waits for you until you reply to it or close it with `done`, whereas a decision waits for you until you close it with `done`.
+`--all` prints an item again for as long as the item waits for you. A thread waits for you until you reply to it or close it with `done`, whereas a decision waits for you until you close it with `done`. A decision with changes requested waits for you until you run `reopen`.
 
 `wait` takes 2 more options:
 
@@ -83,7 +86,8 @@ When a command's output includes something that Nick can open in the browser, th
 | ---------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
 | `status`                                                                                             | The scratch pad's address on the second line and a `link:` line to the progress tracker under the current task |
 | `inbox`, `wait` and `show`                                                                           | A `link:` line under the first line of an item                                                                 |
-| `reply` and `done`                                                                                   | A `link:` line to the thread or the decision                                                                   |
+| `reply`, `done` and `reopen`                                                                         | A `link:` line to the thread or the decision                                                                   |
+| `page`                                                                                               | A `link:` line to the decision on the new decision page                                                        |
 | `pages`                                                                                              | The address of each page at the end of its line                                                                |
 | `outline`                                                                                            | The address of each heading at the end of its line                                                             |
 | `new`                                                                                                | A `link:` line to the scratch pad                                                                              |
@@ -330,6 +334,162 @@ pick: proposal, because a shop only downloads its own file.
 The heading above the block is the question. If there isn't a heading above the block, Nick won't be able to choose an option for the decision.
 
 If the `context:` line of an open decision is missing or empty, `check` will print a problem. It won't print a problem for a decision once Nick has decided.
+
+### The decision page
+
+A decision page is a sub page for one decision. The agent writes the content of the page in the file. Use an inline decision block for a small decision. Use a decision page for a decision that needs more than 3 paragraphs for Nick to understand the problem and the solution.
+
+#### The page command
+
+`page <parent> <file-name>` creates a blank sub page. The command takes the parent page and the file name of the new page. It doesn't take any content. That's why the command doesn't have a flag for any part of the content. The file is empty and the agent writes the content in it. `page <parent> <file-name> --type=decision` writes the template of a decision page instead. The command accepts `--type=decision` and `--type decision`. An unknown type fails with a message that lists the types. Only `decision` is a type for now.
+
+The new page is a sub page of the parent page. The number follows the rules of the numbers of the pages. The new page has the next free number below the number of the parent page. The index page is the parent of the pages at the top level. A parent page without a number can't have sub pages. The file name can be written with or without `.md`. Another page can't have the same name after its number. The command prints `pages/2.1-wait.md already has the name wait.md. Give the page another name.` for such a name.
+
+This is the output of the command with the type `decision`. Without a type, the first line is `created <path> (a sub page of <parent file>)` and the second line is `Write the content of the page.`:
+
+```text
+$ scratch-pad page --pad 2026-11-21-invoice-export retry-limit night-retries.md --type=decision
+created /Users/nick/scratchpads/2026-11-21-invoice-export/pages/2.2-night-retries.md (decision d-6, a draft sub page of pages/2-retry-limit.md)
+Write the content of the page. Run ready d-6 to make the page ready for Nick.
+link: http://127.0.0.1:4747/2026-11-21-invoice-export/night-retries.md#d-6
+Run `wait` in the background before you end your turn.
+```
+
+The decision has the next free id. The inline blocks and the decision pages use the same list of ids. The log of decisions uses the same list too.
+
+#### The template
+
+The first 2 lines of the file are the marker, which is the block `:::decision-page d-6`. The server recognises a decision page by the marker. The template under the marker has these parts:
+
+- A title as a `#` heading, with a description under the title
+- A `## Context` section for the problem or the goal, explained with examples
+- A `## Options` section with a line of instructions and one `### Option 1: name` section
+- A `## Agent recommendation` section for the option that the agent recommends and the reason
+
+The template has one option so that the number of options isn't fixed. The agent writes a `### Option N: name` section for each option and numbers the options from 1. A decision needs at least 2 options. It doesn't have an upper limit. The text of an option can show the current text and the proposed text of code or of a skill file. In a decision page, "before" means the current text and "after" means the proposed text. They don't mean the current state and the proposed solution of the whole decision.
+
+#### The checks
+
+The server checks the page against the template each time the file changes. These are the problems:
+
+| Problem                                                                     | Message of `check`                                                                                                 |
+| --------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| A placeholder of the template is still on the page                          | the page still has the placeholder `<title>` from the template. Replace the placeholder with real content          |
+| The page has fewer than 2 options                                           | the page has fewer than 2 options. A decision needs at least 2 options                                             |
+| A section is missing                                                        | the "Context" section is missing. The sections are Context, Options and Agent recommendation                       |
+| A section is renamed                                                        | the section "Recommendation" isn't one of the sections. The sections are Context, Options and Agent recommendation |
+| A section is written twice                                                  | the "Context" section is written twice                                                                             |
+| The sections are out of order                                               | the sections are out of order                                                                                      |
+| The description or a section doesn't have any text                          | the "Context" section doesn't have any text                                                                        |
+| An option doesn't have any text                                             | "Option 1: name" doesn't have any text. Describe the option                                                        |
+| An option heading doesn't follow `### Option N: name`                       | the heading isn't an option heading, or the number of the option is wrong                                          |
+| The parent page doesn't link to the decision page (only `check` reports it) | the decision page isn't linked from its parent page pages/index.md. Add a link to idea.md on the parent page       |
+
+The placeholders are `<title>`, `<description>`, `<the problem or goal, explained with examples>`, `<name>`, `<prose>` and `<which option and why>`. The line of instructions under the Options heading is a placeholder too. The server checks these exact texts in plain text and in code. Other text in angle brackets, like `List<Invoice>` or `<https://example.com>`, isn't a problem.
+
+A draft page that is broken isn't listed as waiting for Nick. `check` and `ready` print the problems of a draft. A page that was ready and breaks later stays in the Inbox. The section "A page that breaks after it was ready" describes what the server and the commands do for such a page.
+
+#### The draft and the command ready
+
+A new decision page is a draft. Nick can open a draft page. It shows the status Draft and the text that the agent has written. It doesn't show a table of contents. It doesn't show a Decision section or a button either. The decision isn't in the Inbox or on the Decisions page. `inbox` and `wait` don't list the decision. The browser doesn't notify Nick because the decision isn't new in the Inbox.
+
+`ready <id>` is the only way from Draft to Open. The command runs the checks of the template that `check` runs. It doesn't run the check of the link from the parent page, which only `check` reports. A failed check makes the command fail. The command lists every problem together with the place of the problem. The place of a problem has a file and a line, followed by the heading that the line is under. The page stays a draft:
+
+```text
+$ scratch-pad ready --pad 2026-11-21-invoice-export d-6
+Decision d-6 isn't ready. Fix these problems and run ready d-6 again:
+  pages/2.2-night-retries.md:4 under "<title>": the page still has the placeholder <title> from the template. Replace the placeholder with real content
+```
+
+A page that passes every check becomes Open. The command prints `d-6 is ready. Nick can decide the decision page.` and the link. The server records a `decision-ready` event. The decision appears in the Inbox. The browser notifies Nick once. `ready` fails for a decision that is already ready. It fails for an id that isn't the id of a decision page too.
+
+Each state of a decision has its own command or button:
+
+| Change                                  | Who and how                                   |
+| --------------------------------------- | --------------------------------------------- |
+| Draft to Open                           | The agent runs `ready <id>`                   |
+| Open to Changes requested               | Nick presses "Request changes" with a reason  |
+| Changes requested to Open               | The agent runs `reopen <id> <outcome>`        |
+| Open to Decided                         | Nick chooses an option or writes his own text |
+| Closing the work after Nick has decided | The agent runs `done <id> <outcome>`          |
+
+#### A page that breaks after it was ready
+
+The agent can edit a page after the page was ready. An edit can break the template. Nick still sees the page in these cases:
+
+- An Open decision stays in the Inbox and on the Decisions page.
+- A decision with changes requested stays where it was. It waits for the agent as for any page.
+- A Decided page still shows the status and the choice of Nick.
+- The page shows the problems under the marker and a button for each option that is still on the page.
+
+The agent sees the problems in `check`, in `inbox` and in `wait`. The text of the first line matches the state of the decision:
+
+| State of the decision | First line of the problems                                                                                                                                                 |
+| --------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Open                  | pages/2.2-night-retries.md is a broken decision page. Nick can still decide d-6, but the page doesn't match the template. Fix these problems:                              |
+| Changes requested     | pages/2.2-night-retries.md is a broken decision page. Nick asked for changes to d-6 and the page doesn't match the template. Fix these problems together with the changes: |
+| Decided               | pages/2.2-night-retries.md is a broken decision page. Nick has decided d-6 and his decision is kept, but the page doesn't match the template. Fix these problems:          |
+
+`wait` ends and prints the problems when a ready page breaks or when the problems of a broken page change. It doesn't print anything when the agent fixes the page. `reopen d-6` works when the page is broken and prints the problems after its own result. The agent doesn't run `ready` again after fixing the template. The browser doesn't notify Nick a second time, because the decision stays in the Inbox. The browser notifies Nick again only when `reopen` makes the decision wait for Nick again.
+
+#### What the server adds
+
+The agent never writes the status, the table of contents or the Decision section. The server adds them to a finished page:
+
+- The status under the title, which shows the state of the decision
+- A table of contents that links to the sections and to the options
+- A Decision section at the end
+
+The Decision section has a button for each option and a field for Nick's own text. It has the "Request changes" button with a required reason too. Nick chooses an option or writes his own text. The server stores the choice as `option-N`, where N is the number of the option. The log of decisions records the name of the option.
+
+#### The decision on the page
+
+The decision has the id of the marker. The Inbox, the Decisions page, `show`, `done` and `reopen` work with the id in the same way as for an inline decision. That includes the rounds of changes requested. The row of the decision in the Inbox links to the decision page. The row on the Decisions page links to the decision page too. The agent links to the decision page from the parent page like to any other page.
+
+The export shows a decision page like any other page. The export is read only. That's why the page doesn't have any button.
+
+### A decision with changes requested
+
+Nick can press "Request changes" instead of choosing an option. The button needs a reason from Nick. It means that Nick wants the content around the decision or its wording changed. The decision leaves his Inbox because he doesn't have anything to decide. The decision waits for the agent until the agent runs `reopen`.
+
+This is an example of how the agent deals with a decision that has changes requested:
+
+```text
+$ scratch-pad inbox --pad 2026-11-21-invoice-export
+1 new item in 2026-11-21-invoice-export
+
+[d-2] decision · pages/1-how-the-job-runs.md:20 · "Will the job tell the team after the last retry?" · changes requested
+  link: http://127.0.0.1:4747/2026-11-21-invoice-export/how-the-job-runs.md#d-2
+  Nick requested changes: The options don't say who the team is.
+  Change the page, then run: reopen d-2 "<what you changed>"
+
+$ scratch-pad reopen --pad 2026-11-21-invoice-export d-2 "Added who the team is to both options."
+d-2 is open again
+link: http://127.0.0.1:4747/2026-11-21-invoice-export/how-the-job-runs.md#d-2
+Run `wait` in the background before you end your turn.
+```
+
+`reopen` only works for a decision with changes requested. The command fails for a decision that doesn't have any changes requested. `done` fails for a decision with changes requested too because `done` closes a decision that Nick has answered. He answers by choosing an option or by writing his own reply. The decision returns to Nick's Inbox. Nick can choose an option or ask for changes again.
+
+Every request of Nick is a round. Every round stays as history. The card of the decision lists the rounds oldest first. Each round has the reason of Nick and the line of the agent. `show` lists the rounds in the same way. `inbox` and `wait` only print the newest request once. `reopen` only closes the open round. This is an example of what `show` prints for a decision with 2 rounds:
+
+```text
+$ scratch-pad show --pad 2026-11-21-invoice-export d-2
+[d-2] decision · pages/1-how-the-job-runs.md:20 · "Will the job tell the team after the last retry?" · changes requested
+  link: http://127.0.0.1:4747/2026-11-21-invoice-export/how-the-job-runs.md#d-2
+  1. Nick requested changes: The options don't say who the team is.
+     outcome: Added who the team is to both options.
+  2. Nick requested changes: Say which person on the team reads the log.
+Run `wait` in the background before you end your turn.
+```
+
+The Decisions page lists one state at a time. It has a button for each of these states:
+
+- Open
+- Changes requested
+- Decided
+
+The page opens on Open and doesn't have an "All" button. Decided is the log of decisions.
 
 ### The html block
 

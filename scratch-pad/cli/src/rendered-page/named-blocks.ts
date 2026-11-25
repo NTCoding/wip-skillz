@@ -1,4 +1,5 @@
 import { type Token } from 'markdown-it'
+import { decisionPageBlockName, type DecisionPage } from '../decision-pages/decision-page'
 import { agentNoteBlockContent, agentNoteBlockName } from './agent-note-block'
 import { decisionBlockContent, type DecisionBlock } from './decision-block'
 import { htmlBlockContent, type CustomFileReader } from './html-block'
@@ -13,12 +14,14 @@ import {
 import { type PageProblem } from './page-problem'
 import { linesAttribute, sourceLinesOf } from './source-lines'
 
-const blockNames = ['decision', 'html', agentNoteBlockName]
+const blockNames = ['decision', decisionPageBlockName, 'html', agentNoteBlockName]
 const blockList = new Intl.ListFormat('en-GB', { type: 'conjunction' })
 
 interface NamedBlockContext {
   readonly headings: readonly Heading[]
   readonly readCustomFile: CustomFileReader
+  // The decision page that the marker block belongs to, or undefined on any other page
+  readonly decisionPage: DecisionPage | undefined
 }
 
 export interface HtmlBlockSource {
@@ -97,6 +100,16 @@ function namedBlockContent(block: NamedBlock, context: NamedBlockContext): Named
       inline: (markdown) => pageMarkdownParser.renderInline(markdown),
       blocks: (markdown) => blockBodyParser.render(markdown),
     })
+  }
+  if (block.name === decisionPageBlockName) {
+    const { decisionPage } = context
+    return {
+      className: 'decision-page-marker',
+      attributes: [],
+      html: '',
+      problems: decisionPage?.markerLine === block.lines.firstLine ? decisionPage.problems : [],
+      decision: undefined,
+    }
   }
   if (block.name === 'html') {
     return htmlBlockContent(block, context.readCustomFile)

@@ -21,7 +21,7 @@ export function plainLayout(tokens: readonly Token[], headings: readonly Heading
   return { html: htmlOf(tokens), headings }
 }
 
-function htmlOf(tokens: readonly Token[]): string {
+export function htmlOf(tokens: readonly Token[]): string {
   return pageMarkdownParser.renderer.render([...tokens], pageMarkdownParser.options, {})
 }
 

@@ -77,8 +77,10 @@ export function runSqlOnPadDb(folder: ScratchPadFolder, sql: string): void {
 }
 
 // The table tasks before version 5 added the description and version 6 added the ids and the
-// subtasks
+// subtasks. A scratch pad of this version doesn't have the table decision_reviews either, which
+// version 8 added.
 export const tasksTableOfVersion4 = `
+DROP TABLE decision_reviews;
 DROP TABLE tasks;
 CREATE TABLE tasks (
   number INTEGER PRIMARY KEY CHECK (number >= 1),
@@ -87,8 +89,10 @@ CREATE TABLE tasks (
 ) STRICT;
 `
 
-// The table tasks before version 7 added the assignments
+// The table tasks before version 7 added the assignments. A scratch pad of this version doesn't
+// have the table decision_reviews either, which version 8 added.
 export const tasksTableOfVersion6 = `
+DROP TABLE decision_reviews;
 DROP TABLE tasks;
 CREATE TABLE tasks (
   id TEXT PRIMARY KEY CHECK (id GLOB 't-[1-9]*'),

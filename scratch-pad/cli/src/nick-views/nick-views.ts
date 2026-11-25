@@ -1,5 +1,7 @@
+import { readyDecisionPages } from '../decision-pages/ready-decision-pages'
 import { type Answer } from '../decisions/decision-answer'
 import { type DecisionLogEntry } from '../decisions/decision-log'
+import { isSentBack, type DecisionReview } from '../decisions/decision-review'
 import { nickInbox } from '../nick-inbox/nick-inbox'
 import { type QueuedComment, type QueuedReply } from '../outbox/outbox'
 import { isUnderNumber, pageFileOf, parentNumberOf, type PageFile } from '../pages/page-files'
@@ -37,6 +39,8 @@ import {
 
 interface DecisionOnPage extends DecisionBlock {
   readonly answer: Answer | undefined
+  // The rounds of changes that Nick has requested on the decision, oldest first
+  readonly reviews: readonly DecisionReview[]
 }
 
 interface ViewedPage {
@@ -170,7 +174,10 @@ function parentOf(file: PageFile, files: readonly PageFile[]): string | undefine
 export function viewPage(folder: ScratchPadFolder, requested: string): ViewedPage {
   const page = findPage(folder.pages(), requested, folder.name)
   const rendered = renderedPage(folder, page)
-  const answers = folder.read((pad) => pad.readDecisionAnswers())
+  const { answers, reviews } = folder.read((pad) => ({
+    answers: pad.readDecisionAnswers(),
+    reviews: pad.readDecisionReviews(),
+  }))
   return {
     page,
     title: pageTitle(folder.readPageLines(page)),
@@ -180,6 +187,7 @@ export function viewPage(folder: ScratchPadFolder, requested: string): ViewedPag
     decisions: rendered.decisions.map((decision) => ({
       ...decision,
       answer: answers.find((answer) => answer.id === decision.id)?.answer,
+      reviews: reviews.filter((review) => review.id === decision.id),
     })),
   }
 }
@@ -207,7 +215,9 @@ export function withPositions(
 export function nickInboxItems(folder: ScratchPadFolder): NickInboxItems {
   const decisions = folder.pages().flatMap((page) =>
     viewPage(folder, page).decisions.flatMap((decision): OpenDecision[] =>
-      decision.answer === undefined && decision.question !== undefined
+      decision.answer === undefined &&
+      !isSentBack(decision.reviews) &&
+      decision.question !== undefined
         ? [
             {
               page,
@@ -359,6 +369,19 @@ export function decisionLogOf(folder: ScratchPadFolder): DecisionLogEntry[] {
   return folder.read((pad) => pad.readDecisionLog())
 }
 
+function decisionReviewsOf(folder: ScratchPadFolder): DecisionReview[] {
+  return folder.read((pad) => pad.readDecisionReviews())
+}
+
+// The decisions on the Decisions page. The open decisions are the ones that wait for Nick. The
+// reviews are every round of changes that Nick has requested, oldest first for each decision.
+export function decisionsOfPad(folder: ScratchPadFolder): {
+  readonly open: readonly UnansweredDecision[]
+  readonly reviews: readonly DecisionReview[]
+} {
+  return { open: nickInboxItems(folder).decisions, reviews: decisionReviewsOf(folder) }
+}
+
 export function improvementsOf(folder: ScratchPadFolder): ImprovementsTab {
   const { improvements, threads } = folder.read((pad) => ({
     improvements: pad.readImprovements(),
@@ -431,5 +454,6 @@ function renderedPage(folder: ScratchPadFolder, page: string): RenderedPage {
     page,
     markdown: folder.readPageLines(page).join('\n'),
     readCustomFile: (file) => folder.readCustomFile(file),
+    readyDecisionPages: readyDecisionPages(folder),
   })
 }

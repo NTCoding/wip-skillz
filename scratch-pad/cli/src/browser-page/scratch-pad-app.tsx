@@ -1,6 +1,7 @@
 import { useCallback, useEffect } from 'react'
 import {
   type DecisionLogEntry,
+  type DecisionsOfPad,
   type Improvements,
   type NickInbox,
   type Outbox as LoadedOutbox,
@@ -20,6 +21,7 @@ import { useCurrentSection } from './current-section'
 import {
   AppFrame,
   FullTree,
+  NavigationProvider,
   Notice,
   PageList,
   ReadingColumn,
@@ -55,7 +57,8 @@ import {
 import { useSidebarState, type NarrowWindow } from './sidebar-state'
 import { taskChipsOn, taskFinder, type FindTask } from './task-references'
 import { pageActionOf, TopBarActions } from './top-bar-actions'
-import { DecisionLogView, ImprovementsView, LoadingView, ProgressTrackerView } from './pad-views'
+import { DecisionsRoute } from './decisions-view'
+import { ImprovementsView, LoadingView, ProgressTrackerView } from './pad-views'
 
 interface ScratchPadAppProps {
   readonly pad: string
@@ -92,6 +95,7 @@ interface RouteViewProps {
   readonly route: BrowserRoute
   readonly tracker: LoadedValue<ProgressTracker>
   readonly log: LoadedValue<DecisionLogEntry[]>
+  readonly decisions: LoadedValue<DecisionsOfPad>
   readonly improvements: LoadedValue<Improvements>
   readonly page: LoadedValue<ViewedPage>
   readonly pages: LoadedValue<PageSummary[]>
@@ -167,10 +171,14 @@ function RouteView(props: RouteViewProps) {
     )
   }
   if (route.kind === 'decision-log') {
-    return log.status === 'loaded' ? (
-      <DecisionLogView entries={log.value} />
-    ) : (
-      <LoadingView loaded={log} />
+    return (
+      <DecisionsRoute
+        addresses={pageContext.addresses}
+        pages={loadedOr(props.pages, [])}
+        log={log}
+        decisions={props.decisions}
+        onNavigate={pageContext.onNavigate}
+      />
     )
   }
   if (route.kind === 'improvements') {
@@ -264,6 +272,11 @@ export function ScratchPadApp(props: ScratchPadAppProps) {
   const pages = useLoadedValue(pad, revisions.pages, connection.pages)
   const tracker = useLoadedValue(pad, revisions.progressTracker, connection.progressTracker)
   const log = useLoadedValue(pad, revisions.decisionLog, connection.decisionLog)
+  const decisions = useLoadedValue(
+    pad,
+    revisions.decisionLog + revisions.nickInbox,
+    connection.decisions,
+  )
   const improvements = useLoadedValue(pad, revisions.improvements, connection.improvements)
   const inbox = useLoadedValue(pad, revisions.nickInbox, connection.nickInbox)
   const loadedOutbox = useLoadedValue(pad, revisions.outbox, connection.outbox)
@@ -325,79 +338,82 @@ export function ScratchPadApp(props: ScratchPadAppProps) {
   const [searchMatch, openSearchMatch] = useSearchMatch(navigate, addresses.pageHref)
 
   return (
-    <AppFrame
-      sidebarCollapsed={collapsed}
-      onSidebarCollapse={() => changeCollapsed(true)}
-      topBar={
-        <TopBar
-          title={padTitle}
-          titleHref={addresses.pageHref('index.md')}
-          parents={breadcrumb.parents}
-          current={breadcrumb.current}
-          subtree={breadcrumb.subtree}
-          pageAction={pageActionOf(actions, readMark)}
-          onNavigate={navigate}
-          actions={
-            <TopBarActions
-              serverStopped={serverStopped}
-              actions={actions}
-              notifications={props.notifications}
-              search={props.search}
-              pages={pageList}
-              onOpenSearchMatch={openSearchMatch}
-              inboxEntries={inboxEntries}
-              outboxCount={outbox.items.length}
-              outboxEntries={queuedEntries}
-              outboxEditing={outboxEditing}
-              onNavigate={navigate}
-            />
-          }
+    <NavigationProvider onNavigate={navigate}>
+      <AppFrame
+        sidebarCollapsed={collapsed}
+        onSidebarCollapse={() => changeCollapsed(true)}
+        topBar={
+          <TopBar
+            title={padTitle}
+            titleHref={addresses.pageHref('index.md')}
+            parents={breadcrumb.parents}
+            current={breadcrumb.current}
+            subtree={breadcrumb.subtree}
+            pageAction={pageActionOf(actions, readMark)}
+            onNavigate={navigate}
+            actions={
+              <TopBarActions
+                serverStopped={serverStopped}
+                actions={actions}
+                notifications={props.notifications}
+                search={props.search}
+                pages={pageList}
+                onOpenSearchMatch={openSearchMatch}
+                inboxEntries={inboxEntries}
+                outboxCount={outbox.items.length}
+                outboxEntries={queuedEntries}
+                outboxEditing={outboxEditing}
+                onNavigate={navigate}
+              />
+            }
+          />
+        }
+        sidebar={
+          <PadSidebar
+            addresses={addresses}
+            title={padTitle}
+            view={route.kind}
+            pages={pageList}
+            currentFile={route.kind === 'page' ? route.file : undefined}
+            currentPage={viewedPage}
+            currentSection={currentSection}
+            collapsed={collapsed}
+            onCollapsedChange={changeCollapsed}
+            onNavigate={navigate}
+            readMarks={readMarks}
+            withInboxOutbox={actions !== undefined}
+          />
+        }
+      >
+        <RouteView
+          route={route}
+          tracker={tracker}
+          log={log}
+          decisions={decisions}
+          improvements={improvements}
+          page={page}
+          pages={pages}
+          threads={loadedOr(threads, [])}
+          outbox={outbox}
+          inboxThreads={loadedOr(inbox, emptyNickInbox).threads}
+          inboxEntries={inboxEntries}
+          threadsOfPad={threadsOfPad}
+          readMark={readMark}
+          pageContext={{ addresses, onNavigate: navigate, loadPreview, findTask }}
+          actions={actions}
+          navigations={navigations}
+          resolvedThreads={resolvedThreads}
+          searchMatch={searchMatch}
         />
-      }
-      sidebar={
-        <PadSidebar
-          addresses={addresses}
-          title={padTitle}
-          view={route.kind}
-          pages={pageList}
-          currentFile={route.kind === 'page' ? route.file : undefined}
-          currentPage={viewedPage}
-          currentSection={currentSection}
-          collapsed={collapsed}
-          onCollapsedChange={changeCollapsed}
-          onNavigate={navigate}
-          readMarks={readMarks}
-          withInboxOutbox={actions !== undefined}
-        />
-      }
-    >
-      <RouteView
-        route={route}
-        tracker={tracker}
-        log={log}
-        improvements={improvements}
-        page={page}
-        pages={pages}
-        threads={loadedOr(threads, [])}
-        outbox={outbox}
-        inboxThreads={loadedOr(inbox, emptyNickInbox).threads}
-        inboxEntries={inboxEntries}
-        threadsOfPad={threadsOfPad}
-        readMark={readMark}
-        pageContext={{ addresses, onNavigate: navigate, loadPreview, findTask }}
-        actions={actions}
-        navigations={navigations}
-        resolvedThreads={resolvedThreads}
-        searchMatch={searchMatch}
-      />
-      {viewedPage !== undefined && (
-        <PageOutline
-          addresses={addresses}
-          page={viewedPage}
-          onNavigate={navigate}
-          address={address}
-        />
-      )}
-    </AppFrame>
+        {viewedPage !== undefined && (
+          <PageOutline
+            addresses={addresses}
+            page={viewedPage}
+            onNavigate={navigate}
+            address={address}
+          />
+        )}
+      </AppFrame>
+    </NavigationProvider>
   )
 }

@@ -1,5 +1,5 @@
 import { countedNoun } from '../counted-noun'
-import { decisionInboxLines } from '../decisions/decision-text'
+import { decisionInboxLines, decisionReviewInboxLines } from '../decisions/decision-text'
 import { itemTypeNoun } from '../items/item-id'
 import { linkLines, missingLinksLine, taskLink, type ItemLinks } from '../item-links/item-links'
 import { type PageLines } from '../pages/page-files'
@@ -57,8 +57,12 @@ function itemLines(item: AgentInboxItem, context: AgentInboxTextContext): string
   if (item.kind === 'thread') {
     return threadInboxLines(item.thread, context.readPage(item.thread.page), context.links)
   }
-  return item.kind === 'decision'
-    ? decisionInboxLines(item.decision, context.readPage(item.decision.page).file, context.links)
+  if (item.kind === 'decision') {
+    const page = context.readPage(item.decision.page)
+    return decisionInboxLines(item.decision, page.file, context.links, page.lines)
+  }
+  return item.kind === 'decision-review'
+    ? decisionReviewInboxLines(item.review, context.readPage(item.review.page).file, context.links)
     : doneTaskLines(item.task, item.started, context.links)
 }
 

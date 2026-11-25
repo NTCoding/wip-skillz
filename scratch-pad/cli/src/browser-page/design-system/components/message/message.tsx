@@ -1,4 +1,5 @@
 import { type ReactNode } from 'react'
+import { MessageText } from './message-text'
 import './message.css'
 
 const authorNames = { nick: 'Nick', agent: 'Agent' } as const
@@ -26,7 +27,7 @@ export function Message({ author, text, time, shownTime, editor }: MessageProps)
             {shownTime}
           </time>
         </p>
-        {editor ?? <p className="message__text">{text}</p>}
+        {editor ?? <MessageText text={text} />}
       </div>
     </div>
   )

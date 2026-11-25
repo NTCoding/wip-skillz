@@ -11,6 +11,8 @@ export interface ItemRow {
   readonly quote: string | undefined
   readonly quoteKind: 'text' | 'decision' | 'description'
   readonly last: string | undefined
+  // A second line under the last message, like the line that the agent wrote when reopening a decision
+  readonly lastExtra?: string | undefined
   readonly time: string | undefined
   readonly shownTime: string | undefined
   // A late item has waited for the agent for a long time, so its time is highlighted.
@@ -51,6 +53,7 @@ function Row({ row, onNavigate }: { readonly row: ItemRow; readonly onNavigate: 
         </p>
       )}
       {row.last !== undefined && <p className="item-list__last">{row.last}</p>}
+      {row.lastExtra !== undefined && <p className="item-list__last">{row.lastExtra}</p>}
       <a
         className="item-list__link"
         href={row.href}

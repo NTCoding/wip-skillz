@@ -12,6 +12,7 @@ export const padTables = [
   'messages',
   'decisions',
   'decision_log',
+  'decision_reviews',
   'events',
   'agent_inbox',
   'improvements',
@@ -236,8 +237,27 @@ DROP TABLE tasks;
 ALTER TABLE tasks_with_assignments RENAME TO tasks;
 `
 
+// Version 8 adds the reviews of decisions. Each row is one round of changes that Nick has requested
+// on a decision. The rounds of a decision are numbered from 1 and every round is kept. The reason
+// can't be empty. The outcome is the line that the agent wrote when reopening the decision, so a
+// round without an outcome waits for the agent. A decision of an older scratch pad doesn't have a
+// round.
+const decisionReviewsTable = `
+CREATE TABLE decision_reviews (
+  id TEXT NOT NULL,
+  round INTEGER NOT NULL CHECK (round >= 1),
+  page TEXT NOT NULL,
+  line INTEGER NOT NULL CHECK (line >= 1),
+  question TEXT NOT NULL,
+  reason TEXT NOT NULL ${notEmpty('reason')},
+  outcome TEXT ${notEmpty('outcome')},
+  time TEXT NOT NULL,
+  PRIMARY KEY (id, round)
+) STRICT;
+`
+
 export const padSchema: PadSchema = {
-  version: 7,
+  version: 8,
   firstTables: firstPadTables,
   migrations: [
     { version: 2, sql: improvementsTable },
@@ -246,6 +266,7 @@ export const padSchema: PadSchema = {
     { version: 5, sql: taskDescriptionColumn },
     { version: 6, sql: taskIdsAndSubtasks },
     { version: 7, sql: taskAssignments },
+    { version: 8, sql: decisionReviewsTable },
   ],
 }
 
