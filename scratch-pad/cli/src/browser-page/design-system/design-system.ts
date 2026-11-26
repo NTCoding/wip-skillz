@@ -49,7 +49,7 @@ export { OutboxMessage } from './components/outbox-message/outbox-message'
 export { Outline } from './components/outline/outline'
 export { PageLink } from './components/page-link/page-link'
 export { PageList, type PageListEntry } from './components/page-list/page-list'
-export { PanelMenu } from './components/panel-menu/panel-menu'
+export { PanelMenu, type TextPart } from './components/panel-menu/panel-menu'
 export { ReadingColumn } from './components/reading-column/reading-column'
 export { SectionChange } from './components/section-change/section-change'
 export { SelectionTools } from './components/selection-tools/selection-tools'
@@ -67,7 +67,12 @@ export {
 export { StatusPill } from './components/status-pill/status-pill'
 export { TaskChips, type TaskChipRow } from './components/task-chips/task-chips'
 export { TaskLink } from './components/task-link/task-link'
-export { TaskList, type SubtaskRow, type TaskRow } from './components/task-list/task-list'
+export {
+  TaskList,
+  type RowThread,
+  type SubtaskRow,
+  type TaskRow,
+} from './components/task-list/task-list'
 export { TaskSection } from './components/task-section/task-section'
 export { TaskStateLabel } from './components/task-state-label/task-state-label'
 export {

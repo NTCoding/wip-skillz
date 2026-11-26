@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { InvalidItemIdError } from '../items/item-id'
-import { aThread } from '../threads/thread-fixtures'
+import { aTaskThread, aThread } from '../threads/thread-fixtures'
 import { BrokenPadDbError } from './pad-db-errors'
 import { exportJobPadName, inMemoryPadDb } from './scratch-pad-folder-fixtures'
 import { StoredThreads, UnknownThreadError } from './stored-threads'
@@ -34,6 +34,16 @@ describe('StoredThreads', () => {
     stored.write(note)
 
     expect(stored.read('i-1')).toStrictEqual(note)
+  })
+
+  it('reads back a thread on a task with the id of the task instead of a page', () => {
+    const stored = storedThreads()
+    stored.write(aTaskThread({}))
+
+    expect([stored.read('c-4'), stored.readAll()]).toStrictEqual([
+      aTaskThread({}),
+      [aTaskThread({})],
+    ])
   })
 
   it('replaces the messages of a thread when the thread is written again', () => {

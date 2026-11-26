@@ -1,4 +1,6 @@
-import { nickAnswersDecision, nickComments } from '../nick-actions/nick-actions'
+import { nickAnswersDecision, nickComments, nickCommentsOnTask } from '../nick-actions/nick-actions'
+import { trackerWithSubtasks } from '../progress-tracker/progress-tracker-fixtures'
+import { assignSubtask } from '../progress-tracker/task-assignments'
 import { type ScratchPadFolder } from '../scratch-pad-folder/scratch-pad-folder'
 import { retryAnchor } from '../threads/thread-fixtures'
 
@@ -28,4 +30,15 @@ export function commentAndGrammarNoteAndDecision(folder: ScratchPadFolder): void
     question: 'Will the invoice template show the tax number?',
     answer: { choice: 'proposal' },
   })
+}
+
+// Subtask 2.2, whose id is t-5, is assigned to Nick. Nick has started the thread c-1 on it.
+export function threadOnAssignedSubtask(folder: ScratchPadFolder): void {
+  const tracker = assignSubtask(
+    trackerWithSubtasks(['done', 'in-progress']),
+    { task: 2, subtask: 2 },
+    { do: 'Check the log of the export job', why: "The agent can't read the log" },
+  ).tracker
+  folder.change((pad) => pad.writeProgressTracker(tracker))
+  nickCommentsOnTask(folder, 't-5', 'Which log should I check?')
 }

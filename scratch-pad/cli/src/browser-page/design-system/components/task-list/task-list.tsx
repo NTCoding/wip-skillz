@@ -1,16 +1,27 @@
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import { Icon } from '../icon/icon'
 import { TaskStateLabel, type TaskState } from '../task-state-label/task-state-label'
 import { navigationClick, type Navigate } from '../../navigation-click'
 import './task-list.css'
 
 // What Nick has to do and why the agent can't do the task. Only a task or a subtask that is
-// assigned to Nick has an assignment.
+// assigned to Nick has an assignment. Each text is a list of paragraphs, which can contain links.
 export interface RowAssignment {
-  readonly do: string
-  readonly why: string
+  readonly do: ReactNode
+  readonly why: ReactNode
   // The address of the description below the list. An item without a description doesn't have one.
   readonly descriptionHref: string | undefined
+}
+
+// The thread of a task or a subtask that is assigned to Nick. Nick opens it below the row with the
+// speech bubble on the row.
+export interface RowThread {
+  // The id of the thread, like c-4, which a link to the thread points to. A task without a thread
+  // doesn't have one yet.
+  readonly id: string | undefined
+  // The card of the thread, or the box for its first message. close closes the thread below the
+  // row.
+  readonly content: (close: () => void) => ReactNode
 }
 
 export interface SubtaskRow {
@@ -27,6 +38,7 @@ export interface SubtaskRow {
   // points to its row. A link to an assigned task points to its row too.
   readonly anchor?: boolean
   readonly assignment?: RowAssignment | undefined
+  readonly thread?: RowThread | undefined
 }
 
 export interface TaskRow extends SubtaskRow {
@@ -37,7 +49,8 @@ interface TaskListProps {
   readonly tasks: readonly TaskRow[]
   readonly onNavigate?: Navigate | undefined
   // The id of the task or the subtask that a link points to. The subtasks of its task are shown.
-  // A link to an assigned task or subtask opens the details of that row.
+  // A link to an assigned task or subtask opens the details of that row. A link to the thread of a
+  // task opens the thread below the row.
   readonly openTask?: string | undefined
   // A new value every time Nick follows a link. The chevrons that Nick has clicked are forgotten
   // then so the subtasks that a link points to are shown even if Nick had hidden them.
@@ -123,16 +136,6 @@ function RowCells({ task, onNavigate, marks }: RowCellsProps) {
   )
 }
 
-// The text of what Nick has to do or of why the agent can't do the task. A blank line starts a new
-// paragraph.
-function Paragraphs({ text }: { readonly text: string }) {
-  return text.split(/\n\s*\n/u).map((paragraph, index) => (
-    <p key={`${String(index)} ${paragraph}`} className="task-list__text">
-      {paragraph}
-    </p>
-  ))
-}
-
 interface DetailsProps {
   readonly id: string
   readonly kind: 'task' | 'subtask'
@@ -148,11 +151,11 @@ function Details({ id, kind, assignment, onNavigate }: DetailsProps) {
     <div className="task-list__details" id={id}>
       <section className="task-list__part">
         <p className="task-list__label">What you need to do</p>
-        <Paragraphs text={assignment.do} />
+        <div className="task-list__text">{assignment.do}</div>
       </section>
       <section className="task-list__part">
         <p className="task-list__label">Why the agent can’t do the {kind}</p>
-        <Paragraphs text={assignment.why} />
+        <div className="task-list__text">{assignment.why}</div>
       </section>
       {descriptionHref !== undefined && (
         <p className="task-list__part">
@@ -179,6 +182,69 @@ interface RowProps {
   readonly onToggle: () => void
   readonly onNavigate?: Navigate | undefined
   readonly marks: boolean
+}
+
+interface ThreadButtonProps {
+  readonly task: TaskRow
+  readonly kind: 'task' | 'subtask'
+  readonly open: boolean
+  readonly onToggle: () => void
+}
+
+// The speech bubble on the row of a task that has a thread. It's a separate button beside the row,
+// because the row of an assigned task is a button itself.
+function ThreadButton({ task, kind, open, onToggle }: ThreadButtonProps) {
+  const label = `Thread on ${kind} ${task.number}`
+  return (
+    <button
+      type="button"
+      className="task-list__thread-button"
+      aria-label={label}
+      title={label}
+      aria-expanded={open}
+      aria-controls={open ? `${task.id}-thread` : undefined}
+      onClick={onToggle}
+    >
+      <Icon name="comment" />
+    </button>
+  )
+}
+
+interface RowWithThreadProps extends RowProps {
+  // A list with threads has a column for the speech bubble in every row so that the states line up.
+  readonly threads: boolean
+  readonly threadOpen: boolean
+  readonly onThreadToggle: () => void
+}
+
+function RowWithThread(props: RowWithThreadProps) {
+  const { task, threads, threadOpen, onThreadToggle, ...row } = props
+  if (!threads) {
+    return <Row task={task} {...row} />
+  }
+  return (
+    <div className="task-list__row">
+      <Row task={task} {...row} />
+      {task.thread !== undefined && (
+        <ThreadButton
+          task={task}
+          kind={row.subtask ? 'subtask' : 'task'}
+          open={threadOpen}
+          onToggle={onThreadToggle}
+        />
+      )}
+    </div>
+  )
+}
+
+function ThreadArea({ task, onClose }: { readonly task: TaskRow; readonly onClose: () => void }) {
+  return (
+    task.thread !== undefined && (
+      <div className="task-list__thread" id={`${task.id}-thread`}>
+        {task.thread.content(onClose)}
+      </div>
+    )
+  )
 }
 
 // The row of an assigned task with subtasks opens its details and subtasks together. That's why the
@@ -233,23 +299,33 @@ function Row({ task, subtask, open, onToggle, onNavigate, marks }: RowProps) {
   )
 }
 
+function isPointedTo(row: SubtaskRow, openTask: string | undefined): boolean {
+  return openTask !== undefined && (row.id === openTask || row.thread?.id === openTask)
+}
+
 // The subtasks of a task in progress are open until Nick closes them. The subtasks of any other
-// task will be opened if a link points to one of them. The details of an assigned task will be
-// opened if a link points to that task.
+// task will be opened if a link points to one of them or to the thread of one of them. The details
+// of an assigned task will be opened if a link points to that task.
 function shownAtFirst(task: TaskRow, openTask: string | undefined): boolean {
   const subtasks = task.subtasks ?? []
   const pointedTo = task.assignment !== undefined && task.id === openTask
   return (
     pointedTo ||
     (subtasks.length > 0 &&
-      (task.state === 'in-progress' || subtasks.some((subtask) => subtask.id === openTask)))
+      (task.state === 'in-progress' || subtasks.some((subtask) => isPointedTo(subtask, openTask))))
   )
 }
 
+function rowsOf(tasks: readonly TaskRow[]): SubtaskRow[] {
+  return tasks.flatMap((task) => [task, ...(task.subtasks ?? [])])
+}
+
 function hasMarks(tasks: readonly TaskRow[]): boolean {
-  return tasks.some((task) =>
-    [task, ...(task.subtasks ?? [])].some((row) => row.assignment !== undefined),
-  )
+  return rowsOf(tasks).some((row) => row.assignment !== undefined)
+}
+
+function hasThreads(tasks: readonly TaskRow[]): boolean {
+  return rowsOf(tasks).some((row) => row.thread !== undefined)
 }
 
 interface Toggles {
@@ -261,9 +337,17 @@ export function TaskList({ tasks, onNavigate, openTask, openRequest }: TaskListP
   const [toggles, setToggles] = useState<Toggles>({ openRequest, open: new Map() })
   const toggled = toggles.openRequest === openRequest ? toggles.open : new Map<string, boolean>()
   const marks = hasMarks(tasks)
+  const threads = hasThreads(tasks)
   const isOpen = (task: TaskRow): boolean => toggled.get(task.id) ?? shownAtFirst(task, openTask)
   const toggle = (task: TaskRow) => (): void => {
     setToggles({ openRequest, open: new Map([...toggled, [task.id, !isOpen(task)]]) })
+  }
+  // The thread of a row is open when a link points to the thread.
+  const threadKey = (task: SubtaskRow): string => `${task.id}-thread`
+  const isThreadOpen = (task: SubtaskRow): boolean =>
+    toggled.get(threadKey(task)) ?? (task.thread?.id !== undefined && task.thread.id === openTask)
+  const setThreadOpen = (task: SubtaskRow, open: boolean) => (): void => {
+    setToggles({ openRequest, open: new Map([...toggled, [threadKey(task), open]]) })
   }
   return (
     <ol className="task-list" data-marks={marks}>
@@ -276,13 +360,16 @@ export function TaskList({ tasks, onNavigate, openTask, openRequest }: TaskListP
             className="task-list__item"
             data-open={task.assignment !== undefined && open}
           >
-            <Row
+            <RowWithThread
               task={task}
               subtask={false}
               open={open}
               onToggle={toggle(task)}
               onNavigate={onNavigate}
               marks={marks}
+              threads={threads}
+              threadOpen={isThreadOpen(task)}
+              onThreadToggle={setThreadOpen(task, !isThreadOpen(task))}
             />
             {open && task.assignment !== undefined && (
               <Details
@@ -292,6 +379,7 @@ export function TaskList({ tasks, onNavigate, openTask, openRequest }: TaskListP
                 onNavigate={onNavigate}
               />
             )}
+            {isThreadOpen(task) && <ThreadArea task={task} onClose={setThreadOpen(task, false)} />}
             {open && subtasks.length > 0 && (
               <ol className="task-list__subtasks" id={`${task.id}-subtasks`}>
                 {subtasks.map((subtask) => {
@@ -302,13 +390,16 @@ export function TaskList({ tasks, onNavigate, openTask, openRequest }: TaskListP
                       className="task-list__subtask"
                       data-open={subtask.assignment !== undefined && subtaskOpen}
                     >
-                      <Row
+                      <RowWithThread
                         task={subtask}
                         subtask={true}
                         open={subtaskOpen}
                         onToggle={toggle(subtask)}
                         onNavigate={onNavigate}
                         marks={marks}
+                        threads={threads}
+                        threadOpen={isThreadOpen(subtask)}
+                        onThreadToggle={setThreadOpen(subtask, !isThreadOpen(subtask))}
                       />
                       {subtaskOpen && subtask.assignment !== undefined && (
                         <Details
@@ -317,6 +408,9 @@ export function TaskList({ tasks, onNavigate, openTask, openRequest }: TaskListP
                           assignment={subtask.assignment}
                           onNavigate={onNavigate}
                         />
+                      )}
+                      {isThreadOpen(subtask) && (
+                        <ThreadArea task={subtask} onClose={setThreadOpen(subtask, false)} />
                       )}
                     </li>
                   )

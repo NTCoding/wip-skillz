@@ -16,9 +16,11 @@ export type ThreadPosition =
     }
   | { readonly kind: 'detached' }
 
-export interface PositionedThread extends Thread {
+interface WithPosition {
   readonly position: ThreadPosition | undefined
 }
+
+export type PositionedThread = Thread & WithPosition
 
 interface AnchorContext {
   readonly prefix: string
@@ -53,7 +55,7 @@ export function currentPosition(anchor: Anchor, markdown: string): ThreadPositio
   return position
 }
 
-export function positionedThread(thread: Thread, markdown: string): PositionedThread {
+export function positionedThread<T extends Thread>(thread: T, markdown: string): T & WithPosition {
   return {
     ...thread,
     position: thread.anchor === undefined ? undefined : currentPosition(thread.anchor, markdown),

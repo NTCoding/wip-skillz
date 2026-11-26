@@ -33,7 +33,9 @@ export function progressTrackerLink(links: ItemLinks): string | undefined {
   return linkTo(links, progressTrackerHref(links.pad))
 }
 
-// The anchor of a task or a subtask on the progress tracker is its id, like t-4.
+// The anchor of a task or a subtask on the progress tracker is its id, like t-4. The thread of a
+// task is opened on the row of the task. Its anchor on the progress tracker is the id of the
+// thread, like c-4.
 export function taskLink(links: ItemLinks, id: string): string | undefined {
   return linkTo(links, progressTrackerHref(links.pad, id))
 }

@@ -103,8 +103,11 @@ const tasks: PanelMenuItem[] = [
       id: 't-8',
       number: '4.2',
       state: 'in-progress',
-      summary:
-        'Run the export job by hand against the production accounting system and watch it until the summary is printed.',
+      summary: [
+        {
+          text: 'Run the export job by hand against the production accounting system and watch it until the summary is printed.',
+        },
+      ],
       canBeDone: true,
     },
     linkLabel: 'Read the full details',
@@ -124,7 +127,7 @@ const tasks: PanelMenuItem[] = [
       id: 't-4',
       number: '4',
       state: 'to-do',
-      summary: 'Tell the finance team the day that the export goes live.',
+      summary: [{ text: 'Tell the finance team the day that the export goes live.' }],
       canBeDone: false,
     },
     linkLabel: 'Read the full details',

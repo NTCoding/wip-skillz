@@ -94,4 +94,37 @@ describe('ItemList', () => {
     await userEvent.click(screen.getByRole('link', { name: 'Open the thread' }))
     expect(onNavigate).toHaveBeenCalledWith('/pad/invoice-template.md#c-2')
   })
+
+  it('opens a page from a link in the quote of a task, and another site in a new tab', async () => {
+    const onNavigate = vi.fn()
+    const task: ItemRow = {
+      ...changed,
+      key: 't-8',
+      kind: '4.2 Run the first export',
+      quote: [
+        { text: 'Read ' },
+        { text: 'the retry limit', href: '/pad/retry-limit.md' },
+        { text: ' and ' },
+        { text: 'the bank rules', href: 'https://x.dev/rules', external: true },
+      ],
+      quoteKind: 'description',
+      linkLabel: 'Open the task',
+      href: '/pad/progress-tracker#t-8',
+    }
+    render(
+      <ItemList groups={[{ title: undefined, count: 1, rows: [task] }]} onNavigate={onNavigate} />,
+    )
+    const external = screen.getByRole('link', { name: 'the bank rules' })
+    await userEvent.click(screen.getByRole('link', { name: 'the retry limit' }))
+
+    expect([
+      screen.getByText(/^Read/u).textContent,
+      onNavigate.mock.calls,
+      [external.getAttribute('href'), external.getAttribute('target')],
+    ]).toStrictEqual([
+      'Read the retry limit and the bank rules',
+      [['/pad/retry-limit.md']],
+      ['https://x.dev/rules', '_blank'],
+    ])
+  })
 })

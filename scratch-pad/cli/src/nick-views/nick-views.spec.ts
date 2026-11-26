@@ -1,6 +1,7 @@
 import { mkdirSync, renameSync, rmSync } from 'node:fs'
 import { join } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
+import { threadOnAssignedSubtask } from '../agent-commands/agent-commands-fixtures'
 import { replyToThread } from '../agent-commands/thread-commands'
 import { logDecisionFromChat } from '../agent-commands/decision-log-commands'
 import { nickAnswersDecision, nickComments, nickResolves } from '../nick-actions/nick-actions'
@@ -78,6 +79,15 @@ describe('pageSummaries', () => {
         waitingForNickWithSubPages: { decisions: 0, replies: 0 },
       },
     ])
+  })
+
+  it("doesn't count a thread on a task on any page, because the thread isn't on a page", () => {
+    const folder = exportJobScratchPad(temporaryHome())
+    threadOnAssignedSubtask(folder)
+    replyToThread(folder, 'c-1', 'The export log.', unservedLinks)
+
+    expect(pageSummaries(folder).map((summary) => summary.openThreads)).toStrictEqual([0])
+    expect(pageSummaries(folder)[0]?.waitingForNick).toStrictEqual({ decisions: 0, replies: 0 })
   })
 
   it('returns the pages in the order of their numbers with their numbers, their parents and what waits for Nick on them and on their sub pages', () => {

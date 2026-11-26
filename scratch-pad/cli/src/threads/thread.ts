@@ -25,15 +25,32 @@ export interface Message {
   readonly time: string
 }
 
-export interface Thread {
+interface ThreadFields {
   readonly id: string
   readonly type: ThreadType
-  readonly page: string
   readonly anchor: Anchor | undefined
   readonly waitsFor: WaitingParty
   readonly outcome: string | undefined
   readonly messages: readonly [Message, ...Message[]]
 }
+
+export interface PageThread extends ThreadFields {
+  readonly page: string
+  readonly task?: undefined
+}
+
+// A thread that Nick starts on a task or a subtask that is assigned to him. It's always a comment.
+// It doesn't have a page or an anchor, because it's shown on the row of the task on the progress
+// tracker.
+export interface TaskThread extends ThreadFields {
+  readonly type: 'comment'
+  readonly anchor: undefined
+  readonly page: undefined
+  // The id of the task or the subtask, like t-4
+  readonly task: string
+}
+
+export type Thread = PageThread | TaskThread
 
 interface NewThread {
   readonly id: string
@@ -88,13 +105,34 @@ export class EmptyOutcomeError extends ScratchPadError {
   }
 }
 
-export function openThread(newThread: NewThread): Thread {
+export function openThread(newThread: NewThread): PageThread {
   checkAnchor(newThread.type, newThread.anchor)
   return {
     id: newThread.id,
     type: newThread.type,
     page: newThread.page,
     anchor: newThread.anchor,
+    waitsFor: 'agent',
+    outcome: undefined,
+    messages: [message('nick', newThread.text, newThread.time)],
+  }
+}
+
+interface NewTaskThread {
+  readonly id: string
+  readonly task: string
+  readonly text: string
+  readonly time: string
+}
+
+// Only Nick starts the thread of a task. The thread then waits for the agent.
+export function openTaskThread(newThread: NewTaskThread): TaskThread {
+  return {
+    id: newThread.id,
+    type: 'comment',
+    page: undefined,
+    task: newThread.task,
+    anchor: undefined,
     waitsFor: 'agent',
     outcome: undefined,
     messages: [message('nick', newThread.text, newThread.time)],
@@ -125,7 +163,8 @@ export function resolveThread(thread: Thread): Thread {
   return { ...thread, waitsFor: 'nobody' }
 }
 
-export function finishNote(thread: Thread, outcome: string): Thread {
+// A note is always on a page. A thread on a task is a comment.
+export function finishNote(thread: Thread, outcome: string): PageThread {
   if (thread.type === 'comment') {
     throw new NotANoteError(thread.id)
   }

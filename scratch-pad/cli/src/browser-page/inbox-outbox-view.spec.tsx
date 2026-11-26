@@ -1,6 +1,6 @@
 import { act, fireEvent, render, screen, within } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { type ThreadOfPad } from './api-responses'
+import { type PageThread, type ThreadOfPad } from './api-responses'
 import {
   exportPad,
   exportPadAddresses,
@@ -15,7 +15,10 @@ import { ScratchPadApp } from './scratch-pad-app'
 
 const now = '2026-11-20T22:00:00.000Z'
 
-function comment(id: string, overrides: Partial<ThreadOfPad>): ThreadOfPad {
+function comment(
+  id: string,
+  overrides: Partial<PageThread & Pick<ThreadOfPad, 'resolvedTime'>>,
+): ThreadOfPad {
   return { ...retryQuestion, id, resolvedTime: undefined, ...overrides }
 }
 

@@ -13,7 +13,10 @@ import {
   removeTemporaryHomes,
   temporaryHome,
 } from '../scratch-pad-folder/scratch-pad-folder-fixtures'
-import { commentAndGrammarNoteAndDecision } from './agent-commands-fixtures'
+import {
+  commentAndGrammarNoteAndDecision,
+  threadOnAssignedSubtask,
+} from './agent-commands-fixtures'
 import { DecisionReplyError, finishItem, replyToThread, showItem } from './thread-commands'
 
 const time = '2026-03-14T09:30:00.000Z'
@@ -30,7 +33,23 @@ function preparedScratchPad() {
   return folder
 }
 
+function scratchPadWithThreadOnTask() {
+  const folder = exportJobScratchPad(temporaryHome())
+  threadOnAssignedSubtask(folder)
+  return folder
+}
+
 describe('showItem', () => {
+  it('prints the whole thread of a task with its task and a link to the thread', () => {
+    expect(showItem(scratchPadWithThreadOnTask(), 'c-1', servedLinks)).toBe(
+      [
+        '[c-1] comment · subtask 2.2: Log each retry · waits for the agent',
+        `  link: ${exportJobAddress}progress-tracker#c-1`,
+        '  Nick (2026-03-14 09:30): Which log should I check?',
+      ].join('\n'),
+    )
+  })
+
   it('prints the whole thread with its block', () => {
     expect(showItem(preparedScratchPad(), 'c-1', servedLinks)).toBe(
       [
@@ -67,6 +86,12 @@ describe('showItem', () => {
 })
 
 describe('replyToThread', () => {
+  it('prints the link to the thread on the progress tracker when the thread is on a task', () => {
+    expect(replyToThread(scratchPadWithThreadOnTask(), 'c-1', 'The export log.', servedLinks)).toBe(
+      `c-1 now waits for Nick\nlink: ${exportJobAddress}progress-tracker#c-1`,
+    )
+  })
+
   it('prints that the thread now waits for Nick', () => {
     expect(
       replyToThread(preparedScratchPad(), 'c-1', 'I raised the limit to 8.', servedLinks),

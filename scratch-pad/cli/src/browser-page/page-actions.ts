@@ -20,6 +20,11 @@ export function usePageActions(
         changed({ kind: 'thread', id: started.id })
         return started
       },
+      startTaskThread: async (task: string, message: string) => {
+        const started = await writing.startTaskThread(task, message)
+        changed({ kind: 'thread', id: started.id })
+        return started
+      },
       replyToThread: async (id: string, message: string) => {
         const thread = await writing.replyToThread(id, message)
         changed({ kind: 'thread', id })

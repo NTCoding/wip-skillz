@@ -281,11 +281,15 @@ export function threadsOnMissingPages(
   threads: readonly Thread[],
   pages: readonly string[],
 ): ScratchPadProblem[] {
-  return threads
-    .filter((thread) => thread.waitsFor !== 'nobody' && !pages.includes(thread.page))
-    .map((thread) => ({
-      page: thread.page,
-      line: undefined,
-      text: `${thread.id} is still open on a page that doesn't exist any more. Restore the page or reply to ${thread.id} so that Nick can resolve it in his Inbox`,
-    }))
+  return threads.flatMap((thread) =>
+    thread.page === undefined || thread.waitsFor === 'nobody' || pages.includes(thread.page)
+      ? []
+      : [
+          {
+            page: thread.page,
+            line: undefined,
+            text: `${thread.id} is still open on a page that doesn't exist any more. Restore the page or reply to ${thread.id} so that Nick can resolve it in his Inbox`,
+          },
+        ],
+  )
 }

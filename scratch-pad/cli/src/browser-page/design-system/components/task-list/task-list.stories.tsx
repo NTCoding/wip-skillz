@@ -67,8 +67,21 @@ export const Subtasks: Story = {
 }
 
 const runFirstExport = {
-  do: 'Run the export job by hand against the production accounting system. Keep the terminal open until the job has printed its summary.\n\nCheck that the total in the accounting system matches the total in the summary.',
-  why: 'The production key for the accounting system is only on your laptop so the agent can’t run the job against production.',
+  do: (
+    <>
+      <p>
+        Run the export job by hand against the production accounting system. Keep the terminal open
+        until the job has printed its summary.
+      </p>
+      <p>Check that the total in the accounting system matches the total in the summary.</p>
+    </>
+  ),
+  why: (
+    <p>
+      The production key for the accounting system is only on your laptop so the agent can’t run the
+      job against production.
+    </p>
+  ),
   descriptionHref: '#t-8-description',
 }
 
@@ -145,6 +158,26 @@ export const AssignedToNick: Story = {
       },
       { id: 't-11', number: '6', title: 'Check the retry limit', state: 'to-do' },
     ],
+  },
+}
+
+// Subtask 4.2 and task 5 have a speech bubble, which opens their threads below their rows. A link
+// points to the thread of task 5 so the thread is open.
+export const ThreadsOfTasks: Story = {
+  args: {
+    ...AssignedToNick.args,
+    openTask: 'c-4',
+    tasks: (AssignedToNick.args?.tasks ?? []).map((task) => ({
+      ...task,
+      ...(task.id === 't-10'
+        ? { thread: { id: 'c-4', content: () => <p>Which invoices are rounded?</p> } }
+        : {}),
+      subtasks: (task.subtasks ?? []).map((subtask) =>
+        subtask.id === 't-8'
+          ? { ...subtask, thread: { id: undefined, content: () => <p>No messages yet.</p> } }
+          : subtask,
+      ),
+    })),
   },
 }
 

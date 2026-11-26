@@ -1,7 +1,7 @@
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
-import { PanelMenu, type PanelMenuItem } from './panel-menu'
+import { PanelMenu, type AssignedTask, type PanelMenuItem } from './panel-menu'
 
 class StoppedServerError extends Error {}
 
@@ -61,6 +61,14 @@ const decision: PanelMenuItem = {
   linkLabel: undefined,
 }
 
+const assignedSubtaskTask: AssignedTask = {
+  id: 't-8',
+  number: '4.2',
+  state: 'in-progress',
+  summary: [{ text: 'Run the export job by hand against the accounting system.' }],
+  canBeDone: true,
+}
+
 const assignedSubtask: PanelMenuItem = {
   key: 't-8',
   href: '/pad/progress-tracker#t-8',
@@ -72,13 +80,7 @@ const assignedSubtask: PanelMenuItem = {
   time: undefined,
   shownTime: undefined,
   context: undefined,
-  task: {
-    id: 't-8',
-    number: '4.2',
-    state: 'in-progress',
-    summary: 'Run the export job by hand against the accounting system.',
-    canBeDone: true,
-  },
+  task: assignedSubtaskTask,
   linkLabel: 'Read the full details',
 }
 
@@ -95,7 +97,7 @@ const assignedTaskWithSubtasks: PanelMenuItem = {
     id: 't-4',
     number: '4',
     state: 'in-progress',
-    summary: 'Go live with the export job.',
+    summary: [{ text: 'Go live with the export job.' }],
     canBeDone: false,
   },
 }
@@ -233,9 +235,78 @@ describe('PanelMenu', () => {
 
   it('shows a task with its number, its title, its state, the first line of what Nick has to do and its link', () => {
     renderMenu([assignedSubtask])
-    expect(screen.getAllByRole('menuitem').map((item) => item.textContent)).toStrictEqual([
+    const task = screen.getByRole('menuitem', {
+      description: 'In progress Run the export job by hand against the accounting system.',
+    })
+    expect([task.textContent, screen.getByRole('menu').textContent]).toStrictEqual([
+      '4.2 Run the first export against production',
       '4.2 Run the first export against productionIn progressRun the export job by hand against the accounting system.Read the full details',
     ])
+  })
+
+  it('describes the link of a task by the state of the task and the first line of what Nick has to do', () => {
+    renderMenu([{ ...assignedSubtask, task: { ...assignedSubtaskTask, state: 'to-do' } }])
+
+    expect(
+      screen.queryByRole('menuitem', {
+        name: '4.2 Run the first export against production',
+        description: 'To do Run the export job by hand against the accounting system.',
+      }),
+    ).not.toBeNull()
+  })
+
+  it('moves the focus through the link of a task, the links in its first line and its button in that order', async () => {
+    const withLinks: PanelMenuItem = {
+      ...assignedSubtask,
+      task: {
+        ...assignedSubtaskTask,
+        summary: [
+          { text: 'Read ' },
+          { text: 'the retry limit', href: '/pad/retry-limit.md' },
+          { text: ' and ' },
+          { text: 'the bank rules', href: 'https://x.dev/rules', external: true },
+        ],
+      },
+    }
+    renderMenu([withLinks], { onMarkDone: () => Promise.resolve() })
+    const focused = [String(document.activeElement?.textContent)]
+    await userEvent.keyboard('{ArrowDown}')
+    focused.push(String(document.activeElement?.textContent))
+    await userEvent.keyboard('{ArrowDown}')
+    focused.push(String(document.activeElement?.textContent))
+    await userEvent.keyboard('{ArrowDown}')
+    focused.push(String(document.activeElement?.textContent))
+
+    expect(focused).toStrictEqual([
+      '4.2 Run the first export against production',
+      'the retry limit',
+      'the bank rules',
+      'Mark as done',
+    ])
+  })
+
+  it('opens a page from a link in the first line of a task, and another site in a new tab', async () => {
+    const onNavigate = vi.fn()
+    const onChoose = vi.fn()
+    const withLinks: PanelMenuItem = {
+      ...assignedSubtask,
+      task: {
+        ...assignedSubtaskTask,
+        summary: [
+          { text: 'the retry limit', href: '/pad/retry-limit.md' },
+          { text: 'the bank rules', href: 'https://x.dev/rules', external: true },
+        ],
+      },
+    }
+    renderMenu([withLinks], { onNavigate, onChoose })
+    const external = screen.getByRole('menuitem', { name: 'the bank rules' })
+    await userEvent.click(screen.getByRole('menuitem', { name: 'the retry limit' }))
+
+    expect([
+      onNavigate.mock.calls,
+      onChoose.mock.calls.length,
+      external.getAttribute('target'),
+    ]).toStrictEqual([[['/pad/retry-limit.md']], 1, '_blank'])
   })
 
   it('shows a button that marks the task as done after the link of the task', async () => {
@@ -257,7 +328,7 @@ describe('PanelMenu', () => {
         id: 't-9',
         number: '4.3',
         state: 'to-do',
-        summary: 'Add up the totals of the file.',
+        summary: [{ text: 'Add up the totals of the file.' }],
         canBeDone: true,
       },
     }

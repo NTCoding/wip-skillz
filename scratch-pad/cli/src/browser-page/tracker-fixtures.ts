@@ -4,6 +4,18 @@ function pageLink(href: string, page: string, headingId?: string) {
   return { kind: 'page' as const, href, page, headingId }
 }
 
+// An assignment without any links in its texts, in the format that is returned by the server
+export function assignmentOf(what: string, why: string) {
+  return {
+    assignee: 'user' as const,
+    do: what,
+    why,
+    doHtml: `<p>${what}</p>\n`,
+    whyHtml: `<p>${why}</p>\n`,
+    links: [],
+  }
+}
+
 // Task 2 has 2 subtasks. Subtask 2.2 is assigned to Nick. The description of task 1 links to the
 // first retry, which is page 2.1.1. The description of task 3 links to the retry limit, which is
 // page 2 above the first retry. The description of subtask 2.1 links to the invoice template.
@@ -46,11 +58,10 @@ export const progressTracker: ProgressTracker = {
           state: 'in-progress',
           html: undefined,
           links: [],
-          assignment: {
-            assignee: 'user',
-            do: 'Ask the bank for the IBAN of the shop',
-            why: "The agent can't call the bank",
-          },
+          assignment: assignmentOf(
+            'Ask the bank for the IBAN of the shop',
+            "The agent can't call the bank",
+          ),
         },
       ],
     },

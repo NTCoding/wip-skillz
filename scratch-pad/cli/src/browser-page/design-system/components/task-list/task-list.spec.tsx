@@ -17,8 +17,13 @@ const buildTask: TaskRow = {
 const rowTexts = () => screen.getAllByRole('listitem').map((row) => row.textContent)
 
 const runFirstExport = {
-  do: 'Run the export job by hand.\n\nKeep the terminal open until the summary is printed.',
-  why: 'The production key is only on your laptop.',
+  do: (
+    <>
+      <p>Run the export job by hand.</p>
+      <p>Keep the terminal open until the summary is printed.</p>
+    </>
+  ),
+  why: <p>The production key is only on your laptop.</p>,
   descriptionHref: '#t-8-description',
 }
 
@@ -205,7 +210,9 @@ describe('TaskList', () => {
   it('shows each paragraph of what Nick has to do on its own', () => {
     render(<TaskList tasks={[goLive]} openTask="t-8" />)
     expect(
-      [...document.querySelectorAll('.task-list__text')].map((paragraph) => paragraph.textContent),
+      [...document.querySelectorAll('.task-list__text > p')].map(
+        (paragraph) => paragraph.textContent,
+      ),
     ).toStrictEqual([
       'Run the export job by hand.',
       'Keep the terminal open until the summary is printed.',
@@ -261,5 +268,82 @@ describe('TaskList', () => {
         .slice(1)
         .map((row) => row?.slice(0, 20)),
     ]).toStrictEqual([1, ['4.1Write the runbook', '4.2Run the first exp']])
+  })
+})
+
+// Task 5 has a thread whose card is c-4. The card is a plain paragraph here.
+const askFinanceWithThread: TaskRow = {
+  ...askFinance,
+  thread: { id: 'c-4', content: () => <p>Which invoices are rounded?</p> },
+}
+
+// Subtask 4.2 has a thread without any messages yet, whose content closes the thread.
+const goLiveWithThread: TaskRow = {
+  ...goLive,
+  subtasks: (goLive.subtasks ?? []).map((subtask) =>
+    subtask.id === 't-8'
+      ? {
+          ...subtask,
+          thread: {
+            id: undefined,
+            content: (close: () => void) => (
+              <button type="button" onClick={close}>
+                Close the thread
+              </button>
+            ),
+          },
+        }
+      : subtask,
+  ),
+}
+
+describe('the thread of a task in the TaskList', () => {
+  it('shows the content of the thread below the row when Nick clicks the speech bubble and hides it again', async () => {
+    render(<TaskList tasks={[askFinanceWithThread]} />)
+    const bubble = screen.getByRole('button', { name: 'Thread on task 5' })
+    await userEvent.click(bubble)
+    const shown = [
+      screen.queryByText('Which invoices are rounded?'),
+      bubble.getAttribute('aria-controls'),
+    ]
+    await userEvent.click(bubble)
+
+    expect([
+      shown[0] === null,
+      shown[1],
+      screen.queryByText('Which invoices are rounded?'),
+      bubble.getAttribute('aria-expanded'),
+    ]).toStrictEqual([false, 't-10-thread', null, 'false'])
+  })
+
+  it('opens the thread of a task when a link points to the thread', () => {
+    render(<TaskList tasks={[askFinanceWithThread]} openTask="c-4" />)
+
+    expect(screen.getByText('Which invoices are rounded?').closest('[id]')?.id).toBe('t-10-thread')
+  })
+
+  it('closes the thread of a subtask when its content calls close', async () => {
+    render(<TaskList tasks={[goLiveWithThread]} />)
+    await userEvent.click(screen.getByRole('button', { name: /Subtasks of task 4/u }))
+    await userEvent.click(screen.getByRole('button', { name: 'Thread on subtask 4.2' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Close the thread' }))
+
+    expect(screen.queryByRole('button', { name: 'Close the thread' })).toBeNull()
+  })
+
+  it('only shows a speech bubble on the rows that have a thread', () => {
+    render(<TaskList tasks={[goLiveWithThread]} openTask="t-8" />)
+
+    expect(
+      screen
+        .getAllByRole('button', { name: /^Thread on/u })
+        .map((bubble) => bubble.getAttribute('aria-label')),
+    ).toStrictEqual(['Thread on subtask 4.2'])
+  })
+
+  it('doesn’t show any speech bubbles in a list without any threads', () => {
+    render(<TaskList tasks={[askFinance]} />)
+
+    expect(screen.queryAllByRole('button', { name: /^Thread on/u })).toStrictEqual([])
   })
 })

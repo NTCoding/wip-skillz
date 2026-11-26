@@ -1,5 +1,5 @@
 import { type PageSummary, type QueuedItem, type Thread } from './api-responses'
-import { fileOfPage } from './browser-route'
+import { fileOfPage, type PadAddresses } from './browser-route'
 import { parentsOf } from './page-tree'
 import { queuedKey } from './queued-items'
 
@@ -48,8 +48,19 @@ function lineOfThread(thread: Thread): number | undefined {
   return thread.position?.kind === 'attached' ? thread.position.firstLine : thread.anchor?.firstLine
 }
 
+// A thread on a task is shown on the progress tracker.
 export function threadPlace(pages: readonly PageSummary[], thread: Thread): string {
-  return placeOf(pages, thread.page, sectionAt(pages, thread.page, lineOfThread(thread)))
+  return thread.page === undefined
+    ? 'Progress tracker'
+    : placeOf(pages, thread.page, sectionAt(pages, thread.page, lineOfThread(thread)))
+}
+
+// The address of the card of an item on its page. The card of a thread on a task is on the row of
+// its task on the progress tracker, which has the id of the thread as its anchor.
+export function cardHref(addresses: PadAddresses, page: string | undefined, card: string): string {
+  return page === undefined
+    ? addresses.progressTrackerHref(card)
+    : addresses.pageHref(fileOfPage(page), card)
 }
 
 // A thread without an anchor, like a note on a whole page, quotes its first message.
@@ -63,7 +74,8 @@ export function quoteOf(thread: Thread, firstMessage: string): string {
 // The place of an item in the outbox and the id of the card that shows the item on its page. A
 // queued comment has a card of its own. A queued reply is shown on the card of its thread.
 interface QueuedItemPlace {
-  readonly page: string
+  // A reply to a thread on a task doesn't have a page.
+  readonly page: string | undefined
   readonly card: string
   readonly where: string
   readonly quote: string

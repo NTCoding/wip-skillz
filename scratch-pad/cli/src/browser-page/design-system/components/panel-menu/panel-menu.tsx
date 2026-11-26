@@ -1,4 +1,12 @@
-import { useEffect, useId, useRef, useState, type KeyboardEvent, type MouseEvent } from 'react'
+import {
+  Fragment,
+  useEffect,
+  useId,
+  useRef,
+  useState,
+  type KeyboardEvent,
+  type MouseEvent,
+} from 'react'
 import { createPortal } from 'react-dom'
 import { navigationClick, type Navigate } from '../../navigation-click'
 import { usePendingAction } from '../../pending-action'
@@ -21,6 +29,14 @@ export interface DecisionContext {
   readonly links: readonly ContextLink[]
 }
 
+// A piece of a line of text. A piece with an href is a link. A link to another site opens in a new
+// tab.
+export interface TextPart {
+  readonly text: string
+  readonly href?: string | undefined
+  readonly external?: boolean | undefined
+}
+
 // A task or a subtask that is assigned to Nick. Its heading is its title.
 export interface AssignedTask {
   // The id of the task, like t-4
@@ -28,8 +44,8 @@ export interface AssignedTask {
   // The number of the task. A subtask has a number like 2.1.
   readonly number: string
   readonly state: TaskState
-  // The first line of what Nick has to do
-  readonly summary: string
+  // The first line of what Nick has to do, which can contain links
+  readonly summary: readonly TextPart[]
   // A task with subtasks takes its state from its subtasks. That's why Nick can't mark it as done.
   readonly canBeDone: boolean
 }
@@ -85,37 +101,7 @@ function LinkLabel({ label }: { readonly label: string | undefined }) {
   )
 }
 
-// The square mark of a task differs from the round dots of the other items.
-function TaskContent({
-  item,
-  task,
-}: {
-  readonly item: PanelMenuItem
-  readonly task: AssignedTask
-}) {
-  return (
-    <>
-      <span className="panel-menu__dot" data-kind={item.kind} aria-hidden="true" />
-      <span className="panel-menu__main">
-        <span className="panel-menu__head">
-          <span className="panel-menu__what">
-            <span className="panel-menu__number">{task.number}</span> {item.heading}
-          </span>
-          <span className="panel-menu__state">
-            <TaskStateLabel state={task.state} />
-          </span>
-        </span>
-        <span className="panel-menu__summary">{task.summary}</span>
-        <LinkLabel label={item.linkLabel} />
-      </span>
-    </>
-  )
-}
-
 function ItemContent({ item }: { readonly item: PanelMenuItem }) {
-  if (item.task !== undefined) {
-    return <TaskContent item={item} task={item.task} />
-  }
   return (
     <>
       <span className="panel-menu__dot" data-kind={item.kind} aria-hidden="true" />
@@ -150,6 +136,73 @@ function contextLinksOf(item: PanelMenuItem): readonly ContextLink[] {
   return item.context?.links ?? []
 }
 
+function summaryLinkCount(item: PanelMenuItem): number {
+  return (item.task?.summary ?? []).filter((part) => part.href !== undefined).length
+}
+
+interface LinkProps {
+  readonly ref: (control: HTMLElement | null) => void
+  readonly tabIndex: number
+  readonly role: string
+  readonly href: string
+  readonly onClick: (event: MouseEvent<HTMLAnchorElement>) => void
+}
+
+interface TaskItemProps {
+  readonly item: PanelMenuItem
+  readonly task: AssignedTask
+  // The position of the task's own link among the links of the menu
+  readonly first: number
+  readonly linkProps: (index: number, part: TextPart) => LinkProps
+}
+
+// The title of a task item is the link to the task. That link is stretched over the whole item so a
+// click anywhere on the item opens the task. Each link in the first line of what Nick has to do is
+// placed above the link of the task and opens its own page. The arrow keys move the focus to those
+// links straight after the link of the task.
+function TaskItem({ item, task, first, linkProps }: TaskItemProps) {
+  const id = useId()
+  const stateId = `${id}-state`
+  const summaryId = `${id}-summary`
+  const linkIndex = (position: number): number =>
+    first + 1 + task.summary.slice(0, position).filter((part) => part.href !== undefined).length
+  return (
+    <div className="panel-menu__item panel-menu__item--task">
+      <span className="panel-menu__dot" data-kind={item.kind} aria-hidden="true" />
+      <span className="panel-menu__main">
+        <span className="panel-menu__head">
+          <a
+            className="panel-menu__what panel-menu__task-link"
+            {...linkProps(first, { text: item.heading, href: item.href })}
+            aria-describedby={`${stateId} ${summaryId}`}
+          >
+            <span className="panel-menu__number">{task.number}</span> {item.heading}
+          </a>
+          <span className="panel-menu__state" id={stateId}>
+            <TaskStateLabel state={task.state} />
+          </span>
+        </span>
+        <span className="panel-menu__summary" id={summaryId}>
+          {task.summary.map((part, position) =>
+            part.href === undefined ? (
+              <Fragment key={`${String(position)} ${part.text}`}>{part.text}</Fragment>
+            ) : (
+              <a
+                key={`${String(position)} ${part.text}`}
+                className="panel-menu__summary-link"
+                {...linkProps(linkIndex(position), part)}
+              >
+                {part.text}
+              </a>
+            ),
+          )}
+        </span>
+        <LinkLabel label={item.linkLabel} />
+      </span>
+    </div>
+  )
+}
+
 // The task of an item that Nick can mark as done in this menu
 function taskToMarkDone(
   item: PanelMenuItem,
@@ -160,7 +213,12 @@ function taskToMarkDone(
 
 // The links of an item and its button to mark the task as done
 function controlCount(item: PanelMenuItem, onMarkDone: PanelMenuProps['onMarkDone']): number {
-  return 1 + contextLinksOf(item).length + Number(taskToMarkDone(item, onMarkDone) !== undefined)
+  return (
+    1 +
+    contextLinksOf(item).length +
+    summaryLinkCount(item) +
+    Number(taskToMarkDone(item, onMarkDone) !== undefined)
+  )
 }
 
 function linkCount(
@@ -171,8 +229,9 @@ function linkCount(
 }
 
 // The arrow keys move the focus through every link and every button of the menu. That's the link
-// of each item, the links in the context of a decision and the button that marks a task as done.
-// The links of a context and the button come straight after the link of their item. first is the
+// of each item, the links in the context of a decision, the links in the summary of a task and the
+// button that marks a task as done. Those links and the button come straight after the link of
+// their item. first is the
 // position of the item's own link among them.
 function withFirstLinks(items: readonly PanelMenuItem[], onMarkDone: PanelMenuProps['onMarkDone']) {
   return items.map((item, index) => ({
@@ -303,7 +362,7 @@ export function PanelMenu({
     },
     tabIndex: index === current ? 0 : -1,
   })
-  const linkProps = (index: number, href: string) => ({
+  const linkProps = (index: number, href: string): LinkProps => ({
     ...menuItemProps(index),
     role: 'menuitem',
     href,
@@ -312,6 +371,18 @@ export function PanelMenu({
       navigationClick(href, onNavigate)(event)
     },
   })
+  // A link to another site opens in a new tab rather than in the scratch pad.
+  const partLinkProps = (index: number, part: TextPart) =>
+    part.external === true
+      ? {
+          ...menuItemProps(index),
+          role: 'menuitem',
+          href: String(part.href),
+          target: '_blank',
+          rel: 'noreferrer',
+          onClick: onChoose,
+        }
+      : linkProps(index, String(part.href))
   return (
     <>
       <ul className="panel-menu" id={id} role="menu" aria-labelledby={labelledBy} onKeyDown={move}>
@@ -320,9 +391,13 @@ export function PanelMenu({
           const task = taskToMarkDone(item, onMarkDone)
           return (
             <li key={item.key} role="none">
-              <a className="panel-menu__item" {...linkProps(first, item.href)}>
-                <ItemContent item={item} />
-              </a>
+              {item.task === undefined ? (
+                <a className="panel-menu__item" {...linkProps(first, item.href)}>
+                  <ItemContent item={item} />
+                </a>
+              ) : (
+                <TaskItem item={item} task={item.task} first={first} linkProps={partLinkProps} />
+              )}
               {contextLinks.length > 0 && (
                 <ol className="panel-menu__context" role="group" aria-label="Context">
                   {contextLinks.map((link, linkIndex) => (
@@ -343,7 +418,7 @@ export function PanelMenu({
                   task={task}
                   onMarkDone={onMarkDone}
                   onDone={focusAfterDone(position, first)}
-                  menuItem={menuItemProps(first + 1 + contextLinks.length)}
+                  menuItem={menuItemProps(first + 1 + contextLinks.length + summaryLinkCount(item))}
                   announcer={announcer}
                 />
               )}

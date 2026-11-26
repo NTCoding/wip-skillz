@@ -227,7 +227,7 @@ export class ScratchPadFolder {
       db,
       this.name,
       'threads',
-      `SELECT page FROM threads UNION SELECT page FROM decisions
+      `SELECT page FROM threads WHERE page IS NOT NULL UNION SELECT page FROM decisions
        UNION SELECT page FROM outbox WHERE page IS NOT NULL`,
     ).map((row) => row.text('page'))
     return storedPageIds(stored, this.pageFiles())

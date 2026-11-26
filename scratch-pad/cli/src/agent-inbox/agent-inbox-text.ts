@@ -5,13 +5,15 @@ import { linkLines, missingLinksLine, taskLink, type ItemLinks } from '../item-l
 import { type PageLines } from '../pages/page-files'
 import { type TrackerItem } from '../progress-tracker/progress-tracker'
 import { taskLine } from '../progress-tracker/progress-tracker-text'
-import { threadInboxLines } from '../threads/thread-text'
+import { taskThreadInboxLines, threadInboxLines } from '../threads/thread-text'
 import { type AgentInboxItem, type AgentInboxSelection, type ItemCount } from './agent-inbox'
 
 export interface AgentInboxTextContext {
   readonly links: ItemLinks
   readonly includeSeen: boolean
   readonly readPage: (page: string) => PageLines
+  // Reads the task or the subtask of a thread on a task, like t-4
+  readonly readTask: (id: string) => TrackerItem
 }
 
 export function agentInboxText(
@@ -55,7 +57,10 @@ function headerLine(selection: AgentInboxSelection, context: AgentInboxTextConte
 
 function itemLines(item: AgentInboxItem, context: AgentInboxTextContext): string[] {
   if (item.kind === 'thread') {
-    return threadInboxLines(item.thread, context.readPage(item.thread.page), context.links)
+    const { thread } = item
+    return thread.page === undefined
+      ? taskThreadInboxLines(thread, context.readTask(thread.task), context.links)
+      : threadInboxLines(thread, context.readPage(thread.page), context.links)
   }
   if (item.kind === 'decision') {
     const page = context.readPage(item.decision.page)

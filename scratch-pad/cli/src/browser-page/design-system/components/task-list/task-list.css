@@ -88,8 +88,37 @@ button.task-list__task[aria-expanded='true'] .task-list__chevron .icon {
   background: var(--surface-soft);
 }
 
-[data-open='true'] > button.task-list__task:hover {
+[data-open='true'] > button.task-list__task:hover,
+[data-open='true'] > .task-list__row > button.task-list__task:hover {
   background: var(--tint);
+}
+
+/* A list with threads has a column on the right of every row for the speech bubble so that the
+   states line up whether a row has a thread or not. */
+.task-list__row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) var(--control-h);
+  align-items: center;
+  padding-right: var(--cell-padding-x);
+}
+
+.task-list__thread-button {
+  display: grid;
+  place-items: center;
+  width: var(--control-h);
+  height: var(--control-h);
+  padding: var(--space-0);
+  border: 0;
+  border-radius: var(--r-pill);
+  background: none;
+  color: var(--icon);
+  cursor: pointer;
+}
+
+.task-list__thread-button:hover,
+.task-list__thread-button[aria-expanded='true'] {
+  background: var(--tint);
+  color: var(--text);
 }
 
 .task-list__chevron {
@@ -174,8 +203,9 @@ button.task-list__chevron:hover {
   background: var(--text-2);
 }
 
-/* The details line up with the title of their row. */
-.task-list__details {
+/* The details and the thread line up with the title of their row. */
+.task-list__details,
+.task-list__thread {
   padding: var(--space-0) calc(var(--cell-padding-x) + var(--icon-size) + var(--space-xl))
     var(--space-5xl)
     calc(var(--cell-padding-x) + var(--tree-chevron-size) + var(--space-7xl) + var(--space-xl) * 2);
@@ -183,7 +213,8 @@ button.task-list__chevron:hover {
   line-height: var(--lh-ui);
 }
 
-.task-list__subtask > .task-list__details {
+.task-list__subtask > .task-list__details,
+.task-list__subtask > .task-list__thread {
   padding-left: calc(
     var(--cell-padding-x) + var(--space-7xl) * 2 + var(--tree-chevron-size) + var(--space-xl) * 3
   );
@@ -205,16 +236,19 @@ button.task-list__chevron:hover {
   font-weight: var(--fw-medium);
 }
 
-/* A line break that the agent wrote in the text is kept. */
+/* A line break that the agent wrote in the text is kept. Each paragraph of the text is a p. */
 .task-list__text {
-  margin: var(--space-0);
-  font-size: inherit;
-  line-height: inherit;
   white-space: pre-line;
   text-wrap: pretty;
 }
 
-.task-list__text + .task-list__text {
+.task-list__text > p {
+  margin: var(--space-0);
+  font-size: inherit;
+  line-height: inherit;
+}
+
+.task-list__text > p + p {
   margin-top: var(--space-md);
 }
 
@@ -267,7 +301,9 @@ button.task-list__chevron:hover {
   }
 
   .task-list__details,
-  .task-list__subtask > .task-list__details {
+  .task-list__subtask > .task-list__details,
+  .task-list__thread,
+  .task-list__subtask > .task-list__thread {
     padding-right: var(--cell-padding-x);
     padding-left: calc(var(--cell-padding-x) + var(--tree-chevron-size) + var(--space-xl));
   }

@@ -24,6 +24,7 @@ import {
 } from './design-system/design-system'
 import { DecisionForm } from './decision-form'
 import { canBeAnswered, decisionPageElement } from './decision-page-elements'
+import { opensAnotherSite } from './other-site-link'
 import { taskLabel, taskReferenceScheme, type FindTask } from './task-references'
 
 export interface PageElementContext {
@@ -61,7 +62,6 @@ const copiedAttributes: Readonly<Record<string, string>> = {
 const skippedTags = new Set(['script', 'style', 'iframe', 'object', 'embed'])
 const containersWithoutText = new Set(['table', 'thead', 'tbody', 'tfoot', 'tr', 'ul', 'ol', 'dl'])
 const alignment = /text-align:\s*(left|center|right)/
-const linkSchemes = new Set(['http:', 'https:', 'mailto:'])
 
 function attributesOf(element: Element): Record<string, string> {
   const attributes = Object.fromEntries(
@@ -205,13 +205,6 @@ function decisionElement(element: Element, key: Key, context: ConversionContext)
         {answerable && <DecisionForm id={id} actions={context} />}
       </DecisionCard>
     </div>
-  )
-}
-
-function opensAnotherSite(href: string): boolean {
-  return (
-    URL.canParse(href, document.baseURI) &&
-    linkSchemes.has(new URL(href, document.baseURI).protocol)
   )
 }
 

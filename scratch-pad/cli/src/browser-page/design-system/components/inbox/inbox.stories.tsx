@@ -160,7 +160,9 @@ export const TasksAssignedToNick: Story = {
           id: 't-8',
           number: '4.2',
           state: 'in-progress',
-          summary: 'Run the export job by hand against the production accounting system.',
+          summary: [
+            { text: 'Run the export job by hand against the production accounting system.' },
+          ],
           canBeDone: true,
         },
       },
@@ -179,7 +181,9 @@ export const TasksAssignedToNick: Story = {
           id: 't-10',
           number: '5',
           state: 'to-do',
-          summary: 'Ask the finance team whether the tax is rounded on each invoice line.',
+          summary: [
+            { text: 'Ask the finance team whether the tax is rounded on each invoice line.' },
+          ],
           canBeDone: true,
         },
       },

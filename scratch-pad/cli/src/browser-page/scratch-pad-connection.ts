@@ -73,6 +73,8 @@ export interface ScratchPadReading {
 
 export interface ScratchPadWriting {
   readonly startThread: (thread: NewThread) => Promise<Thread>
+  // Nick starts the thread of a task or a subtask that is assigned to him, like t-4.
+  readonly startTaskThread: (task: string, message: string) => Promise<Thread>
   readonly replyToThread: (id: string, message: string) => Promise<Thread>
   readonly resolveThread: (id: string) => Promise<Thread>
   readonly answerDecision: (id: string, page: string, answer: Answer) => Promise<void>
@@ -195,6 +197,15 @@ export function scratchPadConnection(pad: string, network: BrowserNetwork): Scra
         .results,
     startThread: async (thread) =>
       (await readJson(network, `${api}/threads`, threadResponse, postOf(thread))).thread,
+    startTaskThread: async (task, message) =>
+      (
+        await readJson(
+          network,
+          `${api}/tasks/${encodeURIComponent(task)}/threads`,
+          threadResponse,
+          postOf({ message }),
+        )
+      ).thread,
     replyToThread: async (id, message) =>
       (await readJson(network, `${threadUrl(id)}/replies`, threadResponse, postOf({ message })))
         .thread,

@@ -5,15 +5,49 @@ import {
   type ReadMarks,
 } from './api-responses'
 import { fileOfPage, type PadAddresses } from './browser-route'
-import { type InboxEntry } from './design-system/design-system'
-import { placeOf, quoteOf, threadPlace } from './item-places'
+import { type InboxEntry, type TextPart } from './design-system/design-system'
+import { cardHref, placeOf, quoteOf, threadPlace } from './item-places'
 import { shownTime } from './message-time'
+import { opensAnotherSite } from './other-site-link'
 import { readMarkEntries } from './read-marks'
 
 export const authorNames = { nick: 'Nick', agent: 'Agent' } as const
 
 type TaskOnTracker = ProgressTracker['tasks'][number]
 type SubtaskOnTracker = TaskOnTracker['subtasks'][number]
+type AssignmentOnTracker = NonNullable<SubtaskOnTracker['assignment']>
+
+// A link in what Nick has to do. A link to a page opens the page in the scratch pad and a link to
+// another site opens in a new tab. Any other link is shown as its text.
+function linkPart(
+  addresses: PadAddresses,
+  assignment: AssignmentOnTracker,
+  link: Element,
+): TextPart {
+  const text = String(link.textContent)
+  const href = String(link.getAttribute('href'))
+  const target = assignment.links.find((each) => each.href === href)
+  if (target?.kind === 'page') {
+    return { text, href: addresses.pageHref(fileOfPage(target.page), target.headingId) }
+  }
+  return opensAnotherSite(href) ? { text, href, external: true } : { text }
+}
+
+// The first line of what Nick has to do, which includes the links in that line. Everything after
+// the first line is left out.
+function summaryOf(addresses: PadAddresses, assignment: AssignmentOnTracker): TextPart[] {
+  const { body } = new DOMParser().parseFromString(assignment.doHtml, 'text/html')
+  // The nodes of the first paragraph
+  const nodes = [...body.children].slice(0, 1).flatMap((paragraph) => [...paragraph.childNodes])
+  const lineEnd = nodes.findIndex(
+    (node) => !(node instanceof Element) && String(node.textContent).includes('\n'),
+  )
+  return (lineEnd === -1 ? nodes : nodes.slice(0, lineEnd + 1)).map((node) =>
+    node instanceof HTMLAnchorElement
+      ? linkPart(addresses, assignment, node)
+      : { text: String(node.textContent).replace(/\n.*/su, '') },
+  )
+}
 
 // A task or a subtask that is assigned to Nick and isn't done yet. Nick can't mark a task with
 // subtasks as done, because its state follows the states of its subtasks.
@@ -40,8 +74,7 @@ function assignedTaskEntry(
             id: item.id,
             number: String(item.number),
             state: item.state,
-            // Everything after the first line is left out.
-            summary: item.assignment.do.replace(/\n.*/su, ''),
+            summary: summaryOf(addresses, item.assignment),
             canBeDone,
           },
         },
@@ -100,7 +133,7 @@ export function nickInboxEntries(
       : [
           {
             key: thread.id,
-            href: addresses.pageHref(fileOfPage(thread.page), thread.id),
+            href: cardHref(addresses, thread.page, thread.id),
             kind: 'reply',
             heading: 'The agent replied',
             where: threadPlace(pages, thread),

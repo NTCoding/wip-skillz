@@ -6,13 +6,20 @@ import {
   decisionShowLines,
 } from '../decisions/decision-text'
 import { itemTypeOf } from '../items/item-id'
-import { pageLink, textWithLink, withLinksNote, type ItemLinks } from '../item-links/item-links'
+import {
+  pageLink,
+  taskLink,
+  textWithLink,
+  withLinksNote,
+  type ItemLinks,
+} from '../item-links/item-links'
+import { itemWithId } from '../progress-tracker/progress-tracker'
 import { brokenPageLinesOf } from './decision-page-commands'
 import { type PadDb } from '../scratch-pad-folder/pad-db'
 import { type ScratchPadFolder } from '../scratch-pad-folder/scratch-pad-folder'
 import { ScratchPadError } from '../scratch-pad-error'
 import { addAgentMessage, finishNote, type Thread } from '../threads/thread'
-import { threadShowLines } from '../threads/thread-text'
+import { taskThreadShowLines, threadShowLines } from '../threads/thread-text'
 
 export class DecisionReplyError extends ScratchPadError {
   constructor(id: string) {
@@ -32,11 +39,22 @@ export function showItem(folder: ScratchPadFolder, id: string, links: ItemLinks)
   if (itemTypeOf(id) === 'decision') {
     return withLinksNote(links, decisionLinesOf(folder, id, links).join('\n'))
   }
-  const thread = folder.read((pad) => pad.readThread(id))
-  return withLinksNote(
-    links,
-    threadShowLines(thread, folder.readPage(thread.page), links).join('\n'),
-  )
+  const { thread, tracker } = folder.read((pad) => ({
+    thread: pad.readThread(id),
+    tracker: pad.readProgressTracker(),
+  }))
+  const lines =
+    thread.page === undefined
+      ? taskThreadShowLines(thread, itemWithId(tracker, thread.task), links)
+      : threadShowLines(thread, folder.readPage(thread.page), links)
+  return withLinksNote(links, lines.join('\n'))
+}
+
+// The link of a thread on a task opens the thread on the progress tracker.
+function threadLink(links: ItemLinks, thread: Thread): string | undefined {
+  return thread.page === undefined
+    ? taskLink(links, thread.id)
+    : pageLink(links, thread.page, thread.id)
 }
 
 // A decision has the answer of Nick, its rounds of changes requested or both. The rounds of a
@@ -65,13 +83,13 @@ export function replyToThread(
   links: ItemLinks,
 ): string {
   const time = new Date().toISOString()
-  const page = folder.change((pad) => {
-    const thread = addAgentMessage(readThreadToChange(pad, id), text, time)
-    pad.writeThread(thread)
+  const thread = folder.change((pad) => {
+    const replied = addAgentMessage(readThreadToChange(pad, id), text, time)
+    pad.writeThread(replied)
     pad.appendEvent({ time, kind: 'thread-replied', by: 'agent', item: id })
-    return thread.page
+    return replied
   })
-  return textWithLink(links, `${id} now waits for Nick`, pageLink(links, page, id))
+  return textWithLink(links, `${id} now waits for Nick`, threadLink(links, thread))
 }
 
 export function finishItem(

@@ -5,6 +5,7 @@ import {
   exportPadAddresses,
   indexInbox,
   pageSummaries,
+  assignmentOf,
   progressTracker,
   retryQuestion,
 } from './browser-page-fixtures'
@@ -255,11 +256,10 @@ describe('nickInboxEntries', () => {
   })
 
   it('lists the tasks and the subtasks that are assigned to Nick and are not done, after the decisions and before the updates to pages', () => {
-    const assignment = {
-      assignee: 'user',
-      do: 'Ask Jo for the retry limit.\nJo is in the office on Mondays.',
-      why: 'Jo only talks to Nick',
-    } as const
+    const assignment = assignmentOf(
+      'Ask Jo for the retry limit.\nJo is in the office on Mondays.',
+      'Jo only talks to Nick',
+    )
     // Task 2 is still assigned to Nick although it has subtasks. Subtask 2.1 is assigned but done.
     const tracker: ProgressTracker = {
       ...progressTracker,
@@ -301,7 +301,7 @@ describe('nickInboxEntries', () => {
           id: 't-2',
           number: '2',
           state: 'in-progress',
-          summary: 'Ask Jo for the retry limit.',
+          summary: [{ text: 'Ask Jo for the retry limit.' }],
           canBeDone: false,
         },
       ],
@@ -311,7 +311,7 @@ describe('nickInboxEntries', () => {
           id: 't-5',
           number: '2.2',
           state: 'in-progress',
-          summary: 'Ask Jo for the retry limit.',
+          summary: [{ text: 'Ask Jo for the retry limit.' }],
           canBeDone: true,
         },
       ],
@@ -321,10 +321,81 @@ describe('nickInboxEntries', () => {
           id: 't-3',
           number: '3',
           state: 'to-do',
-          summary: 'Ask Jo for the retry limit.',
+          summary: [{ text: 'Ask Jo for the retry limit.' }],
           canBeDone: true,
         },
       ],
+    ])
+  })
+
+  it('shows the first line of what Nick has to do with its links, the text of a link that is neither to a page nor to another site and the text of inline code', () => {
+    const assignment = {
+      ...assignmentOf('', 'Jo only talks to Nick'),
+      doHtml:
+        '<p>Read <a href="retry-limit.md">the limit</a> and <a href="task:t-4">task 4</a> at <a href="https://x.dev">https://x.dev</a> or <code>https://y.dev</code>.\nThen tell Jo.</p>\n',
+      links: [
+        {
+          kind: 'page' as const,
+          href: 'retry-limit.md',
+          page: 'pages/retry-limit.md',
+          headingId: undefined,
+        },
+        { kind: 'task' as const, href: 'task:t-4', id: 't-4' },
+        { kind: 'other' as const, href: 'https://x.dev' },
+      ],
+    }
+    const tracker: ProgressTracker = {
+      ...progressTracker,
+      tasks: progressTracker.tasks.map((task) =>
+        task.id === 't-3' ? { ...task, assignment } : task,
+      ),
+    }
+
+    expect(
+      nickInboxEntries(
+        exportPadAddresses,
+        { threads: [], decisions: [] },
+        [],
+        noReadMarks,
+        tracker,
+      ).find((entry) => entry.key === 't-3')?.task?.summary,
+    ).toStrictEqual([
+      { text: 'Read ' },
+      { text: 'the limit', href: `/${exportPad}/retry-limit.md` },
+      { text: ' and ' },
+      { text: 'task 4' },
+      { text: ' at ' },
+      { text: 'https://x.dev', href: 'https://x.dev', external: true },
+      { text: ' or ' },
+      { text: 'https://y.dev' },
+      { text: '.' },
+    ])
+  })
+
+  it('opens a link whose scheme is in upper case in a new tab', () => {
+    const assignment = {
+      ...assignmentOf('', 'Jo only talks to Nick'),
+      doHtml: '<p>Read <a href="HTTPS://a.dev">HTTPS://a.dev</a></p>\n',
+      links: [{ kind: 'other' as const, href: 'HTTPS://a.dev' }],
+    }
+    const tracker: ProgressTracker = {
+      ...progressTracker,
+      tasks: progressTracker.tasks.map((task) =>
+        task.id === 't-3' ? { ...task, assignment } : task,
+      ),
+    }
+
+    expect(
+      nickInboxEntries(
+        exportPadAddresses,
+        { threads: [], decisions: [] },
+        [],
+        noReadMarks,
+        tracker,
+      ).find((entry) => entry.key === 't-3')?.task?.summary,
+    ).toStrictEqual([
+      { text: 'Read ' },
+      { text: 'HTTPS://a.dev', href: 'HTTPS://a.dev', external: true },
     ])
   })
 })

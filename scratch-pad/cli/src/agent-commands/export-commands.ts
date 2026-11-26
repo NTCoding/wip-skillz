@@ -8,10 +8,10 @@ import {
   decisionsOfPad,
   improvementsOf,
   pageSummaries,
-  progressTrackerOf,
   threadsOfPage,
   viewPage,
 } from '../nick-views/nick-views'
+import { progressTrackerOf } from '../nick-views/progress-tracker-of'
 import { ScratchPadError } from '../scratch-pad-error'
 import { type ScratchPadFolder } from '../scratch-pad-folder/scratch-pad-folder'
 

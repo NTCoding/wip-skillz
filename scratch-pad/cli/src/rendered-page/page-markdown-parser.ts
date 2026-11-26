@@ -9,6 +9,17 @@ export const pageMarkdownParser = pageParser()
 // closes the block. So a ::: line in the body is rendered as text rather than lost.
 export const blockBodyParser = pageParser().disable(namedBlockType)
 
+// Only renders the links and the inline code in a text, which is split into paragraphs at each
+// blank line. A link is like [the retry limit](retry-limit.md) or a bare https://example.com. A URL
+// in backticks is inline code rather than a link. Every other Markdown character stays as text.
+export const linksOnlyParser = linksParser()
+
+function linksParser(): MarkdownIt {
+  const parser = new MarkdownIt('zero', { linkify: true }).enable(['link', 'linkify', 'backticks'])
+  parser.linkify.set({ fuzzyLink: false, fuzzyEmail: false })
+  return parser
+}
+
 function pageParser(): MarkdownIt {
   const parser = new MarkdownIt({ html: false })
   parser.block.ruler.before('fence', namedBlockType, namedBlockRule, {

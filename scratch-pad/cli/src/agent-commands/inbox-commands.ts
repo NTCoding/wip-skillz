@@ -2,6 +2,7 @@ import { selectAgentInbox, type AgentInboxSelection } from '../agent-inbox/agent
 import { agentInboxText } from '../agent-inbox/agent-inbox-text'
 import { type ItemType } from '../items/item-id'
 import { nickInboxItems } from '../nick-views/nick-views'
+import { itemWithId } from '../progress-tracker/progress-tracker'
 import { type ItemLinks } from '../item-links/item-links'
 import { type PadDb } from '../scratch-pad-folder/pad-db'
 import { type ScratchPadFolder } from '../scratch-pad-folder/scratch-pad-folder'
@@ -54,6 +55,11 @@ export function printedInboxText(
       links,
       includeSeen,
       readPage: (page) => folder.readPage(page),
+      readTask: (id) =>
+        itemWithId(
+          folder.read((pad) => pad.readProgressTracker()),
+          id,
+        ),
     }),
     ...brokenDecisionPageLines(folder),
   ].join('\n')

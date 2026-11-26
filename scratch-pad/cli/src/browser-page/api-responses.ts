@@ -71,8 +71,16 @@ export const viewedPageResponse = z.object({
 })
 
 // The assignment of a task or a subtask has what Nick has to do and why the agent can't do the
-// task. The only assignee is user, who is Nick.
-const assignment = z.object({ assignee: z.enum(['user']), do: z.string(), why: z.string() })
+// task. The only assignee is user, who is Nick. The HTML of both texts only has paragraphs, links
+// and inline code.
+const assignment = z.object({
+  assignee: z.enum(['user']),
+  do: z.string(),
+  why: z.string(),
+  doHtml: z.string(),
+  whyHtml: z.string(),
+  links: z.array(pageLink),
+})
 
 const subtask = z.object({
   id: z.string(),
@@ -150,10 +158,9 @@ const position = z.discriminatedUnion('kind', [
 
 const message = z.object({ author: z.enum(['nick', 'agent']), text: z.string(), time: z.string() })
 
-const thread = z.object({
+const threadFields = z.object({
   id: z.string(),
   type: threadType,
-  page: z.string(),
   anchor: anchor.nullable().transform((value) => value ?? undefined),
   waitsFor: z.enum(['nick', 'agent', 'nobody']),
   outcome: optionalText,
@@ -161,11 +168,26 @@ const thread = z.object({
   position: position.nullable().transform((value) => value ?? undefined),
 })
 
+const noValue = z
+  .null()
+  .transform(() => undefined)
+  .optional()
+
+// A thread is on a page or on a task. A thread on a task or a subtask has the id of the task, like
+// t-4, instead of a page.
+const pageThread = threadFields.extend({ page: z.string(), task: noValue })
+
+const taskThread = threadFields.extend({ page: noValue, task: z.string() })
+
+const thread = z.union([pageThread, taskThread])
+
 export const threadsResponse = z.object({ threads: z.array(thread) })
 
 export const threadResponse = z.object({ thread })
 
-const threadOfPad = thread.extend({ resolvedTime: optionalText })
+const resolvedTime = { resolvedTime: optionalText }
+
+const threadOfPad = z.union([pageThread.extend(resolvedTime), taskThread.extend(resolvedTime)])
 
 export const threadsOfPadResponse = z.object({ threads: z.array(threadOfPad) })
 
@@ -287,6 +309,7 @@ export type PadChange = z.infer<typeof padChange>
 export type Answer = z.infer<typeof answer>
 export type ThreadType = z.infer<typeof threadType>
 export type Thread = z.infer<typeof thread>
+export type PageThread = z.infer<typeof pageThread>
 export type ThreadOfPad = z.infer<typeof threadOfPad>
 export type ReadMarks = z.infer<typeof readMarksResponse>
 export type PageReadMark = z.infer<typeof pageReadMark>

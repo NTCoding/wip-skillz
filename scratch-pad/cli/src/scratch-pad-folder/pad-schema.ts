@@ -256,8 +256,44 @@ CREATE TABLE decision_reviews (
 ) STRICT;
 `
 
+// Version 9 adds the threads on a task or a subtask, which have the id of the task in task_id
+// instead of a page. A thread on a task doesn't have an anchor, and a task has one thread at most.
+// The threads are copied to a new table, because SQLite can't remove the NOT NULL of page. The
+// messages and the outbox refer to the threads so the foreign keys are only checked at the commit,
+// once every thread is back in the table. A thread of an older scratch pad is on a page.
+const threadsOnTasks = `
+PRAGMA defer_foreign_keys = ON;
+CREATE TEMP TABLE threads_on_pages AS SELECT * FROM threads;
+DROP TABLE threads;
+CREATE TABLE threads (
+  id TEXT PRIMARY KEY,
+  type TEXT NOT NULL ${oneOf('type', threadTypes)},
+  page TEXT,
+  task_id TEXT UNIQUE CHECK (task_id GLOB 't-[1-9]*'),
+  first_line INTEGER CHECK (first_line >= 1),
+  last_line INTEGER CHECK (last_line >= first_line),
+  selected_text TEXT,
+  prefix TEXT,
+  suffix TEXT,
+  copies_on_page INTEGER CHECK (copies_on_page >= 0),
+  waits_for TEXT NOT NULL ${oneOf('waits_for', waitingParties)},
+  outcome TEXT,
+  CHECK ((page IS NULL) <> (task_id IS NULL)),
+  CHECK (task_id IS NULL OR first_line IS NULL),
+  CHECK ((first_line IS NULL) = (last_line IS NULL)),
+  CHECK ((first_line IS NULL) = (selected_text IS NULL))
+) STRICT;
+INSERT INTO threads
+  (id, type, page, first_line, last_line, selected_text, prefix, suffix, copies_on_page, waits_for,
+   outcome)
+  SELECT id, type, page, first_line, last_line, selected_text, prefix, suffix, copies_on_page,
+    waits_for, outcome
+  FROM threads_on_pages;
+DROP TABLE threads_on_pages;
+`
+
 export const padSchema: PadSchema = {
-  version: 8,
+  version: 9,
   firstTables: firstPadTables,
   migrations: [
     { version: 2, sql: improvementsTable },
@@ -267,6 +303,7 @@ export const padSchema: PadSchema = {
     { version: 6, sql: taskIdsAndSubtasks },
     { version: 7, sql: taskAssignments },
     { version: 8, sql: decisionReviewsTable },
+    { version: 9, sql: threadsOnTasks },
   ],
 }
 

@@ -1,5 +1,10 @@
 import { type ReactNode } from 'react'
-import { type Improvements, type ProgressTracker, type ViewedPage } from './api-responses'
+import {
+  type Improvements,
+  type ProgressTracker,
+  type Thread,
+  type ViewedPage,
+} from './api-responses'
 import { fileOfPage, improvementAnchor } from './browser-route'
 import {
   ImprovementList,
@@ -13,6 +18,7 @@ import {
 import { type LoadedValue } from './loaded-value'
 import { pageElements, parsedPageBody, type PageElementContext } from './page-elements'
 import { type PageActions } from './page-with-threads'
+import { rowThreadOf } from './task-threads'
 
 export function LoadingView({ loaded }: { readonly loaded: LoadedValue<unknown> }) {
   return (
@@ -64,6 +70,16 @@ interface ProgressTrackerViewProps {
   readonly openSection: string | undefined
   // The number of links that Nick has followed, which opens a section again that he has closed
   readonly navigations: number
+  // Every thread of the scratch pad. The threads on tasks are shown on the rows of their tasks.
+  readonly threads: readonly Thread[]
+  readonly actions: PageActions | undefined
+}
+
+// The context of a row, which the rows of the tasks and of the subtasks share
+interface RowContext {
+  readonly context: MarkdownContext
+  readonly threads: readonly Thread[]
+  readonly actions: PageActions | undefined
 }
 
 type TaskOnTracker = ProgressTracker['tasks'][number]
@@ -81,14 +97,17 @@ function sectionAnchor(entry: SubtaskOnTracker | TaskOnTracker): string {
 
 // The title of a task links to its section below the list. A task without a section has the id of
 // the task on its row instead, which a link to the task points to. The row of an assigned task
-// shows what Nick has to do and links to the description of the task.
+// shows what Nick has to do and links to the description of the task. The row of an assigned task
+// has the thread of the task too. The row of an unassigned task only has the thread when Nick has
+// already written in the thread.
 function rowOf(
   entry: SubtaskOnTracker | TaskOnTracker,
   withSection: boolean,
-  context: MarkdownContext,
+  { context, threads, actions }: RowContext,
 ): SubtaskRow {
   const href = withSection ? context.addresses.progressTrackerHref(sectionAnchor(entry)) : undefined
   const { assignment } = entry
+  const hasThread = threads.some((thread) => thread.task === entry.id)
   return {
     id: entry.id,
     number: String(entry.number),
@@ -100,10 +119,12 @@ function rowOf(
       assignment === undefined
         ? undefined
         : {
-            do: assignment.do,
-            why: assignment.why,
+            do: markdownElements(assignment.doHtml, assignment.links, context),
+            why: markdownElements(assignment.whyHtml, assignment.links, context),
             descriptionHref: entry.html === undefined ? undefined : href,
           },
+    thread:
+      assignment !== undefined || hasThread ? rowThreadOf(entry.id, threads, actions) : undefined,
   }
 }
 
@@ -140,7 +161,8 @@ function TaskSections({ tracker, context, openSection, navigations }: ProgressTr
 }
 
 // The task that the address points to. A link to the description of an assigned task points to
-// the task too. So the row of the task stays open when Nick follows the link in its details.
+// the task too. So the row of the task stays open when Nick follows the link in its details. A
+// link to the thread of a task points to the thread.
 function pointedTask(
   tracker: ProgressTracker,
   openSection: string | undefined,
@@ -153,9 +175,12 @@ function pointedTask(
 
 export function ProgressTrackerView(props: ProgressTrackerViewProps) {
   const { tracker, context } = props
+  const rowContext = { context, threads: props.threads, actions: props.actions }
   const rows = tracker.tasks.map((task) => ({
-    ...rowOf(task, hasSection(task), context),
-    subtasks: task.subtasks.map((subtask) => rowOf(subtask, subtask.html !== undefined, context)),
+    ...rowOf(task, hasSection(task), rowContext),
+    subtasks: task.subtasks.map((subtask) =>
+      rowOf(subtask, subtask.html !== undefined, rowContext),
+    ),
   }))
   return (
     <ReadingColumn>

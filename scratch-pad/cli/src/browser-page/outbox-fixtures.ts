@@ -1,4 +1,4 @@
-import { type QueuedItem, type Thread } from './api-responses'
+import { type PageThread, type QueuedItem, type Thread } from './api-responses'
 import { type NewThread } from './scratch-pad-connection'
 
 export const queuedComment: Extract<QueuedItem, { kind: 'comment' }> = {
@@ -34,12 +34,12 @@ export const queuedReply: Extract<QueuedItem, { kind: 'reply' }> = {
 }
 
 // The outbox of the fake connection changes in the same way as the outbox on the server.
-export function fakeOutbox(sentThread: Thread) {
+export function fakeOutbox(sentThread: PageThread) {
   const outbox: QueuedItem[] = []
   return { items: outbox, actions: fakeOutboxActions(outbox, sentThread) }
 }
 
-function fakeOutboxActions(outbox: QueuedItem[], sentThread: Thread) {
+function fakeOutboxActions(outbox: QueuedItem[], sentThread: PageThread) {
   const nextNumber = (): number => Math.max(0, ...outbox.map((item) => item.number)) + 1
   return {
     outbox: () => Promise.resolve({ items: [...outbox] }),

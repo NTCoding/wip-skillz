@@ -115,6 +115,12 @@
   line-height: var(--lh-ui);
 }
 
+/* A link in the first line of what Nick has to do */
+.item-list__quote-link {
+  border-radius: var(--r-sm);
+  color: var(--accent-strong);
+}
+
 .item-list__link {
   display: inline-flex;
   align-items: center;

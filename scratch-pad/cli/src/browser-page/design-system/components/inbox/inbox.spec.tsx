@@ -86,7 +86,7 @@ const assignedSubtask: InboxEntry = {
     id: 't-8',
     number: '4.2',
     state: 'in-progress',
-    summary: 'Run the export job by hand against the accounting system.',
+    summary: [{ text: 'Run the export job by hand against the accounting system.' }],
     canBeDone: true,
   },
 }
