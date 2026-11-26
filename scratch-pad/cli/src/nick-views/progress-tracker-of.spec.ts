@@ -12,7 +12,7 @@ import {
   removeTemporaryHomes,
   temporaryHome,
 } from '../scratch-pad-folder/scratch-pad-folder-fixtures'
-import { progressTrackerOf } from './nick-views'
+import { progressTrackerOf } from './progress-tracker-of'
 
 afterEach(() => {
   removeTemporaryHomes()
@@ -91,7 +91,7 @@ describe('progressTrackerOf', () => {
     ])
   })
 
-  it('returns the assignment of a subtask to Nick', () => {
+  it('returns the assignment of a subtask to Nick with the HTML and the links of both texts', () => {
     const folder = exportJobScratchPad(temporaryHome())
     const links = itemLinks(folder.name, undefined)
     addTaskToTracker(folder, 'Export the invoices')
@@ -99,14 +99,33 @@ describe('progressTrackerOf', () => {
     assignSubtaskInTracker(
       folder,
       { task: 1, subtask: 1 },
-      { do: 'Restart the job', why: "The agent can't reach the server" },
+      { do: 'Restart the job on [the limit](retry-limit.md#the-limit)', why: 'See https://x.dev' },
       links,
     )
 
     expect(progressTrackerOf(folder).tasks[0]?.subtasks[0]?.assignment).toStrictEqual({
       assignee: 'user',
-      do: 'Restart the job',
-      why: "The agent can't reach the server",
+      do: 'Restart the job on [the limit](retry-limit.md#the-limit)',
+      why: 'See https://x.dev',
+      doHtml: '<p>Restart the job on <a href="retry-limit.md#the-limit">the limit</a></p>\n',
+      whyHtml: '<p>See <a href="https://x.dev">https://x.dev</a></p>\n',
+      links: [
+        {
+          kind: 'page',
+          line: 1,
+          href: 'retry-limit.md#the-limit',
+          page: 'pages/retry-limit.md',
+          headingId: 'the-limit',
+        },
+        { kind: 'other', line: 1, href: 'https://x.dev' },
+      ],
     })
+  })
+
+  it("doesn't return any assignment for a task that isn't assigned to Nick", () => {
+    const folder = exportJobScratchPad(temporaryHome())
+    addTaskToTracker(folder, 'Export the invoices')
+
+    expect(progressTrackerOf(folder).tasks[0]?.assignment).toBeUndefined()
   })
 })

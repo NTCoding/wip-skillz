@@ -1,15 +1,18 @@
 import { countedNoun } from '../counted-noun'
 import { localTime } from '../local-time'
 import { itemTypeNoun } from '../items/item-id'
-import { linkLines, pageLink, type ItemLinks } from '../item-links/item-links'
+import { linkLines, pageLink, taskLink, type ItemLinks } from '../item-links/item-links'
 import { type PageLines } from '../pages/page-files'
 import { numberedLines } from '../pages/page-text'
+import { itemName, type TrackerItem } from '../progress-tracker/progress-tracker'
 import { sectionAt } from '../pages/page-markdown'
 import { normalisedText } from '../rendered-page/page-blocks'
 import {
   messagesSinceAgentReply,
   type Author,
   type Message,
+  type PageThread,
+  type TaskThread,
   type Thread,
   type WaitingParty,
 } from './thread'
@@ -32,26 +35,61 @@ const waitingTexts: Readonly<Record<WaitingParty, string>> = {
   nobody: 'closed',
 }
 
-export function threadInboxLines(stored: Thread, page: PageLines, links: ItemLinks): string[] {
-  const padName = links.pad
+export function threadInboxLines(stored: PageThread, page: PageLines, links: ItemLinks): string[] {
   const thread = positionedThread(stored, page.lines.join('\n'))
-  const newMessages = messagesSinceAgentReply(thread)
-  const earlierMessages = thread.messages.length - newMessages.length
   return [
     threadHeader(thread, page),
     ...threadLinkLines(thread, links),
     ...selectedLines(thread),
+    ...newMessageLines(thread, links.pad),
+    ...blockLines(thread, page, { length: 'preview', padName: links.pad }),
+  ]
+}
+
+// A thread on a task is printed with its task instead of a page and a block.
+export function taskThreadInboxLines(
+  thread: TaskThread,
+  item: TrackerItem,
+  links: ItemLinks,
+): string[] {
+  return [
+    taskThreadHeader(thread, item),
+    ...linkLines(taskLink(links, thread.id), '  '),
+    ...newMessageLines(thread, links.pad),
+  ]
+}
+
+export function taskThreadShowLines(
+  thread: TaskThread,
+  item: TrackerItem,
+  links: ItemLinks,
+): string[] {
+  return [
+    `${taskThreadHeader(thread, item)} · ${waitingTexts[thread.waitsFor]}`,
+    ...linkLines(taskLink(links, thread.id), '  '),
+    ...thread.messages.map(timedMessageLine),
+  ]
+}
+
+// The messages since the last reply of the agent. The earlier messages are only counted.
+function newMessageLines(thread: Thread, padName: string): string[] {
+  const newMessages = messagesSinceAgentReply(thread)
+  const earlierMessages = thread.messages.length - newMessages.length
+  return [
     ...(earlierMessages === 0
       ? []
       : [
           `  earlier: ${countedNoun(earlierMessages, 'message')} (${showCommand(padName, thread.id)})`,
         ]),
     ...newMessages.map((entry) => `  ${authorNames[entry.author]}: ${indented(entry.text)}`),
-    ...blockLines(thread, page, { length: 'preview', padName }),
   ]
 }
 
-export function threadShowLines(stored: Thread, page: PageLines, links: ItemLinks): string[] {
+function taskThreadHeader(thread: TaskThread, item: TrackerItem): string {
+  return `[${thread.id}] ${itemTypeNoun(thread.type)} · ${itemName(item)}: ${item.title}`
+}
+
+export function threadShowLines(stored: PageThread, page: PageLines, links: ItemLinks): string[] {
   const thread = positionedThread(stored, page.lines.join('\n'))
   return [
     `${threadHeader(thread, page)} · ${waitingTexts[thread.waitsFor]}`,
@@ -63,7 +101,7 @@ export function threadShowLines(stored: Thread, page: PageLines, links: ItemLink
   ]
 }
 
-function threadLinkLines(thread: Thread, links: ItemLinks): string[] {
+function threadLinkLines(thread: PageThread, links: ItemLinks): string[] {
   return linkLines(pageLink(links, thread.page, thread.id), '  ')
 }
 

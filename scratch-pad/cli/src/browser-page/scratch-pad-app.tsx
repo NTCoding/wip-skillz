@@ -165,6 +165,8 @@ function RouteView(props: RouteViewProps) {
         context={pageContext}
         openSection={route.section}
         navigations={props.navigations}
+        threads={props.threadsOfPad}
+        actions={actions}
       />
     ) : (
       <LoadingView loaded={tracker} />
@@ -243,22 +245,21 @@ function RouteView(props: RouteViewProps) {
   )
 }
 
-// The Inbox / Outbox view shows every thread of the scratch pad. The Outbox in the top bar needs
-// the thread of each queued reply to show the place of the reply.
+// The Inbox / Outbox view shows every thread of the scratch pad. The progress tracker shows the
+// threads on its tasks. The Outbox in the top bar needs the thread of each queued reply to show the
+// place of the reply.
 function useThreadsOfPad(
   connection: ScratchPadReading,
   route: BrowserRoute,
   outbox: LoadedOutbox,
   revision: number,
-): readonly ThreadOfPad[] {
-  const needed = route.kind === 'inbox-outbox' || outbox.items.some((item) => item.kind === 'reply')
-  return loadedOr(
-    useLoadedValue(
-      needed ? 'threads of the pad' : 'no threads',
-      revision,
-      needed ? connection.threadsOfPad : noThreads,
-    ),
-    [],
+): LoadedValue<ThreadOfPad[]> {
+  const withThreads = route.kind === 'inbox-outbox' || route.kind === 'progress-tracker'
+  const needed = withThreads || outbox.items.some((item) => item.kind === 'reply')
+  return useLoadedValue(
+    needed ? 'threads of the pad' : 'no threads',
+    revision,
+    needed ? connection.threadsOfPad : noThreads,
   )
 }
 
@@ -287,7 +288,8 @@ export function ScratchPadApp(props: ScratchPadAppProps) {
     useLoadedValue(pad, revisions.readMarks, connection.readMarks),
     noReadMarks,
   )
-  const threadsOfPad = useThreadsOfPad(connection, route, outbox, revisions.threads)
+  const loadedThreadsOfPad = useThreadsOfPad(connection, route, outbox, revisions.threads)
+  const threadsOfPad = loadedOr(loadedThreadsOfPad, [])
   const viewedPage = route.kind === 'page' ? loadedOr(page, undefined) : undefined
   const padTitle = loadedOr(tracker, undefined)?.title ?? pad
   useInboxNotifications(props.notifications, padTitle, inbox, tracker)
@@ -305,7 +307,7 @@ export function ScratchPadApp(props: ScratchPadAppProps) {
       route,
       cards.page,
       cards.cardsRead,
-      (route.kind === 'progress-tracker' ? tracker : improvements).status !== 'loading',
+      [tracker, improvements, loadedThreadsOfPad].every((loaded) => loaded.status !== 'loading'),
     ),
     navigations,
   )

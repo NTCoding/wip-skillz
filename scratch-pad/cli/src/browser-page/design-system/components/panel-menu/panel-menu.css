@@ -189,19 +189,57 @@
   margin-left: auto;
 }
 
-/* The first line of what Nick has to do. It's cut off at the end of the line. */
+/* The link to a task is stretched over the whole item through its ::after so that a click anywhere
+   on the item opens the task. The item shows the focus of that link. The links in the first line
+   of what Nick has to do are placed above the link of the task. */
+.panel-menu__item--task {
+  position: relative;
+}
+
+.panel-menu__item--task:has(.panel-menu__task-link:focus-visible) {
+  outline: var(--focus-ring-w) solid var(--focus);
+  outline-offset: var(--focus-ring-offset);
+  background: var(--surface-soft);
+}
+
+.panel-menu__task-link {
+  color: inherit;
+  text-decoration: none;
+}
+
+.panel-menu__task-link:focus-visible {
+  outline: none;
+}
+
+.panel-menu__task-link::after {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  content: '';
+}
+
+.panel-menu__summary-link {
+  position: relative;
+  z-index: 1;
+  border-radius: var(--r-sm);
+  color: var(--accent-strong);
+}
+
+/* The first line of what Nick has to do. It wraps rather than being cut off, because a link at the
+   end of the line would be hidden otherwise. A long URL can break anywhere. */
 .panel-menu__summary {
   margin-top: var(--space-2xs);
-  overflow: hidden;
   color: var(--text-nav);
   font-size: var(--fs-ui);
   line-height: var(--lh-ui);
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
 }
 
 /* The button that marks a task as done lines up with the text of the task above the button. */
+/* The actions are positioned so that they're painted above the link of a task, which is stretched
+   over the item above them. */
 .panel-menu__actions {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: flex-start;

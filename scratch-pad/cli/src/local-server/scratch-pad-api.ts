@@ -5,6 +5,7 @@ import {
   nickAnswersDecision,
   nickRequestsChanges,
   nickComments,
+  nickCommentsOnTask,
   nickDeletesImprovement,
   nickEditsImprovement,
   nickEditsQueuedItem,
@@ -26,7 +27,6 @@ import {
   nickInboxItems,
   outboxOf,
   pageSummaries,
-  progressTrackerOf,
   readMarksOf,
   searchPages,
   threadsOfPad,
@@ -34,6 +34,7 @@ import {
   viewPage,
   withPositions,
 } from '../nick-views/nick-views'
+import { progressTrackerOf } from '../nick-views/progress-tracker-of'
 import { ScratchPadError } from '../scratch-pad-error'
 import { type ScratchPadFolder } from '../scratch-pad-folder/scratch-pad-folder'
 import {
@@ -277,6 +278,12 @@ const routes: readonly Route[] = [
     json({
       decision: nickRequestsDecisionBlockChanges(folder, id, reviewRequestFrom(bodyOf(request))),
     }),
+  ),
+  padRoute('POST', '/tasks/([^/]+)/threads', (folder, request, id) =>
+    json(
+      threadBody(folder, nickCommentsOnTask(folder, id, bodyOf(request).messageText('message'))),
+      201,
+    ),
   ),
   padRoute('POST', '/tasks/([^/]+)/done', (folder, _request, id) =>
     json({ task: nickFinishesTask(folder, id) }),

@@ -8,6 +8,7 @@ import {
 } from '../scratch-pad-folder/scratch-pad-folder-fixtures'
 import { type ScratchPadFolder } from '../scratch-pad-folder/scratch-pad-folder'
 import { retryAnchor } from '../threads/thread-fixtures'
+import { threadOnAssignedSubtask } from './agent-commands-fixtures'
 import { readAgentInbox } from './inbox-commands'
 import { waitForAgentInbox, type WaitRequest } from './wait-commands'
 
@@ -71,6 +72,21 @@ describe('waitForAgentInbox', () => {
     setTimeout(() => nickCommentsOnRetryPolicy(folder), 50)
 
     await expect(waitForAgentInbox(folder, waitRequest())).resolves.toBe(commentText)
+  })
+
+  it('prints the message that Nick writes in the thread of a subtask while the agent waits', async () => {
+    const folder = exportJobScratchPad(temporaryHome())
+    setTimeout(() => threadOnAssignedSubtask(folder), 50)
+
+    await expect(waitForAgentInbox(folder, waitRequest())).resolves.toBe(
+      [
+        '1 new item in 2026-03-14-export-job',
+        '',
+        '[c-1] comment · subtask 2.2: Log each retry',
+        `  link: ${exportJobAddress}progress-tracker#c-1`,
+        '  Nick: Which log should I check?',
+      ].join('\n'),
+    )
   })
 
   it('prints the comment at once when the comment waited before the wait started', async () => {

@@ -8,6 +8,7 @@ import {
   removeTemporaryHomes,
   temporaryHome,
 } from '../scratch-pad-folder/scratch-pad-folder-fixtures'
+import { chooseScratchPad } from '../scratch-pads-home/scratch-pads-home'
 import { respondToApiRequest, type ApiResponse } from './scratch-pad-api'
 
 const padApi = `/api/scratch-pads/${exportJobPadName}`
@@ -63,5 +64,61 @@ describe('respondToApiRequest for the tasks', () => {
       "Task 1 isn't assigned to you so only the agent can mark it as done.",
     )
     expect(folder.read((pad) => pad.readProgressTracker().tasks[0]?.state)).toBe('in-progress')
+  })
+})
+
+describe('respondToApiRequest for the thread of a task', () => {
+  it('starts the thread of an assigned task with the message of Nick and returns the thread', () => {
+    const home = homeWithAssignedTask()
+
+    expect(post(home, `${padApi}/tasks/t-1/threads`, { message: 'Which log?' })).toStrictEqual({
+      kind: 'json',
+      status: 201,
+      body: {
+        thread: {
+          id: 'c-1',
+          type: 'comment',
+          page: undefined,
+          task: 't-1',
+          anchor: undefined,
+          position: undefined,
+          waitsFor: 'agent',
+          outcome: undefined,
+          messages: [{ author: 'nick', text: 'Which log?', time: '2026-03-14T09:30:00.000Z' }],
+        },
+      },
+    })
+  })
+
+  it('records a thread-opened event by Nick so that the agent sees the thread', () => {
+    const home = homeWithAssignedTask()
+    post(home, `${padApi}/tasks/t-1/threads`, { message: 'Which log?' })
+
+    expect(
+      chooseScratchPad(home, exportJobPadName)
+        .read((pad) => pad.readEvents())
+        .at(-1),
+    ).toMatchObject({ kind: 'thread-opened', by: 'nick', item: 'c-1' })
+  })
+
+  it('returns the thread of a task with the other threads of the scratch pad', () => {
+    const home = homeWithAssignedTask()
+    post(home, `${padApi}/tasks/t-1/threads`, { message: 'Which log?' })
+    const response = respondToApiRequest({
+      home,
+      method: 'GET',
+      path: `${padApi}/threads`,
+      body: '',
+    })
+
+    expect(response).toMatchObject({ body: { threads: [{ id: 'c-1', task: 't-1' }] } })
+  })
+
+  it('refuses to start the thread of a task that isn’t assigned to Nick', () => {
+    const home = homeWithAssignedTask()
+
+    expect(() => post(home, `${padApi}/tasks/t-2/threads`, { message: 'Hi' })).toThrow(
+      "Task 2 isn't assigned to Nick so a thread can't be started on it.",
+    )
   })
 })

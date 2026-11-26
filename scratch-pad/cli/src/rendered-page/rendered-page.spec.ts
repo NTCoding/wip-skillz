@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { pageHeadings } from './rendered-page'
+import { pageHeadings, renderLinks } from './rendered-page'
 import { invoiceHtml, renderedInvoicePage } from './rendered-page-fixtures'
 
 describe('renderPage', () => {
@@ -111,5 +111,43 @@ describe('pageHeadings', () => {
       { level: 1, text: 'Invoice template', id: 'invoice-template', line: 1 },
       { level: 2, text: 'Tax number', id: 'tax-number', line: 3 },
     ])
+  })
+})
+
+describe('renderLinks', () => {
+  it('renders a link to a page, a link to another site and a bare URL as links', () => {
+    expect(
+      renderLinks(
+        'Open https://claude.ai/a. Read [the docs](https://x.dev/a_b) and reply on [the section](next-steps.md#edit-access).',
+      ),
+    ).toStrictEqual({
+      html: '<p>Open <a href="https://claude.ai/a">https://claude.ai/a</a>. Read <a href="https://x.dev/a_b">the docs</a> and reply on <a href="next-steps.md#edit-access">the section</a>.</p>\n',
+      links: [
+        { kind: 'other', line: 1, href: 'https://claude.ai/a' },
+        { kind: 'other', line: 1, href: 'https://x.dev/a_b' },
+        {
+          kind: 'page',
+          line: 1,
+          href: 'next-steps.md#edit-access',
+          page: 'pages/next-steps.md',
+          headingId: 'edit-access',
+        },
+      ],
+    })
+  })
+
+  it('renders a URL in backticks as inline code rather than as a link', () => {
+    expect(renderLinks('Open `https://a.dev` and https://b.dev')).toStrictEqual({
+      html: '<p>Open <code>https://a.dev</code> and <a href="https://b.dev">https://b.dev</a></p>\n',
+      links: [{ kind: 'other', line: 1, href: 'https://b.dev' }],
+    })
+  })
+
+  it('leaves every other Markdown character as text and starts a paragraph after a blank line', () => {
+    expect(
+      renderLinks('# Not a *heading*\n- not a list <b>x</b> \\[x] next-steps.md\n\nSecond').html,
+    ).toBe(
+      '<p># Not a *heading*\n- not a list &lt;b&gt;x&lt;/b&gt; \\[x] next-steps.md</p>\n<p>Second</p>\n',
+    )
   })
 })

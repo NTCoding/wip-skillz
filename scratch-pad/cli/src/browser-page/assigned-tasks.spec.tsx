@@ -51,6 +51,38 @@ const withSubtaskDone: ProgressTracker = {
   })),
 }
 
+// What Nick has to do for subtask 2.2 has a link to a section of the retry limit, a link to
+// another site and a bare URL. The HTML and the links are in the format that is returned by the
+// server.
+const withLinks: ProgressTracker = {
+  ...progressTracker,
+  tasks: progressTracker.tasks.map((task) => ({
+    ...task,
+    subtasks: task.subtasks.map((subtask) =>
+      subtask.assignment === undefined
+        ? subtask
+        : {
+            ...subtask,
+            assignment: {
+              ...subtask.assignment,
+              doHtml:
+                '<p>Reply on <a href="retry-limit.md#the-limit">the limit</a>. Read <a href="https://x.dev/iban">the IBAN guide</a> at <a href="https://x.dev/a">https://x.dev/a</a>.</p>\n',
+              links: [
+                {
+                  kind: 'page',
+                  href: 'retry-limit.md#the-limit',
+                  page: 'pages/retry-limit.md',
+                  headingId: 'the-limit',
+                },
+                { kind: 'other', href: 'https://x.dev/iban' },
+                { kind: 'other', href: 'https://x.dev/a' },
+              ],
+            },
+          },
+    ),
+  })),
+}
+
 function subtaskRow(): HTMLElement {
   return screen.getByRole('button', { name: /Show the bank details/ })
 }
@@ -70,6 +102,26 @@ describe('a task that is assigned to Nick on the progress tracker', () => {
       'true',
     ])
     expect(screen.getByText('Ask the bank for the IBAN of the shop')).not.toBeNull()
+  })
+
+  it('shows the links in what Nick has to do and opens a link to a page in the scratch pad', async () => {
+    const fake = fakeConnection()
+    vi.spyOn(fake.connection, 'progressTracker').mockResolvedValue(withLinks)
+    renderApp(`/${exportPad}/progress-tracker#t-5`, fake)
+    const external = [
+      await screen.findByRole('link', { name: 'the IBAN guide' }),
+      screen.getByRole('link', { name: 'https://x.dev/a' }),
+    ].map((link) => [link.getAttribute('href'), link.getAttribute('target')])
+    await userEvent.click(screen.getByRole('link', { name: 'the limit' }))
+
+    expect([external, window.location.pathname, window.location.hash]).toStrictEqual([
+      [
+        ['https://x.dev/iban', '_blank'],
+        ['https://x.dev/a', '_blank'],
+      ],
+      `/${exportPad}/retry-limit.md`,
+      '#the-limit',
+    ])
   })
 
   it('gives the description of an assigned subtask its own anchor and opens it from the link in the details', async () => {
@@ -115,6 +167,69 @@ describe('a task that is assigned to Nick in the Inbox', () => {
       '#t-5',
     ])
     expect(subtaskRow().getAttribute('aria-expanded')).toBe('true')
+  })
+
+  it('opens the page and the section of a link in the first line of what Nick has to do', async () => {
+    const fake = fakeConnection()
+    vi.spyOn(fake.connection, 'progressTracker').mockResolvedValue(withLinks)
+    renderApp(`/${exportPad}/`, fake)
+    await userEvent.click(await screen.findByRole('button', { name: /^Inbox/u }))
+    await userEvent.click(screen.getByRole('menuitem', { name: 'the limit' }))
+
+    expect([window.location.pathname, window.location.hash]).toStrictEqual([
+      `/${exportPad}/retry-limit.md`,
+      '#the-limit',
+    ])
+  })
+
+  it('opens the links to other sites in the first line of what Nick has to do in a new tab', async () => {
+    const fake = fakeConnection()
+    vi.spyOn(fake.connection, 'progressTracker').mockResolvedValue(withLinks)
+    renderApp(`/${exportPad}/`, fake)
+    await userEvent.click(await screen.findByRole('button', { name: /^Inbox/u }))
+
+    expect(
+      ['the IBAN guide', 'https://x.dev/a'].map((name) => {
+        const link = screen.getByRole('menuitem', { name })
+        return [link.getAttribute('href'), link.getAttribute('target')]
+      }),
+    ).toStrictEqual([
+      ['https://x.dev/iban', '_blank'],
+      ['https://x.dev/a', '_blank'],
+    ])
+  })
+
+  it('still opens the subtask from the title of an entry whose first line has links', async () => {
+    const fake = fakeConnection()
+    vi.spyOn(fake.connection, 'progressTracker').mockResolvedValue(withLinks)
+    renderApp(`/${exportPad}/`, fake)
+    await userEvent.click(await screen.findByRole('button', { name: /^Inbox/u }))
+    await userEvent.click(
+      screen.getByRole('menuitem', {
+        name: '2.2 Show the bank details',
+        description: 'In progress Reply on the limit. Read the IBAN guide at https://x.dev/a.',
+      }),
+    )
+
+    await screen.findByRole('heading', { level: 1, name: 'Progress tracker' })
+    expect([window.location.pathname, window.location.hash]).toStrictEqual([
+      `/${exportPad}/progress-tracker`,
+      '#t-5',
+    ])
+  })
+
+  it('shows the links of the first line on the Inbox / Outbox page and opens a page from one of them', async () => {
+    const fake = fakeConnection()
+    vi.spyOn(fake.connection, 'progressTracker').mockResolvedValue(withLinks)
+    renderApp(`/${exportPad}/inbox-outbox`, fake)
+    const external = await screen.findByRole('link', { name: 'the IBAN guide' })
+    await userEvent.click(screen.getByRole('link', { name: 'the limit' }))
+
+    expect([
+      external.getAttribute('target'),
+      window.location.pathname,
+      window.location.hash,
+    ]).toStrictEqual(['_blank', `/${exportPad}/retry-limit.md`, '#the-limit'])
   })
 
   it('marks the subtask as done and loads the progress tracker again when Nick clicks its button', async () => {

@@ -9,6 +9,7 @@ import {
   temporaryHome,
   writeFileInPad,
 } from '../scratch-pad-folder/scratch-pad-folder-fixtures'
+import { threadOnAssignedSubtask } from './agent-commands-fixtures'
 import { checkPages } from './check-commands'
 import {
   addSubtaskToTracker,
@@ -130,6 +131,13 @@ describe('checkPages', () => {
       ].join('\n'),
     )
     expect(checkPages(folder, ['index'], undefined).problemCount).toBe(0)
+  })
+
+  it("doesn't report an open thread on a task, because the thread isn't on a page", () => {
+    const folder = exportJobScratchPad(temporaryHome())
+    threadOnAssignedSubtask(folder)
+
+    expect(checkPages(folder, [], undefined).problemCount).toBe(0)
   })
 
   it("reports the decision when there aren't any headings above the decision", () => {

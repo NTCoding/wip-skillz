@@ -14,7 +14,7 @@ import { type Token } from 'markdown-it'
 import { addHeadingIds, headingsOf, type Heading } from './page-headings'
 import { htmlOf, indexLayout, indexPage, plainLayout, type PageLayout } from './index-page'
 import { linksOf, type PageLink } from './page-links'
-import { pageMarkdownParser } from './page-markdown-parser'
+import { linksOnlyParser, pageMarkdownParser } from './page-markdown-parser'
 import { byLine, type PageProblem } from './page-problem'
 import { markTopLevelBlocks } from './source-lines'
 
@@ -54,6 +54,23 @@ export function renderPage(source: PageSource): RenderedPage {
 // doesn't have an id that could clash with another heading or with an anchor on the tab.
 export function renderDetails(source: PageSource): RenderedPage {
   return rendered(source, headingsOf, plainLayout)
+}
+
+interface RenderedLinks {
+  readonly html: string
+  readonly links: readonly PageLink[]
+}
+
+// Renders text in which only the links and the inline code are Markdown, like what Nick has to do
+// for a task. Its links
+// are resolved as if the text were on the index page so that `retry-limit.md` is a link to that
+// page.
+export function renderLinks(text: string): RenderedLinks {
+  const tokens = linksOnlyParser.parse(text, {})
+  return {
+    html: linksOnlyParser.renderer.render(tokens, linksOnlyParser.options, {}),
+    links: linksOf(tokens, indexPage),
+  }
 }
 
 // The status and the table of contents are shown under the title, which is the first heading of

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { type PageSummary, type QueuedItem, type Thread, type ThreadOfPad } from './api-responses'
-import { fileOfPage, type PadAddresses } from './browser-route'
+import { type PadAddresses } from './browser-route'
 import {
   answerCountOf,
   FilterPills,
@@ -12,7 +12,7 @@ import {
   type ItemRow,
   type Navigate,
 } from './design-system/design-system'
-import { queuedItemPlace, quoteOf, threadPlace } from './item-places'
+import { cardHref, queuedItemPlace, quoteOf, threadPlace } from './item-places'
 import { timeAgo } from './message-time'
 import { authorNames } from './nick-inbox-entries'
 import { queuedKey } from './queued-items'
@@ -113,7 +113,7 @@ function threadRow(thread: ThreadOfPad, context: ThreadRowContext): ItemRow[] {
         .join(' '),
       late: !resolved && context.now - Date.parse(last.time) > lateAfterMilliseconds,
       linkLabel: 'Open the thread',
-      href: context.props.addresses.pageHref(fileOfPage(thread.page), thread.id),
+      href: cardHref(context.props.addresses, thread.page, thread.id),
     },
   ]
 }
@@ -135,7 +135,7 @@ function queuedRow(item: QueuedItem, props: InboxOutboxViewProps): ItemRow[] {
       shownTime: 'Not sent yet',
       late: false,
       linkLabel: 'Open the thread',
-      href: props.addresses.pageHref(fileOfPage(place.page), place.card),
+      href: cardHref(props.addresses, place.page, place.card),
     },
   ]
 }

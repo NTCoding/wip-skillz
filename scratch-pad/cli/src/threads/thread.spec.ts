@@ -14,7 +14,7 @@ import {
   openThread,
   resolveThread,
 } from './thread'
-import { aThread, retryAnchor } from './thread-fixtures'
+import { aTaskThread, aThread, retryAnchor } from './thread-fixtures'
 
 const time = '2026-03-14T10:00:00.000Z'
 
@@ -167,6 +167,13 @@ describe('finishNote', () => {
 
     expect(finish).toThrow(NotANoteError)
     expect(finish).toThrow('c-1 is a comment. Only a grammar note or an improvement note')
+  })
+
+  it('throws NotANoteError when the thread is on a task', () => {
+    const finish = () => finishNote(aTaskThread({}), 'Changed it.')
+
+    expect(finish).toThrow(NotANoteError)
+    expect(finish).toThrow('c-4 is a comment.')
   })
 
   it('throws ClosedThreadError when the note is already done', () => {

@@ -7,6 +7,7 @@ import {
   progressTracker,
   retryQuestion,
 } from './browser-page-fixtures'
+import { bankDetailsThread } from './pad-thread-fixtures'
 import { queuedComment, queuedReply } from './outbox-fixtures'
 import {
   ScratchPadRequestError,
@@ -227,6 +228,28 @@ describe('scratchPadConnection for threads and decisions', () => {
     ).resolves.toStrictEqual(retryQuestion)
     expect(network.sent).toStrictEqual([
       { url: `${api}/threads`, method: 'POST', body: JSON.stringify(comment) },
+    ])
+  })
+
+  it('posts the first message of Nick to the address of the task and reads the thread on the task with null turned into undefined', async () => {
+    const network = networkWith({
+      thread: {
+        ...bankDetailsThread,
+        page: null,
+        anchor: null,
+        position: null,
+        outcome: null,
+      },
+    })
+    await expect(
+      scratchPadConnection(exportPad, network).startTaskThread('t-5', 'Which bank account is it?'),
+    ).resolves.toStrictEqual(bankDetailsThread)
+    expect(network.sent).toStrictEqual([
+      {
+        url: `${api}/tasks/t-5/threads`,
+        method: 'POST',
+        body: '{"message":"Which bank account is it?"}',
+      },
     ])
   })
 

@@ -50,6 +50,7 @@ import { placeThreads, type PlacedThread } from './thread-anchors'
 
 export interface PageActions extends QueuedItemActions, ReadMarkActions, DecisionChangeRequests {
   readonly startThread: (thread: NewThread) => Promise<Thread>
+  readonly startTaskThread: (task: string, message: string) => Promise<Thread>
   readonly replyToThread: (id: string, message: string) => Promise<Thread>
   readonly resolveThread: (id: string) => Promise<Thread>
   readonly answerDecision: (id: string, page: string, answer: Answer) => Promise<void>

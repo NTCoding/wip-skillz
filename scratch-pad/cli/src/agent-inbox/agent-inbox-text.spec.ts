@@ -6,9 +6,13 @@ import {
   servedLinks,
   unservedLinks,
 } from '../item-links/item-links-fixtures'
-import { aThread } from '../threads/thread-fixtures'
+import { itemWithId } from '../progress-tracker/progress-tracker'
+import { trackerWithSubtasks } from '../progress-tracker/progress-tracker-fixtures'
+import { aThread, aTaskThread } from '../threads/thread-fixtures'
 import { nothingPrinted, type AgentInboxSelection } from './agent-inbox'
 import { agentInboxText, itemCountText, type AgentInboxTextContext } from './agent-inbox-text'
+
+const assignedTracker = trackerWithSubtasks(['done', 'in-progress'])
 
 const context: AgentInboxTextContext = {
   links: servedLinks,
@@ -17,6 +21,7 @@ const context: AgentInboxTextContext = {
     file: page,
     lines: ['# Export job', '', '## Retry policy', '', 'The export job retries 5 times.'],
   }),
+  readTask: (id) => itemWithId(assignedTracker, id),
 }
 
 const empty: AgentInboxSelection = {
@@ -48,6 +53,42 @@ const twoItems: AgentInboxSelection = {
 }
 
 describe('agentInboxText', () => {
+  it('prints a thread on a subtask with the subtask and a link to the thread', () => {
+    const selection: AgentInboxSelection = {
+      ...empty,
+      printed: [{ kind: 'thread', thread: aTaskThread({}) }],
+    }
+
+    expect(agentInboxText(selection, context)).toBe(
+      [
+        '1 new item in 2026-03-14-export-job',
+        '',
+        '[c-4] comment · subtask 2.2: Log each retry',
+        `  link: ${exportJobAddress}progress-tracker#c-4`,
+        '  Nick: Which log should I check?',
+      ].join('\n'),
+    )
+  })
+
+  it('counts the earlier messages of a thread on a subtask', () => {
+    const thread = aTaskThread({
+      messages: [
+        {
+          author: 'agent',
+          text: 'Check the log of the export job.',
+          time: '2026-03-14T09:31:00.000Z',
+        },
+        { author: 'nick', text: 'Which log should I check?', time: '2026-03-14T09:32:00.000Z' },
+      ],
+    })
+    const selection: AgentInboxSelection = { ...empty, printed: [{ kind: 'thread', thread }] }
+
+    expect(agentInboxText(selection, context).split('\n').slice(4)).toStrictEqual([
+      '  earlier: 1 message (scratch-pad show --pad 2026-03-14-export-job c-4)',
+      '  Nick: Which log should I check?',
+    ])
+  })
+
   it('prints a subtask that Nick has marked as done with its link', () => {
     const logEachRetry = {
       id: 't-5',

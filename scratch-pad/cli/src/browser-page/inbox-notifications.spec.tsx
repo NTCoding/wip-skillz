@@ -8,6 +8,7 @@ import {
   fakeConnection,
   fakeNarrowWindow,
   indexInbox,
+  assignmentOf,
   progressTracker,
   retryQuestion,
   type FakeConnection,
@@ -83,11 +84,7 @@ const withAssignedTask: ProgressTracker = {
     task.id === 't-3'
       ? {
           ...task,
-          assignment: {
-            assignee: 'user',
-            do: 'Ask Jo for the limit',
-            why: 'Jo only talks to Nick',
-          },
+          assignment: assignmentOf('Ask Jo for the limit', 'Jo only talks to Nick'),
         }
       : task,
   ),

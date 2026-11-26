@@ -1,7 +1,7 @@
 import { type PageSummary, type QueuedItem, type Thread } from './api-responses'
-import { fileOfPage, type PadAddresses } from './browser-route'
+import { type PadAddresses } from './browser-route'
 import { type OutboxEntry } from './design-system/design-system'
-import { queuedItemPlace } from './item-places'
+import { cardHref, queuedItemPlace } from './item-places'
 import { shownTime } from './message-time'
 import { queuedKey } from './queued-items'
 
@@ -20,7 +20,7 @@ export function outboxEntries(
       : [
           {
             key: queuedKey(item),
-            href: addresses.pageHref(fileOfPage(place.page), place.card),
+            href: cardHref(addresses, place.page, place.card),
             kind: item.kind,
             where: place.where,
             quote: place.quote,

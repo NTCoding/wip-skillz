@@ -71,11 +71,12 @@ export class StoredThreads {
     this.db
       .prepare(
         `INSERT INTO threads
-           (id, type, page, first_line, last_line, selected_text, prefix, suffix, copies_on_page,
-            waits_for, outcome)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+           (id, type, page, task_id, first_line, last_line, selected_text, prefix, suffix,
+            copies_on_page, waits_for, outcome)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
          ON CONFLICT (id) DO UPDATE SET
-           type = excluded.type, page = excluded.page, first_line = excluded.first_line,
+           type = excluded.type, page = excluded.page, task_id = excluded.task_id,
+           first_line = excluded.first_line,
            last_line = excluded.last_line, selected_text = excluded.selected_text,
            prefix = excluded.prefix, suffix = excluded.suffix,
            copies_on_page = excluded.copies_on_page,
@@ -84,7 +85,8 @@ export class StoredThreads {
       .run(
         thread.id,
         thread.type,
-        thread.page,
+        thread.page ?? null,
+        thread.task ?? null,
         thread.anchor?.firstLine ?? null,
         thread.anchor?.lastLine ?? null,
         thread.anchor?.selectedText ?? null,
@@ -113,15 +115,28 @@ export class StoredThreads {
     if (first === undefined) {
       throw new BrokenPadDbError(this.padName, `the thread ${id} doesn't have any messages`)
     }
-    return {
+    const fields = {
       id,
-      type: thread.oneOf('type', threadTypes),
-      page: thread.text('page'),
-      anchor: anchorFrom(thread),
       waitsFor: thread.oneOf('waits_for', waitingParties),
       outcome: thread.optionalText('outcome'),
-      messages: [first, ...rest],
+      messages: [first, ...rest] as const,
     }
+    const task = thread.optionalText('task_id')
+    // A thread on a task is always a comment without an anchor.
+    return task === undefined
+      ? {
+          ...fields,
+          type: thread.oneOf('type', threadTypes),
+          anchor: anchorFrom(thread),
+          page: thread.text('page'),
+        }
+      : {
+          ...fields,
+          type: thread.oneOf('type', ['comment']),
+          anchor: undefined,
+          page: undefined,
+          task,
+        }
   }
 }
 

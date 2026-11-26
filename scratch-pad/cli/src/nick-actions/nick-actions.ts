@@ -43,6 +43,7 @@ import { pageBlocksOf } from '../rendered-page/page-blocks'
 import { ScratchPadError } from '../scratch-pad-error'
 import { type PadDb } from '../scratch-pad-folder/pad-db'
 import { type ScratchPadFolder } from '../scratch-pad-folder/scratch-pad-folder'
+import { startTaskThread } from '../threads/task-thread'
 import { copiesOnPage } from '../threads/thread-position'
 import {
   addNickMessage,
@@ -120,6 +121,22 @@ export function nickComments(folder: ScratchPadFolder, comment: NickComment): Th
   const page = findPage(folder.pages(), comment.page, folder.name)
   const anchor = checkedAnchor(comment.anchor, page, folder.readPageLines(page).join('\n'))
   return folder.change((pad) => writeNickComment(pad, { ...comment, anchor, page }, time))
+}
+
+// Nick starts the thread of a task or a subtask that is assigned to him from its row on the
+// progress tracker.
+export function nickCommentsOnTask(folder: ScratchPadFolder, task: string, text: string): Thread {
+  const time = new Date().toISOString()
+  return folder.change((pad) => {
+    const thread = startTaskThread(pad.readThreads(), pad.readProgressTracker(), {
+      task,
+      text,
+      time,
+    })
+    pad.writeThread(thread)
+    pad.appendEvent({ time, kind: 'thread-opened', by: 'nick', item: thread.id })
+    return thread
+  })
 }
 
 export function nickReplies(folder: ScratchPadFolder, id: string, text: string): Thread {

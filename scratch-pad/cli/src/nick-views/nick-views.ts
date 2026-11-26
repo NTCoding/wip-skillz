@@ -8,7 +8,6 @@ import { isUnderNumber, pageFileOf, parentNumberOf, type PageFile } from '../pag
 import { existingPage, findPage, pageTitle } from '../pages/page-markdown'
 import { searchResultsOf, type SearchResult } from '../pages/page-search'
 import { type PageSummary, type WaitingForNick } from '../pages/page-text'
-import { type ProgressTracker, type Subtask, type Task } from '../progress-tracker/progress-tracker'
 import {
   pageReadState,
   sectionTexts,
@@ -21,13 +20,9 @@ import { shownHeadings } from '../rendered-page/index-page'
 import { pageDescription } from '../rendered-page/page-description'
 import { type Heading } from '../rendered-page/page-headings'
 import { type PageLink } from '../rendered-page/page-links'
-import {
-  pageHeadings,
-  renderDetails,
-  renderPage,
-  type RenderedPage,
-} from '../rendered-page/rendered-page'
+import { pageHeadings, renderPage, type RenderedPage } from '../rendered-page/rendered-page'
 import { type PadDb } from '../scratch-pad-folder/pad-db'
+import { renderedDetails } from './progress-tracker-of'
 import { type ScratchPadFolder } from '../scratch-pad-folder/scratch-pad-folder'
 import { type Thread } from '../threads/thread'
 import {
@@ -75,22 +70,6 @@ interface ImprovementOnTab {
   readonly links: readonly PageLink[]
 }
 
-// The browser only shows the HTML of a task's description, so the Markdown is left out.
-interface DescriptionHtml {
-  readonly html: string | undefined
-  readonly links: readonly PageLink[]
-}
-
-type SubtaskOnTracker = Omit<Subtask, 'description'> & DescriptionHtml
-
-interface TaskOnTracker extends Omit<Task, 'description' | 'subtasks'>, DescriptionHtml {
-  readonly subtasks: readonly SubtaskOnTracker[]
-}
-
-interface TrackerOnTab extends Omit<ProgressTracker, 'tasks'> {
-  readonly tasks: readonly TaskOnTracker[]
-}
-
 interface NoteOnTab {
   readonly id: string
   readonly type: 'grammar' | 'improvement'
@@ -126,9 +105,7 @@ interface PageReadMark {
   readonly changedSections: readonly SectionText[]
 }
 
-interface ThreadOfPad extends PositionedThread {
-  readonly resolvedTime: string | undefined
-}
+type ThreadOfPad = PositionedThread & { readonly resolvedTime: string | undefined }
 
 export function pageSummaries(folder: ScratchPadFolder): PageSummary[] {
   const openThreads = folder
@@ -138,7 +115,7 @@ export function pageSummaries(folder: ScratchPadFolder): PageSummary[] {
   const files = pageFilesOnce(folder.pageFiles())
   const waitingOn = (pages: readonly string[]): WaitingForNick => ({
     decisions: inbox.decisions.filter((decision) => pages.includes(decision.page)).length,
-    replies: inbox.threads.filter((thread) => pages.includes(thread.page)).length,
+    replies: inbox.threads.filter((thread) => pages.some((page) => page === thread.page)).length,
   })
   return files.map((file) => {
     const lines = folder.readPageLines(file.page)
@@ -202,14 +179,18 @@ export function threadsOfPage(folder: ScratchPadFolder, requested: string): Posi
   )
 }
 
+// A thread on a task doesn't have a position, because it isn't on a page.
 export function withPositions(
   folder: ScratchPadFolder,
   threads: readonly Thread[],
 ): PositionedThread[] {
-  const markdowns = new Map(
-    threads.map((thread) => [thread.page, folder.readPageLines(thread.page).join('\n')]),
+  const pages = threads.flatMap((thread) => (thread.page === undefined ? [] : [thread.page]))
+  const markdowns = new Map(pages.map((page) => [page, folder.readPageLines(page).join('\n')]))
+  return threads.map((thread) =>
+    thread.page === undefined
+      ? { ...thread, position: undefined }
+      : positionedThread(thread, String(markdowns.get(thread.page))),
   )
-  return threads.map((thread) => positionedThread(thread, String(markdowns.get(thread.page))))
 }
 
 export function nickInboxItems(folder: ScratchPadFolder): NickInboxItems {
@@ -342,29 +323,6 @@ export function threadsOfPad(folder: ScratchPadFolder): ThreadOfPad[] {
   }))
 }
 
-export function progressTrackerOf(folder: ScratchPadFolder): TrackerOnTab {
-  const tracker = folder.read((pad) => pad.readProgressTracker())
-  return {
-    ...tracker,
-    tasks: tracker.tasks.map(({ description, subtasks, ...task }) => ({
-      ...task,
-      ...descriptionHtml(folder, description),
-      subtasks: subtasks.map(({ description: subtaskDescription, ...subtask }) => ({
-        ...subtask,
-        ...descriptionHtml(folder, subtaskDescription),
-      })),
-    })),
-  }
-}
-
-function descriptionHtml(
-  folder: ScratchPadFolder,
-  description: string | undefined,
-): DescriptionHtml {
-  const rendered = renderedDetails(folder, description)
-  return { html: rendered?.html, links: rendered?.links ?? [] }
-}
-
 export function decisionLogOf(folder: ScratchPadFolder): DecisionLogEntry[] {
   return folder.read((pad) => pad.readDecisionLog())
 }
@@ -431,22 +389,6 @@ export function searchPages(folder: ScratchPadFolder, query: string): SearchResu
     }),
     query,
   )
-}
-
-// Renders Markdown that isn't on a page, like the details of an improvement or the description of a
-// task. Its links are resolved as if it were on the index page so that `retry-limit.md` is a link
-// to that page.
-function renderedDetails(
-  folder: ScratchPadFolder,
-  markdown: string | undefined,
-): RenderedPage | undefined {
-  return markdown === undefined
-    ? undefined
-    : renderDetails({
-        page: 'pages/index.md',
-        markdown,
-        readCustomFile: (file) => folder.readCustomFile(file),
-      })
 }
 
 function renderedPage(folder: ScratchPadFolder, page: string): RenderedPage {

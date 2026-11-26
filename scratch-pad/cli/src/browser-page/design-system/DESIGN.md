@@ -367,6 +367,10 @@ The button isn't disabled while the server marks the task as done. It ignores a 
 
 The row of an assigned task on the progress tracker is the anchor of the task. That's why the heading of its description below the list has the anchor `t-5-description` instead.
 
+The row of an assigned task has a speech bubble, which opens the thread for the task below the row. The row of an unassigned task only has the speech bubble when the task already has a thread. A thread for a task is identified by the id of the task, like `t-5`, rather than by a page so it doesn't have an anchor.
+
+`task-threads.tsx` renders the thread as a `ThreadCard`. If the task doesn't have a thread yet, `task-threads.tsx` shows a `ThreadDraft` for the first message instead. A link to the thread, like `progress-tracker#c-4`, opens the thread. The HTML export of a pad doesn't have any speech bubbles, because only the server returns the threads for tasks.
+
 The new pages and the pages with changed sections are collapsed under "Updates to pages", below them. When Nick opens the updates, the focus will stay on their button. The count on the Inbox button only includes the items under "Needs your answer". If there are only updates to pages, the button will show a red dot without a number.
 
 The export doesn't contain any read marks, because a reader can't mark anything as read in the file. The sidebar of the export doesn't link to the Inbox / Outbox view either.

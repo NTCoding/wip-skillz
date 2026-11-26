@@ -300,6 +300,8 @@ Nick writes 3 kinds of thread on the text:
 
 You deal with Nick's comments and his decisions yourself, but you hand both kinds of note to a subagent so that they don't fill your context.
 
+Nick can start a thread on each task and each subtask that's assigned to him. He opens it with the speech bubble on its row on the progress tracker. The thread stays on the task after the task is unassigned. A message from Nick in that thread is a comment, which you deal with in the same way as a comment on the text.
+
 ### Wait for Nick
 
 Run `wait` in the background and end your turn. Once Nick has been quiet for 10 seconds, `wait` will print the new items and end. In Claude Code, you run a command in the background with the `Bash` tool and `run_in_background`. If you can't run a command in the background, run `inbox` at the start of each turn instead. This is an example of what `wait` prints:
@@ -324,11 +326,19 @@ $ scratch-pad wait --pad 2026-11-21-invoice-export
 
 Each item includes the file and the lines of its block so you can usually edit the page without reading the whole file. When the inbox only prints the first lines of a thread, run `show <id>` to see the whole thread and its block.
 
+A comment in the thread of a task shows the task instead of a file and a block. Its link opens the thread on the progress tracker. This is an example:
+
+```text
+[c-4] comment · subtask 3.1: Give input on the retry limit
+  link: http://127.0.0.1:4747/2026-11-21-invoice-export/progress-tracker#c-4
+  Nick: Does the limit apply to every shop?
+```
+
 Once you've dealt with every item, run `wait` in the background again and end your turn. Otherwise you won't see Nick's next comment until he writes in the chat.
 
 ### Reply to a comment
 
-If Nick has asked for a change in his comment, change the page first and then reply in the thread. After your reply the thread waits for Nick, who is the only person that can resolve a thread. This is an example of a reply:
+If Nick has asked for a change in his comment, change the page first and then reply in the thread. After your reply the thread waits for Nick, who is the only person that can resolve a thread. You reply in the thread of a task in the same way. This is an example of a reply:
 
 ```text
 $ scratch-pad reply --pad 2026-11-21-invoice-export c-1 "No. Every shop exports at 02:00, which I've added to the page."
@@ -393,6 +403,12 @@ You can always add a subtask, even to a task that is assigned to Nick. In that c
 
 If none of the subtasks are Nick's, run `task unassign <number>` to remove the assignment from the task. `subtask unassign <number>` removes the assignment from a subtask in the same way.
 
+#### Talk with Nick about an assigned task
+
+When Nick has to give input on a task or a subtask, write the details on a page and link to that page from `--do`. Nick can comment on a page, but he can't comment on the description of a task. Put anything else that Nick needs in the description with `task describe` or `subtask describe`.
+
+Each task and each subtask that's assigned to Nick can have a thread on its row on the progress tracker. Only Nick can start the thread, with the speech bubble on the row. The thread is for the feedback that Nick doesn't have any other place for. `wait` and `inbox` print his messages in the same layout as a comment on a page so check them. Reply to him with `reply`.
+
 ### Create a subtask when you need Nick's input
 
 If you are blocked and require Nick's input on a piece of work, create a subtask under the task that the work belongs to and assign it to him with `subtask assign`. Link to the page in `--do`. Then create a second subtask for you to continue from Nick's input.
@@ -408,6 +424,8 @@ $ scratch-pad subtask assign --pad 2026-11-21-invoice-export 3.1 \
     --why "The next step depends on Nick's input."
 $ scratch-pad subtask add --pad 2026-11-21-invoice-export 3 "Apply Nick's input on the retry limit"
 ```
+
+Nick gives his input on the page that you link from `--do`. The thread of the subtask is only for the feedback that Nick doesn't have any other place for. Reply to him there with `reply`, as described in [Talk with Nick about an assigned task](#talk-with-nick-about-an-assigned-task).
 
 ### Find out that Nick has done a task
 

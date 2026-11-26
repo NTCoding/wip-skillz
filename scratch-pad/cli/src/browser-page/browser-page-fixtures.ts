@@ -16,6 +16,7 @@ import { servedAddresses } from './browser-route'
 import { fakeOutbox } from './outbox-fixtures'
 import { pageSummaries } from './page-summary-fixtures'
 import { retrySearchResults } from './search-fixtures'
+import { fakeStartTaskThread, retryQuestion, toneNote } from './pad-thread-fixtures'
 import { progressTracker } from './tracker-fixtures'
 import {
   type ChangeListeners,
@@ -25,7 +26,8 @@ import {
 
 export { pageSummaries } from './page-summary-fixtures'
 export { retrySearchResults } from './search-fixtures'
-export { progressTracker } from './tracker-fixtures'
+export { assignmentOf, progressTracker } from './tracker-fixtures'
+export { retryQuestion, toneNote } from './pad-thread-fixtures'
 
 export const exportPad = '2026-11-20-invoice-export'
 
@@ -200,59 +202,6 @@ export const improvements: Improvements = {
   ],
 }
 
-export const retryQuestion: Thread = {
-  id: 'c-1',
-  type: 'comment',
-  page: 'pages/index.md',
-  anchor: {
-    firstLine: 8,
-    lastLine: 8,
-    selectedText: 'retries 5 times',
-    prefix: 'The job',
-    suffix: '. See this section and the retry',
-  },
-  position: {
-    kind: 'attached',
-    firstLine: 8,
-    lastLine: 8,
-    text: 'retries 5 times',
-    occurrence: 0,
-    match: 'exact',
-    score: 1,
-  },
-  waitsFor: 'nick',
-  outcome: undefined,
-  messages: [
-    { author: 'nick', text: 'Is 5 retries enough?', time: '2026-11-20T21:09:00.000Z' },
-    { author: 'agent', text: 'I have raised the limit to 8.', time: '2026-11-20T21:12:00.000Z' },
-  ],
-}
-
-export const toneNote: Thread = {
-  id: 'g-1',
-  type: 'grammar',
-  page: 'pages/index.md',
-  anchor: {
-    firstLine: 3,
-    lastLine: 4,
-    selectedText: 'shows the tax number',
-    prefix: 'to a CSV file. The invoice template',
-    suffix: '.',
-  },
-  position: {
-    kind: 'attached',
-    firstLine: 3,
-    lastLine: 4,
-    text: 'shows the tax number',
-    occurrence: 0,
-    match: 'exact',
-    score: 1,
-  },
-  waitsFor: 'agent',
-  outcome: undefined,
-  messages: [{ author: 'nick', text: 'Write who shows it.', time: '2026-11-20T21:10:00.000Z' }],
-}
-
 export const indexInbox: NickInbox = {
   threads: [retryQuestion],
   decisions: [
@@ -311,6 +260,7 @@ const fakeActions = {
       outcome: undefined,
       messages: [{ author: 'nick', text: thread.message, time: '2026-11-20T21:20:00.000Z' }],
     }),
+  startTaskThread: fakeStartTaskThread,
   replyToThread: (id: string, message: string) =>
     Promise.resolve<Thread>({
       ...retryQuestion,

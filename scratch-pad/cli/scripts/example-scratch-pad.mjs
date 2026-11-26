@@ -507,6 +507,39 @@ The template that shows the numbers is built in <task:t-2>.
   },
   {
     feature:
+      "The threads of the tasks that are assigned to Nick. Each assigned row on the progress tracker has a speech bubble, which opens the thread below the row. Nick asked a question in the thread of subtask 5.3 and the agent has replied so the reply is in the Inbox. Task 6 doesn't have a thread yet. Click its bubble to write the first message. Task 3 isn't assigned to Nick any more, but the row of task 3 still has the speech bubble because Nick had already written in the thread.",
+    add: async (demo) => {
+      const tracker = await demo.get('progress-tracker')
+      const alertTeam = tracker.tasks
+        .flatMap((task) => task.subtasks)
+        .find((subtask) => subtask.number === '5.3')
+      const { thread } = await demo.post(`tasks/${alertTeam.id}/threads`, {
+        message: 'Does the alert go to the support team or to the shop as well?',
+      })
+      demo.agent(
+        'reply',
+        thread.id,
+        'Only to the support team. The shop sees the failed export in its own dashboard.',
+      )
+      const template = tracker.tasks.find((task) => task.title === 'Write the invoice template')
+      demo.agent(
+        'task',
+        'assign',
+        String(template.number),
+        '--do',
+        'Send the invoice template to Jo.',
+        '--why',
+        'Only Nick talks to Jo.',
+      )
+      const { thread: templateThread } = await demo.post(`tasks/${template.id}/threads`, {
+        message: 'Is the version with the new logo the one to send?',
+      })
+      demo.agent('reply', templateThread.id, 'Yes. The new logo was added yesterday.')
+      demo.agent('task', 'unassign', String(template.number))
+    },
+  },
+  {
+    feature:
       'Task 6 "Run the export on staging" was assigned to Nick before the agent added its subtask 6.1. Until the agent assigns 6.1, the commands status and check report task 6 as a problem. The command task show 6 prints the assignment of task 6, which the agent can reuse for 6.1. Run the tool with SCRATCH_PADS_HOME set to the folder that pnpm try prints to see the output.',
     add: async (demo) => {
       demo.agent('task', 'add', 'Run the export on staging')
@@ -674,6 +707,21 @@ Option 1, because the invoice is the legal document.
       demo.agent('ready', 'd-8')
       demo.changePage('2.4-tax-rounding.md', (markdown) =>
         markdown.replace(/### Option 2[\s\S]*?(?=## Agent recommendation)/u, ''),
+      )
+    },
+  },
+  {
+    feature:
+      'The links in what Nick has to do for task 2 "Agree the retry limit with Jo". Open the row of task 2 on the progress tracker, the Inbox or the Inbox / Outbox page. The first line has all 3 kinds of link. The link to what counts as a failure opens that section of the retry limit in the scratch pad. The link to the rules of the bank and the bare URL of the notes open another site in a new tab. In the Inbox, a click anywhere else on the entry opens task 2. The asterisks around *before* are shown as text. The URL of the old limit is in backticks, which is why it is shown as code rather than as a link.',
+    add: async (demo) => {
+      demo.agent(
+        'task',
+        'assign',
+        '2',
+        '--do',
+        "Agree the retry limit with Jo *before* the job goes live. Read [what counts as a failure](retry-limit.md#what-counts-as-a-failure), [the rules of the bank](https://example.com/bank-rules) and Jo's notes at https://example.com/jo-notes.\n\nThe old limit is at `https://example.com/old-limit`. Write the new limit in a comment on the retry limit.",
+        '--why',
+        'Jo only talks to Nick about the limits of the shops.',
       )
     },
   },
