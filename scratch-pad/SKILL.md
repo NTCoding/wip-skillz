@@ -284,6 +284,12 @@ Use an `:::html` block for a diagram or an animation. The block is shown in a sa
 
 Put a long block in its own file in the `custom` folder. On the page, write `:::html file=custom/export-steps.html` followed by a `:::` line.
 
+### Draw a sequence diagram
+
+Look in [examples/sequence-diagrams.html](examples/sequence-diagrams.html) for examples of how to draw a sequence diagram. Copy the file into the `custom` folder of the scratch pad and change its data. The examples use a basic design that is easy to read and understand. You can do more when a diagram needs it, but start from that design.
+
+Open the page in the scratch pad to check the result, because the file doesn't have the design tokens when it is opened on its own.
+
 ## Talk with Nick through the page
 
 Nick writes 3 kinds of thread on the text:
