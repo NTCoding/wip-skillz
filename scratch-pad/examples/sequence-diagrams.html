@@ -1,0 +1,99 @@
+<!--
+  Examples of sequence diagrams for a scratch pad page. Copy this file into the
+  `custom` folder of the pad and change the data of each diagram. Then write
+  `:::html file=custom/<name>.html` on the page.
+
+  Each diagram is data (participants and messages) that `drawSequence` turns
+  into an SVG. This means there are no coordinates to work out by hand.
+  A message is [from, to, label, colour, dashed]:
+    - colour is 'blue' for a step that belongs to this change and 'grey' for a step that belongs to something else.
+    - dashed is true for a reply and false for a call.
+    - a '#' in a label becomes the next circled number: ①, ②, ③ and so on.
+  A participant is [name, mark]. The mark is '(new)', '(changed)' or ''.
+
+  Keep a diagram easy to read: about 5 participants at most, short labels
+  and one diagram per flow. Split a bigger flow into 2 diagrams.
+-->
+<div id="seq-1"></div>
+<div id="seq-2"></div>
+<div id="seq-3"></div>
+<script>
+{
+const colours = { blue: '#1565c0', grey: '#9e9e9e' }
+const gap = 130, left = 70, top = 66, row = 38
+const circled = '①②③④⑤⑥⑦⑧⑨'
+
+function drawSequence(id, title, participants, messages) {
+  const x = i => left + i * gap
+  const width = left * 2 + gap * (participants.length - 1)
+  const height = top + row * (messages.length + 1)
+  let svg = `<figure style="margin:0 0 var(--space-5xl)"><figcaption style="font:600 var(--fs-sm)/var(--lh-ui) var(--font-ui);color:var(--text-2);margin-bottom:var(--space-xs)">${title}</figcaption><div style="overflow-x:auto"><svg viewBox="0 0 ${width} ${height}" width="${width}" height="${height}" style="display:block" role="img" aria-label="${title}" xmlns="http://www.w3.org/2000/svg">
+<defs>${Object.entries(colours).map(([name, colour]) => `<marker id="${id}-${name}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="${colour}"/></marker>`).join('')}</defs>
+<style>
+  text { font-family: var(--font-ui); fill: var(--text); }
+  .box { fill: var(--surface-raised); stroke: var(--line-strong); }
+  .name { font-size: 13px; font-weight: 600; }
+  .mark { font-size: 10.5px; fill: var(--text-2); }
+  .life { stroke: var(--line-strong); stroke-opacity: .6; stroke-dasharray: 3 4; }
+  .label { font-size: 12.5px; paint-order: stroke; stroke: var(--surface-reading); stroke-width: 4px; }
+</style>`
+  participants.forEach(([name, mark], i) => {
+    svg += `<rect class="box" x="${x(i) - 52}" y="8" width="104" height="42" rx="6"/>
+<text class="name" x="${x(i)}" y="${mark ? 26 : 34}" text-anchor="middle">${name}</text>
+<text class="mark" x="${x(i)}" y="42" text-anchor="middle">${mark}</text>
+<line class="life" x1="${x(i)}" y1="50" x2="${x(i)}" y2="${height - 6}"/>`
+  })
+  let number = 0
+  messages.forEach(([from, to, text, colour, dashed], j) => {
+    const y = top + row * (j + 1)
+    const label = text.replace('#', () => circled[number++])
+    const dash = dashed ? ' stroke-dasharray="6 4"' : ''
+    const line = `fill="none" stroke="${colours[colour]}" stroke-width="1.5"${dash} marker-end="url(#${id}-${colour})"`
+    if (from === to) {
+      svg += `<path d="M${x(from)},${y - 8} h40 v16 h-38" ${line}/><text class="label" x="${x(from) + 48}" y="${y + 4}">${label}</text>`
+    } else {
+      svg += `<line x1="${x(from)}" y1="${y}" x2="${x(to)}" y2="${y}" ${line}/><text class="label" x="${Math.min(x(from), x(to)) + 8}" y="${y - 6}">${label}</text>`
+    }
+  })
+  document.getElementById(id).innerHTML = svg + '</svg></div></figure>'
+}
+
+drawSequence('seq-1', 'A flow with 3 participants, where one is new', [
+  ['Shop', ''],
+  ['Export job', '(changed)'],
+  ['Mailer', '(new)'],
+], [
+  [0, 1, '# Request an export', 'blue', false],
+  [1, 2, '# EmailFileLink(shop, file)', 'blue', false],
+  [2, 0, '# Email with the link', 'blue', true],
+])
+
+drawSequence('seq-2', 'A flow with a call to the same participant and a step of another story', [
+  ['Browser', ''],
+  ['API', ''],
+  ['Handler', '(changed)'],
+  ['Repository', '(changed)'],
+  ['Database', ''],
+], [
+  [0, 1, '# PUT /settings with version 4', 'blue', false],
+  [1, 2, '# SaveSettings(settings, version 4)', 'blue', false],
+  [2, 3, '# Load(settings)', 'blue', false],
+  [3, 4, 'SELECT settings', 'grey', false],
+  [4, 3, 'Row', 'grey', true],
+  [2, 2, '# Settings.apply(change)', 'blue', false],
+  [2, 3, '# Save(settings, version 5)', 'blue', false],
+  [1, 0, '# 200 with version 5', 'blue', true],
+])
+
+drawSequence('seq-3', 'A flow with a failure', [
+  ['Browser', ''],
+  ['API', '(changed)'],
+  ['Repository', ''],
+], [
+  [0, 1, '# PUT /settings with version 4', 'blue', false],
+  [1, 2, '# Save(settings, version 4)', 'blue', false],
+  [2, 1, 'VersionConflict', 'blue', true],
+  [1, 0, '# 409 Conflict', 'blue', true],
+])
+}
+</script>
