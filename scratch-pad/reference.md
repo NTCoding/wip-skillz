@@ -331,7 +331,7 @@ pick: proposal, because a shop only downloads its own file.
 :::
 ```
 
-The heading above the block is the question. If there isn't a heading above the block, Nick won't be able to choose an option for the decision.
+The heading above the block is the title of the decision. It states the choice as a question so that Nick knows what he's deciding from the heading alone. Write it as a question, such as "What should go on the first line of a description?", rather than as a topic, such as "The first line of a description". If there isn't a heading above the block, Nick won't be able to choose an option for the decision.
 
 If the `context:` line of an open decision is missing or empty, `check` will print a problem. It won't print a problem for a decision once Nick has decided.
 
