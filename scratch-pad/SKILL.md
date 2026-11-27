@@ -183,81 +183,13 @@ If you reword the question, keep the same id. Give a new decision the next free 
 
 ### Write a decision page for a big decision
 
-Use an inline `:::decision` block for a small decision. Use a decision page for a decision that needs more than 3 paragraphs for Nick to understand the problem and the solution. A decision page is a sub page of the page that it belongs to. It puts the problem and the options in one place so that Nick doesn't have to scroll through the page to find them.
-
-Create the page with the `page` command and the type `decision`. The command takes the parent page and the file name of the new page. It never takes any content, because the page is content that you write in the file. The numbering and the parent rules are the same as for any other page:
+Use an inline `:::decision` block for a small decision. Use a decision page for a decision that needs more than 3 paragraphs for Nick to understand the problem and the solution. Create the page with this command, which writes a template that you fill in:
 
 ```text
 $ scratch-pad page --pad 2026-11-21-invoice-export retry-limit night-retries.md --type=decision
-created /Users/nick/scratchpads/2026-11-21-invoice-export/pages/2.2-night-retries.md (decision d-6, a draft sub page of pages/2-retry-limit.md)
-Write the content of the page. Run ready d-6 to make the page ready for Nick.
-link: http://127.0.0.1:4747/2026-11-21-invoice-export/night-retries.md#d-6
-Check that `wait` is still running before you end your turn.
 ```
 
-The `page` command also creates a blank page. Leave out `--type` and run `page <parent> <file-name>`. The command creates an empty sub page of the parent page with the right number. Write the content in the file. `--type=decision` is the only type for now. An unknown type fails with a list of the types.
-
-The command writes a template with the next free decision id. The first 2 lines of the file are the marker `:::decision-page d-6` and a closing `:::` line. The marker tells the server that the page is a decision page. Don't change the marker. The template has this structure:
-
-1. A title and a description under the title
-2. A "Context" section for the problem or the goal, explained with examples
-3. An "Options" section with one `### Option 1: name` section
-4. An "Agent recommendation" section for the option that you recommend and the reason
-
-The template has 6 placeholders in angle brackets: `<title>`, `<description>`, `<the problem or goal, explained with examples>`, `<name>`, `<prose>` and `<which option and why>`. It also has a line of instructions in angle brackets under the "Options" heading. Replace each placeholder with real content and delete the line of instructions. The server only checks these exact texts. Other text in angle brackets, like `List<Invoice>`, is content. The template has one option so that the number of options isn't fixed. Write a `### Option N: name` section for each option and number the options from 1. A decision needs at least 2 options. It doesn't have an upper limit.
-
-Use "before" and "after" in an option only for the current text and the proposed text. For example, show the current text of a skill file and the proposed text of the same file in 2 code blocks. Never use "before" and "after" for the current state and the proposed solution of the whole decision. The Context section explains the current state. Each option is a proposed solution.
-
-Link to the decision page from the parent page like any other page. `check` reports a decision page that the parent page doesn't link to.
-
-#### Make the page ready
-
-A new decision page is a draft. Nick can open a draft page. It shows the status Draft and the text that you have written. It doesn't show a Decision section or a button. The decision isn't in Nick's Inbox or on the Decisions page. `inbox` and `wait` don't list the decision. Nick isn't notified.
-
-Run `ready` with the id of the decision to make the page ready. The command is the only way from Draft to Open. It runs the checks of the template. A failed check makes the command fail. The command lists every problem and the place of the problem in the file. The page stays a draft:
-
-```text
-$ scratch-pad ready --pad 2026-11-21-invoice-export d-6
-Decision d-6 isn't ready. Fix these problems and run ready d-6 again:
-  pages/2.2-night-retries.md:4 under "<title>": the page still has the placeholder <title> from the template. Replace the placeholder with real content
-```
-
-A page that passes every check becomes Open. The decision appears in Nick's Inbox. Nick is notified once:
-
-```text
-$ scratch-pad ready --pad 2026-11-21-invoice-export d-6
-d-6 is ready. Nick can decide the decision page.
-link: http://127.0.0.1:4747/2026-11-21-invoice-export/night-retries.md#d-6
-Check that `wait` is still running before you end your turn.
-```
-
-Each change of the state of a decision has its own command or button. You run `ready` to open a draft. You run `reopen` after a request for changes. You run `done` after Nick has decided. Nick presses the buttons for the other changes.
-
-A page that you edit after it was ready can break the template. An Open decision stays in Nick's Inbox and on the Decisions page. Nick still sees the status and the buttons of the page. Nick's choice is still shown on a Decided page. The server shows the problems under the marker. `check`, `inbox` and `wait` print the problems with a text that matches the state of the decision. `wait` ends and prints the problems when a ready page breaks. Fix the problems in the file. You don't run `ready` again. Nick isn't notified a second time. `reopen` works on a broken page and prints the problems of the page.
-
-#### What the server checks and shows
-
-The server checks the page against the template each time the file changes. A decision page is broken in these cases:
-
-- Some text in angle brackets from the template is still on the page.
-- The page has fewer than 2 options.
-- A section is missing or renamed.
-- A section is written twice or is out of order.
-- The title, the description, the Context section, the Agent recommendation section or an option doesn't have any text.
-- An option heading isn't `### Option N: name`, or the numbers of the options aren't in order.
-
-A draft page that is broken isn't listed as waiting for Nick. Fix the problems in the file. `check` and `ready` print the problems of a draft.
-
-A finished page shows the status under the title. The status has these values:
-
-- Draft
-- Open
-- Changes requested
-- Decided
-
-A draft page doesn't show the table of contents or the Decision section. A page that is Open shows a table of contents and a Decision section at the end. The Decision section has a button for each option, a field for Nick's own text and a "Request changes" button. Don't write the status, the table of contents or the Decision section yourself.
-
-The decision has an id like d-6, which the inline blocks use too. `show`, `done` and `reopen` work with the id in the same way as for an inline decision, including the rounds of changes requested.
+Read [The decision page](reference.md#the-decision-page) in reference.md before you write the page, because that section describes the template, the checks and the command `ready` that makes the page ready for Nick.
 
 ### Emphasise a key point
 

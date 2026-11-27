@@ -338,7 +338,7 @@ If the `context:` line of an open decision is missing or empty, `check` will pri
 
 ### The decision page
 
-A decision page is a sub page for one decision. The agent writes the content of the page in the file. Use an inline decision block for a small decision. Use a decision page for a decision that needs more than 3 paragraphs for Nick to understand the problem and the solution.
+A decision page is a sub page for one decision. The agent writes the content of the page in the file. Use an inline decision block for a small decision. Use a decision page for a decision that needs more than 3 paragraphs for Nick to understand the problem and the solution. The page puts the problem and the options in one place so that Nick doesn't have to scroll through the parent page to find them.
 
 #### The page command
 
@@ -367,7 +367,7 @@ The first 2 lines of the file are the marker, which is the block `:::decision-pa
 - A `## Options` section with a line of instructions and one `### Option 1: name` section
 - A `## Agent recommendation` section for the option that the agent recommends and the reason
 
-The template has one option so that the number of options isn't fixed. The agent writes a `### Option N: name` section for each option and numbers the options from 1. A decision needs at least 2 options. It doesn't have an upper limit. The text of an option can show the current text and the proposed text of code or of a skill file. In a decision page, "before" means the current text and "after" means the proposed text. They don't mean the current state and the proposed solution of the whole decision.
+The agent replaces each placeholder with real content and deletes the line of instructions. The template has one option so that the number of options isn't fixed. The agent writes a `### Option N: name` section for each option and numbers the options from 1. A decision needs at least 2 options. It doesn't have an upper limit. The text of an option can show the current text and the proposed text of code or of a skill file. In a decision page, "before" means the current text and "after" means the proposed text. They don't mean the current state and the proposed solution of the whole decision.
 
 #### The checks
 
@@ -402,7 +402,16 @@ Decision d-6 isn't ready. Fix these problems and run ready d-6 again:
   pages/2.2-night-retries.md:4 under "<title>": the page still has the placeholder <title> from the template. Replace the placeholder with real content
 ```
 
-A page that passes every check becomes Open. The command prints `d-6 is ready. Nick can decide the decision page.` and the link. The server records a `decision-ready` event. The decision appears in the Inbox. The browser notifies Nick once. `ready` fails for a decision that is already ready. It fails for an id that isn't the id of a decision page too.
+A page that passes every check becomes Open:
+
+```text
+$ scratch-pad ready --pad 2026-11-21-invoice-export d-6
+d-6 is ready. Nick can decide the decision page.
+link: http://127.0.0.1:4747/2026-11-21-invoice-export/night-retries.md#d-6
+Check that `wait` is still running before you end your turn.
+```
+
+The server records a `decision-ready` event. The decision appears in the Inbox. The browser notifies Nick once. `ready` fails for a decision that is already ready. It fails for an id that isn't the id of a decision page too.
 
 Each state of a decision has its own command or button:
 
@@ -437,7 +446,7 @@ The agent sees the problems in `check`, in `inbox` and in `wait`. The text of th
 
 The agent never writes the status, the table of contents or the Decision section. The server adds them to a finished page:
 
-- The status under the title, which shows the state of the decision
+- The status under the title, which shows the state of the decision: Draft, Open, Changes requested or Decided
 - A table of contents that links to the sections and to the options
 - A Decision section at the end
 
