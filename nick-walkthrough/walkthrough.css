@@ -465,16 +465,17 @@ pre.focus .ln:not(.on) > :not(.nb) { opacity: .45 }
 .dtabs { display: inline-flex; padding: 2px; border: 1px solid #d0d7de; border-radius: 7px; background: #f6f8fa }
 .dtab { appearance: none; border: 0; background: none; padding: 4px 14px; border-radius: 5px; font: 600 13px/18px var(--font); color: #57606a; cursor: pointer }
 .dtab:hover { color: #242424 }
-.dsw[data-v="flow"] .dtab[data-v="flow"], .dsw[data-v="seq"] .dtab[data-v="seq"] { background: #fff; color: #0f766e; box-shadow: 0 1px 2px rgb(0 0 0 / 8%), 0 0 0 1px #d0d7de }
-.dsw[data-v="flow"] .dv[data-v="seq"], .dsw[data-v="seq"] .dv[data-v="flow"] { display: none }
+.dsw[data-v="flow"] .dtab[data-v="flow"], .dsw[data-v="seq"] .dtab[data-v="seq"], .dsw[data-v="code"] .dtab[data-v="code"] { background: #fff; color: #0f766e; box-shadow: 0 1px 2px rgb(0 0 0 / 8%), 0 0 0 1px #d0d7de }
+.dsw .dv { display: none }
+.dsw[data-v="flow"] .dv[data-v="flow"], .dsw[data-v="seq"] .dv[data-v="seq"], .dsw[data-v="code"] .dv[data-v="code"] { display: block }
 .dsw.one .dv[data-v="flow"] { display: block }
 .dsw-fold { width: 24px; height: 24px; border-radius: 50%; border: 1px solid #d0d7de; background: #fff; color: #4f4f4f; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; padding: 0; transform: rotate(-90deg) }
 .dsw-fold:hover { border-color: #0d9488; color: #0d9488 }
 .dsw.closed .dsw-fold { transform: rotate(180deg) } .dsw.closed .dsw-b, .dsw.closed .dtabs { display: none } .dsw.closed .dsw-h { margin-bottom: 0 }
 .dsw.fold { border: 1px solid #e5e7eb; border-radius: 8px; padding: 10px 12px 12px; background: #fbfcfd }
 .dsw.fold.closed { padding-bottom: 10px }
-.dv[data-v="seq"] { border: 1px solid #e5e7eb; border-radius: 8px; padding: 8px 12px 4px; background: #fbfcfd }
-.dsw.fold .dv[data-v="seq"] { border: 0; padding: 0; background: none }
+.dv[data-v="seq"], .dv[data-v="code"] { border: 1px solid #e5e7eb; border-radius: 8px; padding: 8px 12px 4px; background: #fbfcfd }
+.dsw.fold .dv[data-v="seq"], .dsw.fold .dv[data-v="code"] { border: 0; padding: 0; background: none }
 
 /* The card diagram: a lane per context and a card per passage. */
 .fl { position: relative; isolation: isolate }

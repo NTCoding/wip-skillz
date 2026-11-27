@@ -92,6 +92,11 @@ folder that you write as a context.
 Read a file at the head with `git show <head>:<path>` rather than checking
 anything out.
 
+If anything in the walkthrough would benefit from reading the plan, read the
+plan. For example, if a piece of code seems unused, the plan might explain why
+or show it being used in the next task. If you don't have the plan, ask where
+to find it.
+
 ### 2. Work out the points
 
 In most merge requests, the points follow one request through the code, such
@@ -373,6 +378,12 @@ return new UploadRetriesExhausted() //~ `UploadRetriesExhausted` is the error fr
   name of a context exactly as in the `context:` line, or leave out the last
   word of the name, as in `billing` for `billing context`. The page then marks
   that context in the sequence diagram while one of its passages is open.
+- A `codeflow` block after the `flow` block is drawn as the code-level
+  sequence diagram. The `flow` block shows the contexts. The `codeflow` block
+  shows the classes and ports that the passage titles are about. Each line is
+  written like a `flow` line, with the class or port as the participant and its
+  context in brackets, as in
+  `ExportController (exports) -> GetInvoiceOwner (exports): … @1.1`.
 - A `types` block after the `flow` block is drawn as a type diagram under the
   sequence diagram. The type diagram shows how the types fit together, which
   the sequence diagram doesn't.
@@ -606,6 +617,25 @@ doesn't apply.
 Each entry describes the usual case. So use your judgment rather than
 applying an entry to every sentence.
 
+### Write every name from the code in backticks
+
+**Bad:** ExportController.startExport checks the shop
+
+**Good:** `ExportController.startExport` checks the shop
+
+### Write like a developer talks
+
+Write a behaviour as a sentence that a developer would say to another
+developer.
+
+**Bad:** reads an export never started as no files
+
+**Good:** An export that has never been started doesn't have any files.
+
+**Bad:** responds to a start with a null shop with 400
+
+**Good:** The controller returns a 400 if the request contains a null shop. The export isn't started.
+
 ### A passage that shows code without saying why the code matters
 
 Write each passage as Point, Explain, Evidence so that Nick knows why a block
@@ -613,8 +643,26 @@ of code matters before he reads the code. Without the point first, the block
 would read as a dump of code. Nick would have to work out for himself what it
 changes.
 
-1. **Point.** The `### ` title states the point of the passage, such as what
-   changes for a caller or for a reviewer.
+1. **Point.** The `### ` title states the most important thing about the
+   passage, which is the key point of the flow. For a new class, the title
+   states its main responsibility. For a changed class, the title states the
+   main significant change. The paragraph contains the details that support the
+   key point.
+
+   **Bad (a new class that starts an export):** `ExportController` in the
+   exports context adds a `Location` header
+
+   **Good (the same class):** `ExportController` in the exports context starts
+   an export of the invoices of a shop
+
+   **Bad (a changed class where the main change is the 4th upload):**
+   `UploadRetryPolicy` in the exports context logs a warning
+
+   **Good (the same class):** `UploadRetryPolicy` in the exports context stops
+   a 4th upload
+
+   The header and the warning are details. They belong in the paragraph unless
+   one of them is the main change of the passage.
 2. **Explain.** The paragraph under the title describes in plain words how
    the code makes that change and why. Write the context of each thing at its
    first mention.
@@ -792,8 +840,10 @@ find it easier to read a sequence of steps as a list instead of prose. Use
 your judgment, though. For example, 2 short steps can read fine as one
 sentence.
 
-Separate statements about the code are usually easier to read as bullet
-points too. A statement and the reason for it stay in one bullet, joined as
+Strongly prefer bullet points for independent facts about the code, because a
+list is much easier to read than a run of statements. This is a strong
+preference rather than a rule, so 2 short related statements can still be one
+sentence. A statement and the reason for it stay in one bullet, joined as
 one sentence. A reason on a separate bullet reads like a separate statement,
 because a reason only makes sense when it's joined to the sentence it
 explains.
@@ -1066,6 +1116,16 @@ need for a warning either.
 There's usually no need to show the import of a framework decorator, or of a
 helper whose name already describes what the helper does.
 
+### Missing imports
+
+When a key piece of code is imported from another file, show the import. This
+is especially important when the import crosses an architectural boundary like
+a module or a context.
+
+### A new folder missing a layout
+
+When the change adds a folder, show the file tree of the folder.
+
 ### Something in a code block that the text didn't prepare the reader for
 
 If a code block contains something surprising, either describe the surprise
@@ -1079,6 +1139,10 @@ Lines that are ordinary for the file don't need a description. Imports and
 constructors are usually ordinary lines like that. So are decorators. An
 import from another context is the exception, as described in "A code block
 that calls another context without the text announcing the call".
+
+When you see code that the reader won't understand, add a ` //~ ` note that
+explains what the code does and why. When you can't make sense of the code
+yourself, start the note with ⚠️ and say that the code may be a bug.
 
 ### A repeated change shown several times, or shown once without its exceptions
 

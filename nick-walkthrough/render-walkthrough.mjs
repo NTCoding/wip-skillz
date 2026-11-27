@@ -136,7 +136,7 @@ const flush = () => {
   push({ type: 'text', text })
   para = []
 }
-const KIND = { text: 'paragraph', list: 'list', table: 'table', quote: 'quote', code: 'code block', flow: 'flow block', types: 'types block' }
+const KIND = { text: 'paragraph', list: 'list', table: 'table', quote: 'quote', code: 'code block', flow: 'flow block', codeflow: 'codeflow block', types: 'types block' }
 // Inside a "## " point, every block belongs to the "### " passage above it. The point's intro, before the first "### ",
 // only has paragraphs, lists (such as the table of contents) and "> ⚠️" blocks. A "> ⚠️" block ends the passage above it.
 const push = block => {
@@ -182,7 +182,7 @@ for (let i = 0; i < lines.length; i++) {
     const body = []
     for (i++; i < lines.length && !lines[i].startsWith('```'); i++) body.push(lines[i])
     if (lang === 'request') { addRequest(body); continue }
-    push(lang === 'flow' || lang === 'types' ? { type: lang, body } : { type: 'code', lang, file, ref: ref === '@base' ? 'base' : 'head', body })
+    push(lang === 'flow' || lang === 'codeflow' || lang === 'types' ? { type: lang, body } : { type: 'code', lang, file, ref: ref === '@base' ? 'base' : 'head', body })
     continue
   }
   if (line.startsWith('|')) {
@@ -381,11 +381,19 @@ const contextNamed = name => CONTEXTS.find(c => [c.name, c.name.replace(/ (conte
 for (const t of tabs) {
   const flow = t.points[0]?.title ? undefined : t.points[0]?.blocks.find(b => b.type === 'flow')
   const calls = flow ? flowSteps(flow) : []
+  const codeflow = t.points[0]?.title ? undefined : t.points[0]?.blocks.find(b => b.type === 'codeflow')
+  const codeCalls = codeflow ? flowSteps(codeflow) : []
   t.points.filter(p => p.title).forEach((p, pi) => {
     p.n = pi + 1
     // The calls of the tab's flow block that are tagged with the number of this point.
     p.calls = calls.filter(s => s.point === String(p.n))
     p.who = [...new Set(p.calls.flatMap(s => [s.from, s.to]))].map(name => ({ name, ctx: contextNamed(name) }))
+    // A participant of the codeflow block is written as "<class or port> (<context>)".
+    p.codeCalls = codeCalls.filter(s => s.point === String(p.n))
+    p.codeWho = [...new Set(p.codeCalls.flatMap(s => [s.from, s.to]))].map(name => {
+      const m = /^(.+?)\s*\((.+)\)$/.exec(name)
+      return { name, label: m ? m[1] : name, ctx: m ? contextNamed(m[2]) : undefined }
+    })
     const toc = p.intro.find(isToc)
     p.warnings = p.intro.filter(b => b.type === 'attention')
     let above
@@ -641,7 +649,7 @@ const breakable = html => html.replace(/(<[^>]+>)|([/_])/g, (m, tag, ch) => tag 
 
 function evidence (b) {
   return b.type === 'code' ? codeBlock(b)
-    : b.type === 'flow' ? flowSvg(b)
+    : b.type === 'flow' || b.type === 'codeflow' ? flowSvg(b)
     : b.type === 'types' ? typesSvg(b)
     : b.type === 'quote' ? `<blockquote>${inline(b.text)}</blockquote>`
     : b.type === 'list' ? textList(b)
@@ -685,29 +693,30 @@ function cardsHtml (p, kind) {
 // The sequence diagram of a point is drawn from the lines of the tab's flow block that are tagged with the number of the
 // point. Each arrow shows the number of its passage. A click on the number opens that passage.
 const HUE = ['#0e7c74', '#a15c07', '#6d28d9', '#0369a1', '#be123c', '#475569', '#4d7c0f', '#c2410c', '#0e7490', '#a21caf']
-function seqSvg (p) {
-  const who = p.who.map(w => ({ ...w, label: w.ctx ? w.ctx.name : w.name, hue: w.ctx ? HUE[w.ctx.n] : '#334155' }))
+function seqSvg (p, code = false) {
+  const calls = code ? p.codeCalls : p.calls
+  const who = (code ? p.codeWho : p.who).map(w => ({ ...w, label: code ? w.label : w.ctx ? w.ctx.name : w.name, hue: w.ctx ? HUE[w.ctx.n] : '#334155' }))
   const at = name => who.findIndex(w => w.name === name)
   const boxWidth = w => Math.max(180, Math.ceil(w.label.length * 7.8) + 28)
   const TEXT = 6.7
-  const between = Math.max(0, ...p.calls.filter(s => Math.abs(at(s.from) - at(s.to)) === 1).map(s => s.label.length * TEXT + 48))
+  const between = Math.max(0, ...calls.filter(s => Math.abs(at(s.from) - at(s.to)) === 1).map(s => s.label.length * TEXT + 48))
   const pitch = Math.max(1040 / who.length, Math.min(380, Math.max(240, between, ...who.map(w => boxWidth(w) + 24))))
   const x = i => Math.round(pitch * i + pitch / 2)
-  const loops = p.calls.filter(s => s.from === s.to).map(s => x(at(s.from)) + 56 + s.label.length * TEXT)
+  const loops = calls.filter(s => s.from === s.to).map(s => x(at(s.from)) + 56 + s.label.length * TEXT)
   const W = Math.ceil(Math.max(pitch * who.length, ...loops))
-  const top = 58; const gap = 28; const H = top + gap * (p.calls.length - 1) + 26
-  const head = who.map((w, i) => `<g class="sq-who" data-w="${i}"><rect x="${x(i) - boxWidth(w) / 2}" y="6" width="${boxWidth(w)}" height="28" rx="6" fill="#fff" stroke="${w.hue}" stroke-width="1.5"/><text x="${x(i)}" y="25" text-anchor="middle" font-size="13" font-weight="700" fill="${w.hue}">${esc(w.label)}</text><line x1="${x(i)}" y1="34" x2="${x(i)}" y2="${H - 2}" stroke="#cbd5e1" stroke-dasharray="4 4"/></g>`).join('')
-  const arrows = p.calls.map((s, i) => {
+  const top = 58; const gap = 28; const H = top + gap * (calls.length - 1) + 26
+  const head = who.map((w, i) => `<g class="sq-who"${code ? '' : ` data-w="${i}"`}><rect x="${x(i) - boxWidth(w) / 2}" y="6" width="${boxWidth(w)}" height="28" rx="6" fill="#fff" stroke="${w.hue}" stroke-width="1.5"/><text x="${x(i)}" y="25" text-anchor="middle" font-size="13" font-weight="700" fill="${w.hue}">${esc(w.label)}</text><line x1="${x(i)}" y1="34" x2="${x(i)}" y2="${H - 2}" stroke="#cbd5e1" stroke-dasharray="4 4"/></g>`).join('')
+  const arrows = calls.map((s, i) => {
     const y = top + gap * i; const a = at(s.from); const z = at(s.to)
     const dash = s.dashed ? ' stroke-dasharray="6 4"' : ''
     const badge = (cx, dy) => s.passage ? `<g class="sq-n" data-to="${s.passage}"><rect x="${cx - 14}" y="${y + dy - 13}" width="28" height="17" rx="8.5"/><text x="${cx}" y="${y + dy}" text-anchor="middle">${p.n}.${s.passage}</text></g>` : ''
     if (a === z) {
-      return `<g class="sq" data-a="${a}" data-z="${z}"><path d="M${x(a) + 2} ${y - 7}h40v14h-38" fill="none" stroke-width="1.6"${dash}/><polygon class="ah" points="${x(a) + 3},${y + 7} ${x(a) + 12},${y + 2} ${x(a) + 12},${y + 11}"/><text x="${x(a) + 52}" y="${y + 4}" font-size="12.5" text-anchor="start">${esc(s.label)}</text>${badge(x(a) - 24, 4)}</g>`
+      return `<g class="sq"${code ? '' : ` data-a="${a}" data-z="${z}"`}><path d="M${x(a) + 2} ${y - 7}h40v14h-38" fill="none" stroke-width="1.6"${dash}/><polygon class="ah" points="${x(a) + 3},${y + 7} ${x(a) + 12},${y + 2} ${x(a) + 12},${y + 11}"/><text x="${x(a) + 52}" y="${y + 4}" font-size="12.5" text-anchor="start">${esc(s.label)}</text>${badge(x(a) - 24, 4)}</g>`
     }
     const dir = z > a ? 1 : -1
-    return `<g class="sq" data-a="${a}" data-z="${z}"><line x1="${x(a) + dir * 2}" y1="${y}" x2="${x(z) - dir * 9}" y2="${y}" stroke-width="1.6"${dash}/><polygon class="ah" points="${x(z) - dir},${y} ${x(z) - dir * 10},${y - 5} ${x(z) - dir * 10},${y + 4}"/><text x="${(x(a) + x(z)) / 2}" y="${y - 6}" font-size="12.5" text-anchor="middle">${esc(s.label)}</text>${badge(x(a) + dir * 22, 0)}</g>`
+    return `<g class="sq"${code ? '' : ` data-a="${a}" data-z="${z}"`}><line x1="${x(a) + dir * 2}" y1="${y}" x2="${x(z) - dir * 9}" y2="${y}" stroke-width="1.6"${dash}/><polygon class="ah" points="${x(z) - dir},${y} ${x(z) - dir * 10},${y - 5} ${x(z) - dir * 10},${y + 4}"/><text x="${(x(a) + x(z)) / 2}" y="${y - 6}" font-size="12.5" text-anchor="middle">${esc(s.label)}</text>${badge(x(a) + dir * 22, 0)}</g>`
   }).join('')
-  return zoomable(`<svg class="seq-svg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="The calls of this point in order">${head}${arrows}</svg>`, 'sequence diagram')
+  return zoomable(`<svg class="seq-svg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="${code ? 'The calls between the classes and ports of this point in order' : 'The calls of this point in order'}">${head}${arrows}</svg>`, code ? 'code sequence diagram' : 'sequence diagram')
 }
 
 // The 2 views of "The request" are the card diagram and the sequence diagram. The overview slide of a point has the large
@@ -715,13 +724,15 @@ function seqSvg (p) {
 function diagramsHtml (p, kind) {
   if (!p.passages.length) return ''
   const seq = p.calls.length > 0
+  const code = p.codeCalls.length > 0
   const fold = kind === 'strip'
-  return `<div class="dsw${fold ? ' fold closed' : ''}${seq ? '' : ' one'}" data-v="flow">
-        <div class="dsw-h">${fold ? `<button type="button" class="dsw-fold" aria-label="Show the diagram" title="Show the diagram">${ICON.left}</button>` : ''}<span class="dsw-t">${p.request ? 'The request' : 'The passages'}</span>${seq ? `
-          <div class="dtabs" role="tablist"><button type="button" class="dtab" role="tab" data-v="flow">Flow</button><button type="button" class="dtab" role="tab" data-v="seq">Sequence</button></div>` : ''}</div>
+  return `<div class="dsw${fold ? ' fold closed' : ''}${seq || code ? '' : ' one'}" data-v="flow">
+        <div class="dsw-h">${fold ? `<button type="button" class="dsw-fold" aria-label="Show the diagram" title="Show the diagram">${ICON.left}</button>` : ''}<span class="dsw-t">${p.request ? 'The request' : 'The passages'}</span>${seq || code ? `
+          <div class="dtabs" role="tablist"><button type="button" class="dtab" role="tab" data-v="flow">Flow</button>${seq ? '<button type="button" class="dtab" role="tab" data-v="seq">Sequence</button>' : ''}${code ? '<button type="button" class="dtab" role="tab" data-v="code">Code sequence</button>' : ''}</div>` : ''}</div>
         <div class="dsw-b">
           <div class="dv" data-v="flow">${cardsHtml(p, kind)}</div>${seq ? `
-          <div class="dv" data-v="seq">${seqSvg(p)}</div>` : ''}
+          <div class="dv" data-v="seq">${seqSvg(p)}</div>` : ''}${code ? `
+          <div class="dv" data-v="code">${seqSvg(p, true)}</div>` : ''}
         </div>
       </div>`
 }
@@ -801,6 +812,7 @@ function pointHtml (p, n, t, ti) {
           <span>${plain(q.intro.find(b => b.type === 'text')?.text ?? '')}</span></span>
         </a></li>`).join('')
     const flow = p.blocks.find(b => b.type === 'flow')
+    const codeflow = p.blocks.find(b => b.type === 'codeflow')
     const types = p.blocks.find(b => b.type === 'types')
     const alerts = ti === 0 ? ALERTS : ALERTS.filter(a => a.tab === t)
     return `
@@ -808,6 +820,7 @@ function pointHtml (p, n, t, ti) {
       <div class="lead">${p.blocks.map(b => b.type === 'text' ? `<p>${inline(b.text)}</p>` : b.type === 'list' ? textList(b) : b.type === 'table' ? `<div class="show">${evidence(b)}</div>` : '').join('')}</div>
       ${alerts.length ? `<div class="alerts"><h3>⚠️ ${alerts.length} ${alerts.length === 1 ? 'thing needs' : 'things need'} your attention</h3>${alerts.map(a => `<details class="alert"><summary>${inline(a.block.heading)}</summary><p>${inline(a.block.text)}</p><p class="alert-at"><a href="#${a.block.id}" data-go="${a.block.id}">Go to the warning</a> <span class="dim">${esc(a.tab.title)} · ${plain(a.point.title)}</span></p></details>`).join('')}</div>` : ''}
       ${flow ? flowSvg(flow) : ''}
+      ${codeflow ? flowSvg(codeflow) : ''}
       ${types ? typesSvg(types) : ''}
       <ol class="story">${story}</ol>
     </section>`
