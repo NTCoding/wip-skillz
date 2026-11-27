@@ -166,7 +166,7 @@ function setText (on) {
 
 // The view and the fold of "The request" are the same on every slide of every point.
 function setView (view) {
-  for (const d of $$('.dsw')) d.dataset.v = view
+  for (const d of $$('.dsw')) d.dataset.v = $(`.dv[data-v="${view}"]`, d) ? view : 'flow'
   state.ui.view = view
   save(); layout()
 }
