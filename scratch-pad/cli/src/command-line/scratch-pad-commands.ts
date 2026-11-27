@@ -35,7 +35,7 @@ const defaultPort = 4747
 const checkMilliseconds = 250
 const startMilliseconds = 5000
 const stopMilliseconds = 5000
-const defaultQuietMilliseconds = 10_000
+const defaultQuietMilliseconds = 120_000
 
 // An agent that ends its turn while `wait` isn't running misses Nick's next comment. That's why
 // the output of the commands that the agent runs while it deals with Nick's items ends with this
@@ -144,7 +144,7 @@ export const scratchPadCommands: ReadonlyMap<string, ScratchPadCommand> = new Ma
     {
       usage: 'wait [--follow] [--quiet <seconds>] [--timeout <seconds>]',
       summary:
-        'print the new items like inbox once Nick has been quiet for 10 seconds (--follow keeps printing each batch, --type works as for inbox)',
+        'print the new items like inbox once Nick has been quiet for 2 minutes (--follow keeps printing each batch, --type works as for inbox)',
       options: ['pad', 'type', 'quiet', 'timeout', 'follow'],
       run: async (input: CommandInput) => {
         if (input.options.follow && input.options.timeout !== undefined) {

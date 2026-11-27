@@ -306,7 +306,7 @@ Nick can start a thread on each task and each subtask that's assigned to him. He
 
 Follow these steps to wait for Nick:
 
-1. Start `scratch-pad wait --follow --pad <folder>` with the `Monitor` tool and the longest timeout, which is 30 minutes. Then end your turn. Once Nick has been quiet for 10 seconds, `wait --follow` prints the new items, which Claude Code adds to the conversation as a notification. It keeps running after that and prints each new batch of items.
+1. Start `scratch-pad wait --follow --pad <folder>` with the `Monitor` tool and the longest timeout, which is 30 minutes. Then end your turn. Once Nick has been quiet for 2 minutes, `wait --follow` prints the new items, which Claude Code adds to the conversation as a notification. It keeps running after that and prints each new batch of items.
 2. The monitor runs until Claude Code tells you that the monitor has stopped. Start the monitor again as soon as you're told.
 3. If you can't use `Monitor`, run `wait` without `--follow` in the background with the `Bash` tool and `run_in_background`. That `wait` prints the new items and ends. It has always ended by the time that its notification starts a turn. Start `wait` again before you end your turn.
 4. If you can't run a command in the background, run `inbox` at the start of each turn instead.

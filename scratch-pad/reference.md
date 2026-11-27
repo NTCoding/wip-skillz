@@ -14,7 +14,7 @@ Every command prints a few short lines. If a command fails, it will exit with a 
 | `serve [--port <port>]`                            | Runs the server in the foreground. `start` runs this command in the background.                                                                                                                                                                                            |
 | `status`                                           | Prints the current task and what's waiting for the agent and for Nick. It will also print the scratch pad's address if the server is running.                                                                                                                              |
 | `inbox [--type <types>]`                           | Prints the new items that are waiting for the agent. `--all` also prints the items that were printed before.                                                                                                                                                               |
-| `wait [--follow]`                                  | Waits until Nick has been quiet for 10 seconds and then prints the new items in the same way as `inbox`. `--follow` keeps running and prints each new batch                                                                                                                |
+| `wait [--follow]`                                  | Waits until Nick has been quiet for 2 minutes and then prints the new items in the same way as `inbox`. `--follow` keeps running and prints each new batch                                                                                                                 |
 | `show <id>`                                        | Prints one whole thread or decision                                                                                                                                                                                                                                        |
 | `reply <id> <text>`                                | Adds your reply to a thread, which then waits for Nick                                                                                                                                                                                                                     |
 | `done <id> <outcome>`                              | Closes a note or a decision with one line about what you changed                                                                                                                                                                                                           |
@@ -56,7 +56,7 @@ The types for `--type` are `comment`, `decision`, `grammar` and `improvement`. Y
 
 `wait` takes 3 more options:
 
-- `--quiet <seconds>` changes how long Nick has to be quiet, which is 10 seconds by default.
+- `--quiet <seconds>` changes how long Nick has to be quiet, which is 2 minutes by default.
 - `--timeout <seconds>` ends the wait after that many seconds, even if there aren't any new items.
 - `--follow` keeps `wait` running when the new items have been printed. The next batch is printed in the same way after Nick was quiet again. `wait --follow` only ends when somebody stops it. A stopped `wait --follow` doesn't print anything and exits with 0. Start it with the `Monitor` tool, which adds each batch to the conversation as a notification. `--follow` doesn't work with `--timeout`.
 
