@@ -203,24 +203,7 @@ This proposal hasn't been verified against the latest version of the library.
 
 ### Draw something that Markdown can't show
 
-Use an `:::html` block for a diagram or an animation. The block is shown in a sandboxed frame so its styles and scripts can't change the rest of the page. Use the page's design tokens rather than raw colours so that the block looks like the rest of the page. This is an example of a small diagram:
-
-```markdown
-:::html
-<div style="display:flex;gap:var(--space-md)">
-  <p style="padding:var(--space-xl);border-radius:var(--r-md);background:var(--accent-pale)">1. Read the invoices</p>
-  <p style="padding:var(--space-xl);border-radius:var(--r-md);background:var(--tint)">2. Write one file per shop</p>
-</div>
-:::
-```
-
-Put a long block in its own file in the `custom` folder. On the page, write `:::html file=custom/export-steps.html` followed by a `:::` line.
-
-### Draw a sequence diagram
-
-Look in [examples/sequence-diagrams.html](examples/sequence-diagrams.html) for examples of how to draw a sequence diagram. Copy the file into the `custom` folder of the scratch pad and change its data. The examples use a basic design that is easy to read and understand. You can do more when a diagram needs it, but start from that design.
-
-Open the page in the scratch pad to check the result, because the file doesn't have the design tokens when it is opened on its own.
+Use an `:::html` block for a diagram or an animation. Read [The html block](reference.md#the-html-block) in reference.md before you draw one. It describes the design tokens and the examples, including how to draw a sequence diagram.
 
 ## Talk with Nick through the page
 
@@ -318,62 +301,7 @@ Don't run `done` for a decision with changes requested. The command `done` is on
 
 ### Assign a task to Nick
 
-Assign a task or a subtask to Nick only for work that blocks you and that only Nick can do. Never assign work that you could do yourself. These are examples of work that only Nick can do:
-
-- work that needs credentials that you don't have
-- an approval from Nick
-- a command that has to run on Nick's machine
-
-Write what Nick has to do in `--do` and why you can't do the work in `--why`. Put both of them in quotes. This is an example:
-
-```text
-$ scratch-pad task assign --pad 2026-11-21-invoice-export 3 --do "Run the export job on staging for one shop and open the file that it writes." --why "The agent can't log in to staging."
-[t-2] task 3 is assigned to Nick: Ship the export job
-link: http://127.0.0.1:4747/2026-11-21-invoice-export/progress-tracker#t-2
-```
-
-Never assign a whole task that has subtasks. Assign the subtasks that Nick has to do with `subtask assign` instead.
-
-You can always add a subtask, even to a task that is assigned to Nick. In that case `subtask add` prints the question "Which subtasks does Nick have to do?". It also prints the `--do` and `--why` of the task so that you can reuse them for the subtasks that Nick has to do.
-
-`status` and `check` will also report the task as a problem until you've assigned at least one of its subtasks. `status` prints the problem on a line that starts with `problem:`.
-
-If none of the subtasks are Nick's, run `task unassign <number>` to remove the assignment from the task. `subtask unassign <number>` removes the assignment from a subtask in the same way.
-
-#### Talk with Nick about an assigned task
-
-When Nick has to give input on a task or a subtask, write the details on a page and link to that page from `--do`. Nick can comment on a page, but he can't comment on the description of a task. Put anything else that Nick needs in the description with `task describe` or `subtask describe`.
-
-Each task and each subtask that's assigned to Nick can have a thread on its row on the progress tracker. Only Nick can start the thread, with the speech bubble on the row. The thread is for the feedback that Nick doesn't have any other place for. `wait` and `inbox` print his messages in the same layout as a comment on a page so check them. Reply to him with `reply`.
-
-### Create a subtask when you need Nick's input
-
-If you are blocked and require Nick's input on a piece of work, create a subtask under the task that the work belongs to and assign it to him with `subtask assign`. Link to the page in `--do`. Then create a second subtask for you to continue from Nick's input.
-
-If no task on the progress tracker fits the work, add a parent task with `task add` first. Then add the 2 subtasks under that parent task.
-
-This is an example:
-
-```text
-$ scratch-pad subtask add --pad 2026-11-21-invoice-export 3 "Give input on the retry limit"
-$ scratch-pad subtask assign --pad 2026-11-21-invoice-export 3.1 \
-    --do "Read the retry limit page and comment or mark this as done." \
-    --why "The next step depends on Nick's input."
-$ scratch-pad subtask add --pad 2026-11-21-invoice-export 3 "Apply Nick's input on the retry limit"
-```
-
-Nick gives his input on the page that you link from `--do`. The thread of the subtask is only for the feedback that Nick doesn't have any other place for. Reply to him there with `reply`, as described in [Talk with Nick about an assigned task](#talk-with-nick-about-an-assigned-task).
-
-### Find out that Nick has done a task
-
-Nick marks a task that is assigned to him as done in the browser. The server then starts the next task in the same way as `task done` does. After that, `wait` and `inbox` will print the task among the decisions. If the server has started a task, the last line of the item will describe that task. This is an example:
-
-```text
-[t-2] task 3 is done: Ship the export job
-  link: http://127.0.0.1:4747/2026-11-21-invoice-export/progress-tracker#t-2
-  Nick marked it as done in the browser.
-  [t-3] task 4 has started: Write the runbook
-```
+Assign a task or a subtask to Nick only for work that blocks you and that only Nick can do. Read [The tasks that are assigned to Nick](reference.md#the-tasks-that-are-assigned-to-nick) in reference.md before you assign a task, create a subtask for Nick's input or reply in the thread of a task. That section also describes the item that `wait` prints for a task that Nick has marked as done.
 
 ### Hand the notes to a subagent
 
@@ -466,14 +394,7 @@ If the environment variable `SCRATCH_PAD_PROSE_CHECK` is set to a script, `check
 
 ## Share a scratch pad
 
-When Nick wants a file that somebody can read without the server, run `export`. The file shows the same pages as the browser, but a reader can't reply to anything in the file. Everything that the file shows is listed under [The export](reference.md#the-export) in reference.md. This is an example:
-
-```text
-$ scratch-pad export --pad 2026-11-21-invoice-export
-exported 3 pages and 4 threads to /Users/nick/scratchpads/2026-11-21-invoice-export/export.html
-```
-
-Pass `--out <file>` to write the file somewhere else.
+When Nick wants a file that somebody can read without the server, run `export`. Read [The export](reference.md#the-export) in reference.md for the output and for everything that the file shows.
 
 ## Leave the server running when you finish
 

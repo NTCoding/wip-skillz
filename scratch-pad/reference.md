@@ -228,9 +228,41 @@ Refer to a task by its id on a page or in the description of a task or a subtask
 
 ## The tasks that are assigned to Nick
 
-[Assign a task to Nick](SKILL.md#assign-a-task-to-nick) in SKILL.md describes when you assign a task to Nick. This section describes what the commands print.
+### When to assign a task to Nick
 
-### The assign commands
+Assign a task or a subtask to Nick only for work that blocks you and that only Nick can do. Never assign work that you could do yourself. These are examples of work that only Nick can do:
+
+- work that needs credentials that you don't have
+- an approval from Nick
+- a command that has to run on Nick's machine
+
+### Talk with Nick about an assigned task
+
+When Nick has to give input on a task or a subtask, write the details on a page and link to that page from `--do`. Nick can comment on a page, but he can't comment on the description of a task. Put anything else that Nick needs in the description with `task describe` or `subtask describe`.
+
+Each task and each subtask that's assigned to Nick can have a thread on its row on the progress tracker. Only Nick can start the thread, with the speech bubble on the row. The thread is for the feedback that Nick doesn't have any other place for. `wait` and `inbox` print his messages in the same layout as a comment on a page so check them. Reply to him with `reply`.
+
+### Create a subtask when you need Nick's input
+
+If you are blocked and require Nick's input on a piece of work, create a subtask under the task that the work belongs to and assign it to him with `subtask assign`. Link to the page in `--do`. Then create a second subtask for you to continue from Nick's input.
+
+If no task on the progress tracker fits the work, add a parent task with `task add` first. Then add the 2 subtasks under that parent task.
+
+This is an example:
+
+```text
+$ scratch-pad subtask add --pad 2026-11-21-invoice-export 3 "Give input on the retry limit"
+$ scratch-pad subtask assign --pad 2026-11-21-invoice-export 3.1 \
+    --do "Read the retry limit page and comment or mark this as done." \
+    --why "The next step depends on Nick's input."
+$ scratch-pad subtask add --pad 2026-11-21-invoice-export 3 "Apply Nick's input on the retry limit"
+```
+
+Nick gives his input on the page that you link from `--do`. The thread of the subtask is only for the feedback that Nick doesn't have any other place for.
+
+### What the commands print
+
+#### The assign commands
 
 Put the text of `--do` and `--why` in quotes, because an option only takes the next word as its text. If a word is left over, `task assign` and `subtask assign` will print an error and won't assign anything. This is an example:
 
@@ -254,7 +286,7 @@ there isn't any description yet (write one with task describe)
 
 The "waiting for Nick" line of `status` counts each task and each subtask that is assigned to Nick and isn't done yet.
 
-### An assigned task with subtasks
+#### An assigned task with subtasks
 
 A task with subtasks can't be assigned, because its state is worked out from the states of its subtasks. `task assign` lists the subtasks of the task instead.
 
@@ -300,7 +332,7 @@ If the current task or the task of the current subtask is assigned to Nick, `sta
 [t-7] subtask 3.1: Open the file of one shop · task 3 of 4: Ship the export job · subtask 3.1 is assigned to Nick
 ```
 
-### A task that Nick has done
+#### A task that Nick has done
 
 Nick marks a task or a subtask as done in the browser. The server finishes the task in the same way as `task done` or `subtask done`. Then `inbox` and `wait` print the task once, among the decisions. If the server has started the next task, the last line will describe that task in the same way as the last line of `subtask done`:
 
@@ -520,6 +552,25 @@ Use these tokens rather than raw values so that the block looks like the rest of
 
 The frame sets the text's font and colour from the same tokens.
 
+This is an example of a small diagram:
+
+```markdown
+:::html
+<div style="display:flex;gap:var(--space-md)">
+  <p style="padding:var(--space-xl);border-radius:var(--r-md);background:var(--accent-pale)">1. Read the invoices</p>
+  <p style="padding:var(--space-xl);border-radius:var(--r-md);background:var(--tint)">2. Write one file per shop</p>
+</div>
+:::
+```
+
+Put a long block in its own file in the `custom` folder. On the page, write `:::html file=custom/export-steps.html` followed by a `:::` line.
+
+#### A sequence diagram
+
+Look in [examples/sequence-diagrams.html](examples/sequence-diagrams.html) for examples of how to draw a sequence diagram. Copy the file into the `custom` folder of the scratch pad and change its data. The examples use a basic design that is easy to read and understand. You can do more when a diagram needs it, but start from that design.
+
+Open the page in the scratch pad to check the result, because the file doesn't have the design tokens when it is opened on its own.
+
 ### The agent-note block
 
 An `:::agent-note` block contains a point that Nick needs to be aware of before he trusts the rest of the page. The block can contain any Markdown, including several paragraphs. The page shows the block under an "Agent note" label so that Nick can tell the agent's note apart from the page's own messages.
@@ -531,6 +582,15 @@ I haven't read the full code. I've only looked at the commit history.
 ```
 
 ## The export
+
+Run `export` when Nick wants a file that somebody can read without the server. A reader can't reply to anything in the file. This is an example:
+
+```text
+$ scratch-pad export --pad 2026-11-21-invoice-export
+exported 3 pages and 4 threads to /Users/nick/scratchpads/2026-11-21-invoice-export/export.html
+```
+
+Pass `--out <file>` to write the file somewhere else.
 
 The export is one HTML file that a reader can open from the disk without the server. `export` writes the browser page's bundle, the design system's CSS and the scratch pad's data into that file.
 
