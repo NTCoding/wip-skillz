@@ -388,6 +388,18 @@ I'd go with option 1, because a renamed field should fail the build. Other
 modules can safely use a small value object like `Currency`.
 ```
 
+## Bring the content to life with visualisations
+
+When you are writing to documents especially html (like when working in the scratchpad) bring the content to life with visualisations that make the concept easier to understand. For example: 
+
+- when talking about how the lifecycle of something, you could draw a state machine diagram 
+
+- when talking about how the words in 2 bounded contexts relate, draw a diagram showing each context and the words that live inside it and connections to the words in the other context
+
+- when talking about how something changes over tie, add a diagram showing the state at each step.
+
+YOu have the full power of HTML, JS, and CSS, don't waste it. If you're worried about wasting tokens, offer the user the choice of a visualiation, animation, slide show etc first before adding it.
+
 ## Check before sending
 
 Before you send the explanation or point Nick at its file, start a subagent
