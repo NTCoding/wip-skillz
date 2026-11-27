@@ -270,13 +270,15 @@ const OPENS = new RegExp(`^\\s*${NAME}$`)
 const CLOSES = /^\s*\)\s*(?::\s*[^{]+)?\{\s*$/
 const named = (re, l) => { const m = re.exec(l); return m && !KEYWORDS.has(m[1]) }
 const indentOf = s => /^\s*/.exec(s)[0].length
+const TOP_LEVEL = /^(?:export\s+)?(?:async\s+)?(?:function\b|interface\s)/
 function enclose (rows, b, where) {
   const first = rows.find(r => r.n)?.n; const last = rows.findLast(r => r.n)?.n
   if (!first || !/\.(ts|tsx|mjs|js)$/.test(b.file)) return rows
   const fileLines = fileAt(b.ref === 'base' ? meta.base : meta.head, b.file)
   const added = b.ref === 'base' ? new Set() : addedLines(b.file)
   // When the first copied line is the signature, the agent copied the whole method.
-  if (named(DECLARES, fileLines[first - 1]) || named(OPENS, fileLines[first - 1])) return rows
+  const signature = fileLines[first - 1]
+  if (named(DECLARES, signature) || named(OPENS, signature) || (indentOf(signature) === 0 && TOP_LEVEL.test(signature))) return rows
   let top; let open
   for (let k = first - 1; k > 0 && !top; k--) {
     if (named(DECLARES, fileLines[k - 1])) { top = k; open = k }
