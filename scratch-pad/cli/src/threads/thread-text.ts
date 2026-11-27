@@ -23,8 +23,6 @@ interface LineRange {
   readonly lastLine: number
 }
 
-const shortBlockLines = 8
-const previewLines = 5
 const longestSelection = 160
 
 const authorNames: Readonly<Record<Author, string>> = { nick: 'Nick', agent: 'agent' }
@@ -42,11 +40,11 @@ export function threadInboxLines(stored: PageThread, page: PageLines, links: Ite
     ...threadLinkLines(thread, links),
     ...selectedLines(thread),
     ...newMessageLines(thread, links.pad),
-    ...blockLines(thread, page, { length: 'preview', padName: links.pad }),
+    ...detachedLines(thread, page),
   ]
 }
 
-// A thread on a task is printed with its task instead of a page and a block.
+// A thread on a task is printed with its task instead of a file.
 export function taskThreadInboxLines(
   thread: TaskThread,
   item: TrackerItem,
@@ -95,7 +93,7 @@ export function threadShowLines(stored: PageThread, page: PageLines, links: Item
     `${threadHeader(thread, page)} · ${waitingTexts[thread.waitsFor]}`,
     ...threadLinkLines(thread, links),
     ...selectedLines(thread),
-    ...blockLines(thread, page, { length: 'whole' }),
+    ...blockLines(thread, page),
     ...thread.messages.map(timedMessageLine),
     ...(thread.outcome === undefined ? [] : [`  outcome: ${thread.outcome}`]),
   ]
@@ -139,32 +137,26 @@ function quotedLine(label: string, text: string): string {
   return `  ${label}: "${shortened}"`
 }
 
-type BlockLength =
-  { readonly length: 'preview'; readonly padName: string } | { readonly length: 'whole' }
-
 function showCommand(padName: string, id: string): string {
   return `scratch-pad show --pad ${padName} ${id}`
 }
 
-function blockLines(thread: PositionedThread, page: PageLines, shown: BlockLength): string[] {
-  const { position } = thread
-  if (position === undefined) {
+// The line that tells the agent that the text of a thread has gone from the page
+function detachedLines({ position }: PositionedThread, page: PageLines): string[] {
+  if (position?.kind !== 'detached') {
     return []
   }
-  if (position.kind === 'detached') {
-    return page.lines.length === 0
-      ? [`  block: (${page.file} doesn't exist any more)`]
-      : [`  block: (the selected text isn't in ${page.file} any more)`]
+  return page.lines.length === 0
+    ? [`  block: (${page.file} doesn't exist any more)`]
+    : [`  block: (the selected text isn't in ${page.file} any more)`]
+}
+
+function blockLines(thread: PositionedThread, page: PageLines): string[] {
+  const { position } = thread
+  if (position === undefined || position.kind === 'detached') {
+    return detachedLines(thread, page)
   }
-  const lines = numberedLines(page.lines, position.firstLine, position.lastLine)
-  if (shown.length === 'whole' || lines.length <= shortBlockLines) {
-    return ['  block:', ...lines]
-  }
-  return [
-    '  block:',
-    ...lines.slice(0, previewLines),
-    `    … ${lines.length - previewLines} more lines (${showCommand(shown.padName, thread.id)})`,
-  ]
+  return ['  block:', ...numberedLines(page.lines, position.firstLine, position.lastLine)]
 }
 
 function timedMessageLine(entry: Message): string {

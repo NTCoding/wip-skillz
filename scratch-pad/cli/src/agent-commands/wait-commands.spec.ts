@@ -19,9 +19,6 @@ const commentText = [
   `  link: ${exportJobAddress}#c-1`,
   '  selected: "The export job retries 5 times."',
   '  Nick: Is 5 retries enough on a slow network?',
-  '  block:',
-  '    5 | The export job retries 5 times.',
-  '    6 | Each retry waits 30 seconds.',
 ].join('\n')
 
 const endedText = 'the wait ended before a new item arrived in 2026-03-14-export-job'

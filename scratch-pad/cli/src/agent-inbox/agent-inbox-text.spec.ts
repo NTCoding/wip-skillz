@@ -153,8 +153,6 @@ describe('agentInboxText', () => {
         `  link: ${exportJobAddress}#c-1`,
         '  selected: "retries"',
         '  Nick: Is 5 retries enough on a slow network?',
-        '  block:',
-        '    5 | The export job retries 5 times.',
         '',
         '[d-1] decision · pages/index.md:9 · "Will the invoice template show the tax number?"',
         `  link: ${exportJobAddress}#d-1`,

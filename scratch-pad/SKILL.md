@@ -321,8 +321,6 @@ $ scratch-pad wait --pad 2026-11-21-invoice-export
   link: http://127.0.0.1:4747/2026-11-21-invoice-export/how-the-job-runs.md#c-1
   selected: "every night"
   Nick: Can a shop pick another time?
-  block:
-    3 | The export job writes the paid invoices of each shop to a CSV file every night.
 
 [d-1] decision · pages/1-how-the-job-runs.md:9 · "Will the export job retry 8 times?"
   link: http://127.0.0.1:4747/2026-11-21-invoice-export/how-the-job-runs.md#d-1
@@ -331,9 +329,9 @@ $ scratch-pad wait --pad 2026-11-21-invoice-export
 1 grammar note waits for a subagent
 ```
 
-Each item includes the file and the lines of its block so you can usually edit the page without reading the whole file. When the inbox only prints the first lines of a thread, run `show <id>` to see the whole thread and its block.
+The first line of each item contains the file and the line number. That's where you read the page. Run `show <id>` to see the whole thread and its block.
 
-A comment in the thread of a task shows the task instead of a file and a block. Its link opens the thread on the progress tracker. This is an example:
+A comment in the thread of a task shows the task instead of a file. Its link opens the thread on the progress tracker. This is an example:
 
 ```text
 [c-4] comment · subtask 3.1: Give input on the retry limit
@@ -467,8 +465,6 @@ $ scratch-pad inbox --pad 2026-11-21-invoice-export --type grammar,improvement
   link: http://127.0.0.1:4747/2026-11-21-invoice-export/how-the-job-runs.md#g-1
   selected: "can be slow"
   Nick: Write when it is slow.
-  block:
-    7 | The network of a small shop can be slow in the evening.
 Check that `wait` is still running before you end your turn.
 
 $ scratch-pad done --pad 2026-11-21-invoice-export g-1 "Wrote that the network is slow in the evening."
