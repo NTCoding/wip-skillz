@@ -192,7 +192,7 @@ $ scratch-pad page --pad 2026-11-21-invoice-export retry-limit night-retries.md 
 created /Users/nick/scratchpads/2026-11-21-invoice-export/pages/2.2-night-retries.md (decision d-6, a draft sub page of pages/2-retry-limit.md)
 Write the content of the page. Run ready d-6 to make the page ready for Nick.
 link: http://127.0.0.1:4747/2026-11-21-invoice-export/night-retries.md#d-6
-Run `wait` in the background before you end your turn.
+Check that `wait` is still running before you end your turn.
 ```
 
 The `page` command also creates a blank page. Leave out `--type` and run `page <parent> <file-name>`. The command creates an empty sub page of the parent page with the right number. Write the content in the file. `--type=decision` is the only type for now. An unknown type fails with a list of the types.
@@ -228,7 +228,7 @@ A page that passes every check becomes Open. The decision appears in Nick's Inbo
 $ scratch-pad ready --pad 2026-11-21-invoice-export d-6
 d-6 is ready. Nick can decide the decision page.
 link: http://127.0.0.1:4747/2026-11-21-invoice-export/night-retries.md#d-6
-Run `wait` in the background before you end your turn.
+Check that `wait` is still running before you end your turn.
 ```
 
 Each change of the state of a decision has its own command or button. You run `ready` to open a draft. You run `reopen` after a request for changes. You run `done` after Nick has decided. Nick presses the buttons for the other changes.
@@ -304,7 +304,14 @@ Nick can start a thread on each task and each subtask that's assigned to him. He
 
 ### Wait for Nick
 
-Run `wait` in the background and end your turn. Once Nick has been quiet for 10 seconds, `wait` will print the new items and end. In Claude Code, you run a command in the background with the `Bash` tool and `run_in_background`. If you can't run a command in the background, run `inbox` at the start of each turn instead. This is an example of what `wait` prints:
+Follow these steps to wait for Nick:
+
+1. Start `scratch-pad wait --follow --pad <folder>` with the `Monitor` tool and the longest timeout, which is 30 minutes. Then end your turn. Once Nick has been quiet for 10 seconds, `wait --follow` prints the new items, which Claude Code adds to the conversation as a notification. It keeps running after that and prints each new batch of items.
+2. The monitor runs until Claude Code tells you that the monitor has stopped. Start the monitor again as soon as you're told.
+3. If you can't use `Monitor`, run `wait` without `--follow` in the background with the `Bash` tool and `run_in_background`. That `wait` prints the new items and ends. It has always ended by the time that its notification starts a turn. Start `wait` again before you end your turn.
+4. If you can't run a command in the background, run `inbox` at the start of each turn instead.
+
+This is an example of what `wait` prints:
 
 ```text
 $ scratch-pad wait --pad 2026-11-21-invoice-export
@@ -334,7 +341,7 @@ A comment in the thread of a task shows the task instead of a file and a block. 
   Nick: Does the limit apply to every shop?
 ```
 
-Once you've dealt with every item, run `wait` in the background again and end your turn. Otherwise you won't see Nick's next comment until he writes in the chat.
+After you've dealt with every item, check that `wait` is still running and end your turn. A `wait` without `--follow` has ended by now. You have to start it again. Otherwise you won't see Nick's next comment until he writes in the chat.
 
 ### Reply to a comment
 
@@ -344,7 +351,7 @@ If Nick has asked for a change in his comment, change the page first and then re
 $ scratch-pad reply --pad 2026-11-21-invoice-export c-1 "No. Every shop exports at 02:00, which I've added to the page."
 c-1 now waits for Nick
 link: http://127.0.0.1:4747/2026-11-21-invoice-export/how-the-job-runs.md#c-1
-Run `wait` in the background before you end your turn.
+Check that `wait` is still running before you end your turn.
 ```
 
 ### Follow Nick's decision
@@ -356,12 +363,12 @@ $ scratch-pad show --pad 2026-11-21-invoice-export d-1
 [d-1] decision · pages/1-how-the-job-runs.md:9 · "Will the export job retry 8 times?" · waits for the agent
   link: http://127.0.0.1:4747/2026-11-21-invoice-export/how-the-job-runs.md#d-1
   Nick chose: proposal
-Run `wait` in the background before you end your turn.
+Check that `wait` is still running before you end your turn.
 
 $ scratch-pad done --pad 2026-11-21-invoice-export d-1 "Raised the retry limit to 8 on the page."
 d-1 is done
 link: http://127.0.0.1:4747/2026-11-21-invoice-export/how-the-job-runs.md#d-1
-Run `wait` in the background before you end your turn.
+Check that `wait` is still running before you end your turn.
 ```
 
 Don't run `reply` or `decide` for a decision, because a decision can't be replied to and the server has already logged Nick's choice. If Nick has written his own reply and it leaves something open, write the open point as a new question below the old one. Put a new `:::decision` block under the new question.
@@ -374,7 +381,7 @@ Nick can ask for changes instead of choosing an option. He always writes a reaso
 $ scratch-pad reopen --pad 2026-11-21-invoice-export d-2 "Added who the team is to both options."
 d-2 is open again
 link: http://127.0.0.1:4747/2026-11-21-invoice-export/how-the-job-runs.md#d-2
-Run `wait` in the background before you end your turn.
+Check that `wait` is still running before you end your turn.
 ```
 
 Don't run `done` for a decision with changes requested. The command `done` is only for a decision that Nick has decided. He decides by choosing an option or by writing his own reply. Keep the same id on the decision that you change. Nick's reason stays with the decision through its id.
@@ -449,7 +456,7 @@ Run the tool as: scratch-pad <command>
 2. Change the page file of each note in the way that Nick asks for. Only change the text that the note is about.
 3. Close each note with: done --pad 2026-11-21-invoice-export <id> "<one line about what you changed>"
 Don't reply to any comment, don't answer any decision and don't stop the server.
-Only the main agent runs `wait` so ignore the line "Run `wait` in the background before you end your turn."
+Only the main agent runs `wait` so ignore the line "Check that `wait` is still running before you end your turn."
 ```
 
 This is an example of what the subagent runs and what it sees:
@@ -462,12 +469,12 @@ $ scratch-pad inbox --pad 2026-11-21-invoice-export --type grammar,improvement
   Nick: Write when it is slow.
   block:
     7 | The network of a small shop can be slow in the evening.
-Run `wait` in the background before you end your turn.
+Check that `wait` is still running before you end your turn.
 
 $ scratch-pad done --pad 2026-11-21-invoice-export g-1 "Wrote that the network is slow in the evening."
 g-1 is done
 link: http://127.0.0.1:4747/2026-11-21-invoice-export/how-the-job-runs.md#g-1
-Run `wait` in the background before you end your turn.
+Check that `wait` is still running before you end your turn.
 ```
 
 Nick still sees the closed note on the page. The note includes the line about the change.

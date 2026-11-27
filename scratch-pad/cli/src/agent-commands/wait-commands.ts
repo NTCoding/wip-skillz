@@ -25,6 +25,26 @@ export async function waitForAgentInbox(
   folder: ScratchPadFolder,
   request: WaitRequest,
 ): Promise<string> {
+  const batches: string[] = []
+  await waitForBatches(folder, request, (text) => batches.push(text), 'one batch')
+  return batches[0] ?? `the wait ended before a new item arrived in ${folder.name}`
+}
+
+// Prints every batch of new items as soon as it's ready, until the wait is stopped.
+export async function followAgentInbox(
+  folder: ScratchPadFolder,
+  request: WaitRequest,
+  printBatch: (text: string) => void,
+): Promise<void> {
+  await waitForBatches(folder, request, printBatch, 'every batch')
+}
+
+async function waitForBatches(
+  folder: ScratchPadFolder,
+  request: WaitRequest,
+  printBatch: (text: string) => void,
+  howMany: 'one batch' | 'every batch',
+): Promise<void> {
   const deadline =
     request.timeoutMilliseconds === undefined
       ? Number.POSITIVE_INFINITY
@@ -36,15 +56,20 @@ export async function waitForAgentInbox(
       const timedOut = Date.now() >= deadline
       const check = printOnceNickIsQuiet(folder, request, timedOut)
       if (check.kind === 'printed') {
-        return printedInboxText(folder, check.selection, false, await request.links())
+        printBatch(printedInboxText(folder, check.selection, false, await request.links()))
+      } else if (problems.haveNewOnes()) {
+        printBatch(
+          printedInboxText(folder, nothingNew(folder, request), false, await request.links()),
+        )
+      } else if (timedOut || request.stopSignal.aborted) {
+        return
+      } else {
+        await nextChange(watch, Math.min(deadline, check.until), request, () => problems.changed())
+        continue
       }
-      if (problems.haveNewOnes()) {
-        return printedInboxText(folder, nothingNew(folder, request), false, await request.links())
+      if (howMany === 'one batch' || request.stopSignal.aborted) {
+        return
       }
-      if (timedOut || request.stopSignal.aborted) {
-        return `the wait ended before a new item arrived in ${folder.name}`
-      }
-      await nextChange(watch, Math.min(deadline, check.until), request, () => problems.changed())
     }
   } finally {
     watch.close()

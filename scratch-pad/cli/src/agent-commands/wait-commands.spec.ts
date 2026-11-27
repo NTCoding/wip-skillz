@@ -10,7 +10,7 @@ import { type ScratchPadFolder } from '../scratch-pad-folder/scratch-pad-folder'
 import { retryAnchor } from '../threads/thread-fixtures'
 import { threadOnAssignedSubtask } from './agent-commands-fixtures'
 import { readAgentInbox } from './inbox-commands'
-import { waitForAgentInbox, type WaitRequest } from './wait-commands'
+import { followAgentInbox, waitForAgentInbox, type WaitRequest } from './wait-commands'
 
 const commentText = [
   '1 new item in 2026-03-14-export-job',
@@ -48,6 +48,15 @@ function nickCommentsOnRetryPolicy(folder: ScratchPadFolder): void {
     page: 'pages/index.md',
     anchor: retryAnchor,
     text: 'Is 5 retries enough on a slow network?',
+  })
+}
+
+function nickWritesNewComment(folder: ScratchPadFolder): void {
+  nickComments(folder, {
+    type: 'comment',
+    page: 'pages/index.md',
+    anchor: retryAnchor,
+    text: 'What about a longer wait?',
   })
 }
 
@@ -151,5 +160,51 @@ describe('waitForAgentInbox', () => {
     await expect(
       waitForAgentInbox(folder, waitRequest({ stopSignal: stopping.signal })),
     ).resolves.toBe(endedText)
+  })
+})
+
+describe('followAgentInbox', () => {
+  it('prints each batch of comments when Nick writes a comment after the batch before', async () => {
+    const folder = exportJobScratchPad(temporaryHome())
+    const stopping = new AbortController()
+    const batches: string[] = []
+    setTimeout(() => nickCommentsOnRetryPolicy(folder), 20)
+    setTimeout(() => nickWritesNewComment(folder), 200)
+    setTimeout(() => stopping.abort(), 500)
+
+    await followAgentInbox(folder, waitRequest({ stopSignal: stopping.signal }), (text) =>
+      batches.push(text),
+    )
+
+    expect(batches).toHaveLength(2)
+    expect(batches[0]).toBe(commentText)
+    expect(batches[1]).toMatch(/^1 new item in 2026-03-14-export-job\n\n\[c-2\] comment/)
+  })
+
+  it('prints nothing when the stop signal is aborted before a comment arrives', async () => {
+    const folder = exportJobScratchPad(temporaryHome())
+    const stopping = new AbortController()
+    const batches: string[] = []
+    setTimeout(() => stopping.abort(), 30)
+
+    await followAgentInbox(folder, waitRequest({ stopSignal: stopping.signal }), (text) =>
+      batches.push(text),
+    )
+
+    expect(batches).toStrictEqual([])
+  })
+
+  it('ends after the batch that is printed when the stop signal is aborted during the batch', async () => {
+    const folder = exportJobScratchPad(temporaryHome())
+    const stopping = new AbortController()
+    const batches: string[] = []
+    nickCommentsOnRetryPolicy(folder)
+
+    await followAgentInbox(folder, waitRequest({ stopSignal: stopping.signal }), (text) => {
+      batches.push(text)
+      stopping.abort()
+    })
+
+    expect(batches).toStrictEqual([commentText])
   })
 })

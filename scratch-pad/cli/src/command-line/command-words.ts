@@ -13,6 +13,7 @@ export const optionNames = [
   'port',
   'quiet',
   'timeout',
+  'follow',
   'out',
   'before',
   'after',
@@ -30,6 +31,7 @@ const parserOptions = {
   port: { type: 'string' },
   quiet: { type: 'string' },
   timeout: { type: 'string' },
+  follow: { type: 'boolean' },
   out: { type: 'string' },
   before: { type: 'string' },
   after: { type: 'string' },
@@ -49,6 +51,7 @@ export interface CommandOptions {
   readonly port: string | undefined
   readonly quiet: string | undefined
   readonly timeout: string | undefined
+  readonly follow: boolean
   readonly out: string | undefined
   readonly before: string | undefined
   readonly after: string | undefined
@@ -122,6 +125,12 @@ export class PlacementError extends ScratchPadError {
   }
 }
 
+export class FollowWithTimeoutError extends ScratchPadError {
+  constructor(usage: string) {
+    super(`Pass either --follow or --timeout. Usage: scratch-pad ${usage}`)
+  }
+}
+
 class UnquotedAssignmentTextError extends ScratchPadError {
   constructor(words: readonly string[], usage: string) {
     super(
@@ -181,6 +190,7 @@ export function parseCommandWords(argv: readonly string[], startsText: StartsTex
       port: textOption(values, 'port'),
       quiet: textOption(values, 'quiet'),
       timeout: textOption(values, 'timeout'),
+      follow: flagOption(values, 'follow'),
       out: textOption(values, 'out'),
       before: textOption(values, 'before'),
       after: textOption(values, 'after'),
