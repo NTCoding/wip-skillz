@@ -6,7 +6,7 @@ import { listPages, outlinePage } from '../agent-commands/page-commands'
 import { setGoalOfScratchPad } from '../agent-commands/progress-tracker-commands'
 import { createPage, makeDecisionPageReady } from '../agent-commands/decision-page-commands'
 import { finishItem, reopenItem, replyToThread, showItem } from '../agent-commands/thread-commands'
-import { waitForAgentInbox } from '../agent-commands/wait-commands'
+import { followAgentInbox, waitForAgentInbox } from '../agent-commands/wait-commands'
 import { browserPageBundle } from '../local-server/browser-page-bundle'
 import { toolBuild } from '../local-server/tool-build'
 import { padLink, textWithLink } from '../item-links/item-links'
@@ -20,7 +20,14 @@ import {
 } from '../server-process/server-process'
 import { servingText, startedServerText, stoppedServerText } from '../server-process/server-text'
 import { linksOf, pad, type CommandInput, type ScratchPadCommand } from './command-input'
-import { inboxTypes, milliseconds, portNumber, requiredWord, restOfWords } from './command-words'
+import {
+  FollowWithTimeoutError,
+  inboxTypes,
+  milliseconds,
+  portNumber,
+  requiredWord,
+  restOfWords,
+} from './command-words'
 import { improvementCommands } from './improvement-commands'
 import { taskCommands, withTrackerLink } from './task-commands'
 
@@ -28,12 +35,12 @@ const defaultPort = 4747
 const checkMilliseconds = 250
 const startMilliseconds = 5000
 const stopMilliseconds = 5000
-const defaultQuietMilliseconds = 10_000
+const defaultQuietMilliseconds = 120_000
 
-// An agent that ends its turn without starting `wait` again misses Nick's next comment. That's why
+// An agent that ends its turn while `wait` isn't running misses Nick's next comment. That's why
 // the output of the commands that the agent runs while it deals with Nick's items ends with this
 // line.
-const waitReminder = 'Run `wait` in the background before you end your turn.'
+const waitReminder = 'Check that `wait` is still running before you end your turn.'
 
 function withWaitReminder(text: string): string {
   return `${text}\n${waitReminder}`
@@ -135,20 +142,28 @@ export const scratchPadCommands: ReadonlyMap<string, ScratchPadCommand> = new Ma
   [
     'wait',
     {
-      usage: 'wait [--quiet <seconds>] [--timeout <seconds>]',
+      usage: 'wait [--follow] [--quiet <seconds>] [--timeout <seconds>]',
       summary:
-        'print the new items like inbox once Nick has been quiet for 10 seconds (--type works as for inbox)',
-      options: ['pad', 'type', 'quiet', 'timeout'],
-      run: (input: CommandInput) => {
+        'print the new items like inbox once Nick has been quiet for 2 minutes (--follow keeps printing each batch, --type works as for inbox)',
+      options: ['pad', 'type', 'quiet', 'timeout', 'follow'],
+      run: async (input: CommandInput) => {
+        if (input.options.follow && input.options.timeout !== undefined) {
+          throw new FollowWithTimeoutError(input.usage)
+        }
         const folder = input.folder()
-        return waitForAgentInbox(folder, {
+        const request = {
           types: inboxTypes(input.options.type),
           quietMilliseconds: milliseconds('quiet', input.options.quiet) ?? defaultQuietMilliseconds,
           timeoutMilliseconds: milliseconds('timeout', input.options.timeout),
           checkMilliseconds,
           stopSignal: input.stopSignal,
           links: () => linksOf(input, folder),
-        })
+        }
+        if (input.options.follow) {
+          await followAgentInbox(folder, request, input.emit)
+          return { text: '', exitCode: 0 }
+        }
+        return waitForAgentInbox(folder, request)
       },
     },
   ],

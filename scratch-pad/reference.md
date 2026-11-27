@@ -14,7 +14,7 @@ Every command prints a few short lines. If a command fails, it will exit with a 
 | `serve [--port <port>]`                            | Runs the server in the foreground. `start` runs this command in the background.                                                                                                                                                                                            |
 | `status`                                           | Prints the current task and what's waiting for the agent and for Nick. It will also print the scratch pad's address if the server is running.                                                                                                                              |
 | `inbox [--type <types>]`                           | Prints the new items that are waiting for the agent. `--all` also prints the items that were printed before.                                                                                                                                                               |
-| `wait`                                             | Waits until Nick has been quiet for 10 seconds and then prints the new items in the same way as `inbox`                                                                                                                                                                    |
+| `wait [--follow]`                                  | Waits until Nick has been quiet for 2 minutes and then prints the new items in the same way as `inbox`. `--follow` keeps running and prints each new batch                                                                                                                 |
 | `show <id>`                                        | Prints one whole thread or decision                                                                                                                                                                                                                                        |
 | `reply <id> <text>`                                | Adds your reply to a thread, which then waits for Nick                                                                                                                                                                                                                     |
 | `done <id> <outcome>`                              | Closes a note or a decision with one line about what you changed                                                                                                                                                                                                           |
@@ -54,10 +54,11 @@ The types for `--type` are `comment`, `decision`, `grammar` and `improvement`. Y
 
 `--all` prints an item again for as long as the item waits for you. A thread waits for you until you reply to it or close it with `done`, whereas a decision waits for you until you close it with `done`. A decision with changes requested waits for you until you run `reopen`.
 
-`wait` takes 2 more options:
+`wait` takes 3 more options:
 
-- `--quiet <seconds>` changes how long Nick has to be quiet, which is 10 seconds by default.
+- `--quiet <seconds>` changes how long Nick has to be quiet, which is 2 minutes by default.
 - `--timeout <seconds>` ends the wait after that many seconds, even if there aren't any new items.
+- `--follow` keeps `wait` running when the new items have been printed. The next batch is printed in the same way after Nick was quiet again. `wait --follow` only ends when somebody stops it. A stopped `wait --follow` doesn't print anything and exits with 0. Start it with the `Monitor` tool, which adds each batch to the conversation as a notification. `--follow` doesn't work with `--timeout`.
 
 Put `--pad` before the text of `new`, `goal`, `task add`, `subtask add`, `decide`, `improve`, `improvement edit`, `reply` or `done`, because an option after the text is read as part of the text:
 
@@ -65,7 +66,7 @@ Put `--pad` before the text of `new`, `goal`, `task add`, `subtask add`, `decide
 $ scratch-pad reply --pad 2026-11-21-invoice-export c-1 "Every shop can pick a time."
 c-1 now waits for Nick
 link: http://127.0.0.1:4747/2026-11-21-invoice-export/how-the-job-runs.md#c-1
-Run `wait` in the background before you end your turn.
+Check that `wait` is still running before you end your turn.
 ```
 
 ## The environment variables
@@ -127,7 +128,7 @@ $ scratch-pad show --pad 2026-11-21-invoice-export c-1
   block:
     3 | The export job writes the paid invoices of each shop to a CSV file every night.
   Nick (2026-11-21 09:12): Can a shop pick another time?
-Run `wait` in the background before you end your turn.
+Check that `wait` is still running before you end your turn.
 ```
 
 If the text that an item is attached to is deleted from the page, the item will be detached. For a detached item, the tool prints the line that the text was on rather than its block:
@@ -337,7 +338,7 @@ If the `context:` line of an open decision is missing or empty, `check` will pri
 
 ### The decision page
 
-A decision page is a sub page for one decision. The agent writes the content of the page in the file. Use an inline decision block for a small decision. Use a decision page for a decision that needs more than 3 paragraphs for Nick to understand the problem and the solution.
+A decision page is a sub page for one decision. The agent writes the content of the page in the file. Use an inline decision block for a small decision. Use a decision page for a decision that needs more than 3 paragraphs for Nick to understand the problem and the solution. The page puts the problem and the options in one place so that Nick doesn't have to scroll through the parent page to find them.
 
 #### The page command
 
@@ -352,7 +353,7 @@ $ scratch-pad page --pad 2026-11-21-invoice-export retry-limit night-retries.md 
 created /Users/nick/scratchpads/2026-11-21-invoice-export/pages/2.2-night-retries.md (decision d-6, a draft sub page of pages/2-retry-limit.md)
 Write the content of the page. Run ready d-6 to make the page ready for Nick.
 link: http://127.0.0.1:4747/2026-11-21-invoice-export/night-retries.md#d-6
-Run `wait` in the background before you end your turn.
+Check that `wait` is still running before you end your turn.
 ```
 
 The decision has the next free id. The inline blocks and the decision pages use the same list of ids. The log of decisions uses the same list too.
@@ -366,7 +367,7 @@ The first 2 lines of the file are the marker, which is the block `:::decision-pa
 - A `## Options` section with a line of instructions and one `### Option 1: name` section
 - A `## Agent recommendation` section for the option that the agent recommends and the reason
 
-The template has one option so that the number of options isn't fixed. The agent writes a `### Option N: name` section for each option and numbers the options from 1. A decision needs at least 2 options. It doesn't have an upper limit. The text of an option can show the current text and the proposed text of code or of a skill file. In a decision page, "before" means the current text and "after" means the proposed text. They don't mean the current state and the proposed solution of the whole decision.
+The agent replaces each placeholder with real content and deletes the line of instructions. The template has one option so that the number of options isn't fixed. The agent writes a `### Option N: name` section for each option and numbers the options from 1. A decision needs at least 2 options. It doesn't have an upper limit. The text of an option can show the current text and the proposed text of code or of a skill file. In a decision page, "before" means the current text and "after" means the proposed text. They don't mean the current state and the proposed solution of the whole decision.
 
 #### The checks
 
@@ -401,7 +402,16 @@ Decision d-6 isn't ready. Fix these problems and run ready d-6 again:
   pages/2.2-night-retries.md:4 under "<title>": the page still has the placeholder <title> from the template. Replace the placeholder with real content
 ```
 
-A page that passes every check becomes Open. The command prints `d-6 is ready. Nick can decide the decision page.` and the link. The server records a `decision-ready` event. The decision appears in the Inbox. The browser notifies Nick once. `ready` fails for a decision that is already ready. It fails for an id that isn't the id of a decision page too.
+A page that passes every check becomes Open:
+
+```text
+$ scratch-pad ready --pad 2026-11-21-invoice-export d-6
+d-6 is ready. Nick can decide the decision page.
+link: http://127.0.0.1:4747/2026-11-21-invoice-export/night-retries.md#d-6
+Check that `wait` is still running before you end your turn.
+```
+
+The server records a `decision-ready` event. The decision appears in the Inbox. The browser notifies Nick once. `ready` fails for a decision that is already ready. It fails for an id that isn't the id of a decision page too.
 
 Each state of a decision has its own command or button:
 
@@ -436,7 +446,7 @@ The agent sees the problems in `check`, in `inbox` and in `wait`. The text of th
 
 The agent never writes the status, the table of contents or the Decision section. The server adds them to a finished page:
 
-- The status under the title, which shows the state of the decision
+- The status under the title, which shows the state of the decision: Draft, Open, Changes requested or Decided
 - A table of contents that links to the sections and to the options
 - A Decision section at the end
 
@@ -466,7 +476,7 @@ $ scratch-pad inbox --pad 2026-11-21-invoice-export
 $ scratch-pad reopen --pad 2026-11-21-invoice-export d-2 "Added who the team is to both options."
 d-2 is open again
 link: http://127.0.0.1:4747/2026-11-21-invoice-export/how-the-job-runs.md#d-2
-Run `wait` in the background before you end your turn.
+Check that `wait` is still running before you end your turn.
 ```
 
 `reopen` only works for a decision with changes requested. The command fails for a decision that doesn't have any changes requested. `done` fails for a decision with changes requested too because `done` closes a decision that Nick has answered. He answers by choosing an option or by writing his own reply. The decision returns to Nick's Inbox. Nick can choose an option or ask for changes again.
@@ -480,7 +490,7 @@ $ scratch-pad show --pad 2026-11-21-invoice-export d-2
   1. Nick requested changes: The options don't say who the team is.
      outcome: Added who the team is to both options.
   2. Nick requested changes: Say which person on the team reads the log.
-Run `wait` in the background before you end your turn.
+Check that `wait` is still running before you end your turn.
 ```
 
 The Decisions page lists one state at a time. It has a button for each of these states:

@@ -24,7 +24,7 @@ type ScratchPadEnvironment = Environment & {
   readonly SCRATCH_PAD: string
 }
 
-export const waitReminderText = 'Run `wait` in the background before you end your turn.'
+export const waitReminderText = 'Check that `wait` is still running before you end your turn.'
 
 const noProcessSetUp: ProcessSetUp = {
   readStandardInput: () => Promise.resolve(''),

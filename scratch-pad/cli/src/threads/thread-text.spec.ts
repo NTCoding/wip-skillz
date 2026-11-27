@@ -30,14 +30,11 @@ describe('threadInboxLines', () => {
     )
   })
 
-  it('prints the id, the lines, the section, the selected text, the message and the block', () => {
+  it('prints the id, the lines, the section, the selected text and the message but not the block', () => {
     expect(threadInboxLines(aThread({}), onIndexPage(indexPage), unservedLinks)).toStrictEqual([
       '[c-1] comment · pages/index.md:5-6 · section "Retry policy"',
       '  selected: "The export job retries 5 times."',
       '  Nick: Is 5 retries enough on a slow network?',
-      '  block:',
-      '    5 | The export job retries 5 times.',
-      '    6 | Each retry waits 30 seconds.',
     ])
   })
 
@@ -67,16 +64,13 @@ describe('threadInboxLines', () => {
     )
   })
 
-  it('prints the current lines and block when the agent added lines above the text', () => {
+  it('prints the current lines when the agent added lines above the text', () => {
     const page = [...indexPage.slice(0, 4), 'A new paragraph.', '', ...indexPage.slice(4)]
 
     expect(threadInboxLines(aThread({}), onIndexPage(page), unservedLinks)).toStrictEqual([
       '[c-1] comment · pages/index.md:7-8 · section "Retry policy"',
       '  selected: "The export job retries 5 times."',
       '  Nick: Is 5 retries enough on a slow network?',
-      '  block:',
-      '    7 | The export job retries 5 times.',
-      '    8 | Each retry waits 30 seconds.',
     ])
   })
 
@@ -100,7 +94,7 @@ describe('threadInboxLines', () => {
     ])
   })
 
-  it('prints the first 5 lines and a pointer to show when the block is longer than 8 lines', () => {
+  it('prints neither the block nor a preview of it when the block is long', () => {
     const thread = aThread({
       anchor: {
         firstLine: 2,
@@ -111,14 +105,9 @@ describe('threadInboxLines', () => {
       },
     })
 
-    expect(threadInboxLines(thread, onIndexPage(longPage), unservedLinks).slice(-6)).toStrictEqual([
-      '     2 | Line 2',
-      '     3 | Line 3',
-      '     4 | Line 4',
-      '     5 | Line 5',
-      '     6 | Line 6',
-      '    … 7 more lines (scratch-pad show --pad 2026-03-14-export-job c-1)',
-    ])
+    expect(threadInboxLines(thread, onIndexPage(longPage), unservedLinks).join('\n')).not.toContain(
+      'block:',
+    )
   })
 
   it('prints that the thread is detached with the old lines when the selected text was deleted', () => {
@@ -211,6 +200,17 @@ describe('threadShowLines', () => {
       '    6 | Each retry waits 30 seconds.',
       '  Nick (2026-03-14 09:30): Is 5 enough?',
       '  agent (2026-03-14 09:40): I raised it to 8.',
+    ])
+  })
+
+  it('prints only the page and the messages when an improvement note has no anchor', () => {
+    const thread = aThread({ id: 'i-1', type: 'improvement', anchor: undefined })
+
+    expect(
+      threadShowLines(thread, onIndexPage(indexPage), unservedLinks).slice(0, 2),
+    ).toStrictEqual([
+      '[i-1] improvement note · pages/index.md · waits for the agent',
+      '  Nick (2026-03-14 09:30): Is 5 retries enough on a slow network?',
     ])
   })
 

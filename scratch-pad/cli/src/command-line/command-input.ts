@@ -16,6 +16,8 @@ export interface CommandInput {
   readonly toolCommand: ToolCommand
   readonly stopSignal: AbortSignal
   readonly log: (text: string) => void
+  // Writes the text to standard output at once, while the command is still running
+  readonly emit: (text: string) => void
 }
 
 export interface ScratchPadCommand {

@@ -38,7 +38,9 @@ class OptionNotAllowedError extends ScratchPadError {
 export async function runCommandLine(commandLine: CommandLine): Promise<number> {
   try {
     const output = await runCommand(commandLine)
-    commandLine.stdout.write(`${output.text}\n`)
+    if (output.text !== '') {
+      commandLine.stdout.write(`${output.text}\n`)
+    }
     return output.exitCode
   } catch (error) {
     if (error instanceof ScratchPadError || isSystemError(error)) {
@@ -88,6 +90,7 @@ async function runCommand(commandLine: CommandLine): Promise<CommandOutput> {
     toolCommand: commandLine.toolCommand,
     stopSignal: commandLine.stopSignal,
     log: (text) => commandLine.stderr.write(`${text}\n`),
+    emit: (text) => commandLine.stdout.write(`${text}\n`),
   })
   return typeof output === 'string' ? { text: output, exitCode: 0 } : output
 }

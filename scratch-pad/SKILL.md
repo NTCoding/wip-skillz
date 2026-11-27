@@ -183,81 +183,13 @@ If you reword the question, keep the same id. Give a new decision the next free 
 
 ### Write a decision page for a big decision
 
-Use an inline `:::decision` block for a small decision. Use a decision page for a decision that needs more than 3 paragraphs for Nick to understand the problem and the solution. A decision page is a sub page of the page that it belongs to. It puts the problem and the options in one place so that Nick doesn't have to scroll through the page to find them.
-
-Create the page with the `page` command and the type `decision`. The command takes the parent page and the file name of the new page. It never takes any content, because the page is content that you write in the file. The numbering and the parent rules are the same as for any other page:
+Use an inline `:::decision` block for a small decision. Use a decision page for a decision that needs more than 3 paragraphs for Nick to understand the problem and the solution. Create the page with this command, which writes a template that you fill in:
 
 ```text
 $ scratch-pad page --pad 2026-11-21-invoice-export retry-limit night-retries.md --type=decision
-created /Users/nick/scratchpads/2026-11-21-invoice-export/pages/2.2-night-retries.md (decision d-6, a draft sub page of pages/2-retry-limit.md)
-Write the content of the page. Run ready d-6 to make the page ready for Nick.
-link: http://127.0.0.1:4747/2026-11-21-invoice-export/night-retries.md#d-6
-Run `wait` in the background before you end your turn.
 ```
 
-The `page` command also creates a blank page. Leave out `--type` and run `page <parent> <file-name>`. The command creates an empty sub page of the parent page with the right number. Write the content in the file. `--type=decision` is the only type for now. An unknown type fails with a list of the types.
-
-The command writes a template with the next free decision id. The first 2 lines of the file are the marker `:::decision-page d-6` and a closing `:::` line. The marker tells the server that the page is a decision page. Don't change the marker. The template has this structure:
-
-1. A title and a description under the title
-2. A "Context" section for the problem or the goal, explained with examples
-3. An "Options" section with one `### Option 1: name` section
-4. An "Agent recommendation" section for the option that you recommend and the reason
-
-The template has 6 placeholders in angle brackets: `<title>`, `<description>`, `<the problem or goal, explained with examples>`, `<name>`, `<prose>` and `<which option and why>`. It also has a line of instructions in angle brackets under the "Options" heading. Replace each placeholder with real content and delete the line of instructions. The server only checks these exact texts. Other text in angle brackets, like `List<Invoice>`, is content. The template has one option so that the number of options isn't fixed. Write a `### Option N: name` section for each option and number the options from 1. A decision needs at least 2 options. It doesn't have an upper limit.
-
-Use "before" and "after" in an option only for the current text and the proposed text. For example, show the current text of a skill file and the proposed text of the same file in 2 code blocks. Never use "before" and "after" for the current state and the proposed solution of the whole decision. The Context section explains the current state. Each option is a proposed solution.
-
-Link to the decision page from the parent page like any other page. `check` reports a decision page that the parent page doesn't link to.
-
-#### Make the page ready
-
-A new decision page is a draft. Nick can open a draft page. It shows the status Draft and the text that you have written. It doesn't show a Decision section or a button. The decision isn't in Nick's Inbox or on the Decisions page. `inbox` and `wait` don't list the decision. Nick isn't notified.
-
-Run `ready` with the id of the decision to make the page ready. The command is the only way from Draft to Open. It runs the checks of the template. A failed check makes the command fail. The command lists every problem and the place of the problem in the file. The page stays a draft:
-
-```text
-$ scratch-pad ready --pad 2026-11-21-invoice-export d-6
-Decision d-6 isn't ready. Fix these problems and run ready d-6 again:
-  pages/2.2-night-retries.md:4 under "<title>": the page still has the placeholder <title> from the template. Replace the placeholder with real content
-```
-
-A page that passes every check becomes Open. The decision appears in Nick's Inbox. Nick is notified once:
-
-```text
-$ scratch-pad ready --pad 2026-11-21-invoice-export d-6
-d-6 is ready. Nick can decide the decision page.
-link: http://127.0.0.1:4747/2026-11-21-invoice-export/night-retries.md#d-6
-Run `wait` in the background before you end your turn.
-```
-
-Each change of the state of a decision has its own command or button. You run `ready` to open a draft. You run `reopen` after a request for changes. You run `done` after Nick has decided. Nick presses the buttons for the other changes.
-
-A page that you edit after it was ready can break the template. An Open decision stays in Nick's Inbox and on the Decisions page. Nick still sees the status and the buttons of the page. Nick's choice is still shown on a Decided page. The server shows the problems under the marker. `check`, `inbox` and `wait` print the problems with a text that matches the state of the decision. `wait` ends and prints the problems when a ready page breaks. Fix the problems in the file. You don't run `ready` again. Nick isn't notified a second time. `reopen` works on a broken page and prints the problems of the page.
-
-#### What the server checks and shows
-
-The server checks the page against the template each time the file changes. A decision page is broken in these cases:
-
-- Some text in angle brackets from the template is still on the page.
-- The page has fewer than 2 options.
-- A section is missing or renamed.
-- A section is written twice or is out of order.
-- The title, the description, the Context section, the Agent recommendation section or an option doesn't have any text.
-- An option heading isn't `### Option N: name`, or the numbers of the options aren't in order.
-
-A draft page that is broken isn't listed as waiting for Nick. Fix the problems in the file. `check` and `ready` print the problems of a draft.
-
-A finished page shows the status under the title. The status has these values:
-
-- Draft
-- Open
-- Changes requested
-- Decided
-
-A draft page doesn't show the table of contents or the Decision section. A page that is Open shows a table of contents and a Decision section at the end. The Decision section has a button for each option, a field for Nick's own text and a "Request changes" button. Don't write the status, the table of contents or the Decision section yourself.
-
-The decision has an id like d-6, which the inline blocks use too. `show`, `done` and `reopen` work with the id in the same way as for an inline decision, including the rounds of changes requested.
+Read [The decision page](reference.md#the-decision-page) in reference.md before you write the page, because that section describes the template, the checks and the command `ready` that makes the page ready for Nick.
 
 ### Emphasise a key point
 
@@ -304,7 +236,14 @@ Nick can start a thread on each task and each subtask that's assigned to him. He
 
 ### Wait for Nick
 
-Run `wait` in the background and end your turn. Once Nick has been quiet for 10 seconds, `wait` will print the new items and end. In Claude Code, you run a command in the background with the `Bash` tool and `run_in_background`. If you can't run a command in the background, run `inbox` at the start of each turn instead. This is an example of what `wait` prints:
+Follow these steps to wait for Nick:
+
+1. Start `scratch-pad wait --follow --pad <folder>` with the `Monitor` tool and the longest timeout, which is 30 minutes. Then end your turn. Once Nick has been quiet for 2 minutes, `wait --follow` prints the new items, which Claude Code adds to the conversation as a notification. It keeps running after that and prints each new batch of items.
+2. The monitor runs until Claude Code tells you that the monitor has stopped. Start the monitor again as soon as you're told.
+3. If you can't use `Monitor`, run `wait` without `--follow` in the background with the `Bash` tool and `run_in_background`. That `wait` prints the new items and ends. It has always ended by the time that its notification starts a turn. Start `wait` again before you end your turn.
+4. If you can't run a command in the background, run `inbox` at the start of each turn instead.
+
+This is an example of what `wait` prints:
 
 ```text
 $ scratch-pad wait --pad 2026-11-21-invoice-export
@@ -314,8 +253,6 @@ $ scratch-pad wait --pad 2026-11-21-invoice-export
   link: http://127.0.0.1:4747/2026-11-21-invoice-export/how-the-job-runs.md#c-1
   selected: "every night"
   Nick: Can a shop pick another time?
-  block:
-    3 | The export job writes the paid invoices of each shop to a CSV file every night.
 
 [d-1] decision · pages/1-how-the-job-runs.md:9 · "Will the export job retry 8 times?"
   link: http://127.0.0.1:4747/2026-11-21-invoice-export/how-the-job-runs.md#d-1
@@ -324,9 +261,9 @@ $ scratch-pad wait --pad 2026-11-21-invoice-export
 1 grammar note waits for a subagent
 ```
 
-Each item includes the file and the lines of its block so you can usually edit the page without reading the whole file. When the inbox only prints the first lines of a thread, run `show <id>` to see the whole thread and its block.
+The first line of each item contains the file and the line number. That's where you read the page. Run `show <id>` to see the whole thread and its block.
 
-A comment in the thread of a task shows the task instead of a file and a block. Its link opens the thread on the progress tracker. This is an example:
+A comment in the thread of a task shows the task instead of a file. Its link opens the thread on the progress tracker. This is an example:
 
 ```text
 [c-4] comment · subtask 3.1: Give input on the retry limit
@@ -334,7 +271,7 @@ A comment in the thread of a task shows the task instead of a file and a block. 
   Nick: Does the limit apply to every shop?
 ```
 
-Once you've dealt with every item, run `wait` in the background again and end your turn. Otherwise you won't see Nick's next comment until he writes in the chat.
+After you've dealt with every item, check that `wait` is still running and end your turn. A `wait` without `--follow` has ended by now. You have to start it again. Otherwise you won't see Nick's next comment until he writes in the chat.
 
 ### Reply to a comment
 
@@ -344,7 +281,7 @@ If Nick has asked for a change in his comment, change the page first and then re
 $ scratch-pad reply --pad 2026-11-21-invoice-export c-1 "No. Every shop exports at 02:00, which I've added to the page."
 c-1 now waits for Nick
 link: http://127.0.0.1:4747/2026-11-21-invoice-export/how-the-job-runs.md#c-1
-Run `wait` in the background before you end your turn.
+Check that `wait` is still running before you end your turn.
 ```
 
 ### Follow Nick's decision
@@ -356,12 +293,12 @@ $ scratch-pad show --pad 2026-11-21-invoice-export d-1
 [d-1] decision · pages/1-how-the-job-runs.md:9 · "Will the export job retry 8 times?" · waits for the agent
   link: http://127.0.0.1:4747/2026-11-21-invoice-export/how-the-job-runs.md#d-1
   Nick chose: proposal
-Run `wait` in the background before you end your turn.
+Check that `wait` is still running before you end your turn.
 
 $ scratch-pad done --pad 2026-11-21-invoice-export d-1 "Raised the retry limit to 8 on the page."
 d-1 is done
 link: http://127.0.0.1:4747/2026-11-21-invoice-export/how-the-job-runs.md#d-1
-Run `wait` in the background before you end your turn.
+Check that `wait` is still running before you end your turn.
 ```
 
 Don't run `reply` or `decide` for a decision, because a decision can't be replied to and the server has already logged Nick's choice. If Nick has written his own reply and it leaves something open, write the open point as a new question below the old one. Put a new `:::decision` block under the new question.
@@ -374,7 +311,7 @@ Nick can ask for changes instead of choosing an option. He always writes a reaso
 $ scratch-pad reopen --pad 2026-11-21-invoice-export d-2 "Added who the team is to both options."
 d-2 is open again
 link: http://127.0.0.1:4747/2026-11-21-invoice-export/how-the-job-runs.md#d-2
-Run `wait` in the background before you end your turn.
+Check that `wait` is still running before you end your turn.
 ```
 
 Don't run `done` for a decision with changes requested. The command `done` is only for a decision that Nick has decided. He decides by choosing an option or by writing his own reply. Keep the same id on the decision that you change. Nick's reason stays with the decision through its id.
@@ -449,7 +386,7 @@ Run the tool as: scratch-pad <command>
 2. Change the page file of each note in the way that Nick asks for. Only change the text that the note is about.
 3. Close each note with: done --pad 2026-11-21-invoice-export <id> "<one line about what you changed>"
 Don't reply to any comment, don't answer any decision and don't stop the server.
-Only the main agent runs `wait` so ignore the line "Run `wait` in the background before you end your turn."
+Only the main agent runs `wait` so ignore the line "Check that `wait` is still running before you end your turn."
 ```
 
 This is an example of what the subagent runs and what it sees:
@@ -460,14 +397,12 @@ $ scratch-pad inbox --pad 2026-11-21-invoice-export --type grammar,improvement
   link: http://127.0.0.1:4747/2026-11-21-invoice-export/how-the-job-runs.md#g-1
   selected: "can be slow"
   Nick: Write when it is slow.
-  block:
-    7 | The network of a small shop can be slow in the evening.
-Run `wait` in the background before you end your turn.
+Check that `wait` is still running before you end your turn.
 
 $ scratch-pad done --pad 2026-11-21-invoice-export g-1 "Wrote that the network is slow in the evening."
 g-1 is done
 link: http://127.0.0.1:4747/2026-11-21-invoice-export/how-the-job-runs.md#g-1
-Run `wait` in the background before you end your turn.
+Check that `wait` is still running before you end your turn.
 ```
 
 Nick still sees the closed note on the page. The note includes the line about the change.
