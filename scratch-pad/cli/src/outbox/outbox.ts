@@ -1,3 +1,4 @@
+import { answerDecision, type Answer, type NewDecisionAnswer } from '../decisions/decision-answer'
 import { ScratchPadError } from '../scratch-pad-error'
 import {
   checkMessageText,
@@ -7,8 +8,9 @@ import {
   type ThreadType,
 } from '../threads/thread'
 
-// Nick adds a comment or a reply to the outbox when he wants to send it later together with
-// others. The agent never sees an item in the outbox until Nick sends the outbox.
+// Nick adds a comment, a reply or a decision to the outbox when he works in draft mode and wants
+// to send them later together. The agent never sees an item in the outbox until Nick sends the
+// outbox.
 export interface QueuedComment {
   readonly kind: 'comment'
   readonly number: number
@@ -26,9 +28,22 @@ export interface QueuedReply {
   readonly time: string
 }
 
-export type QueuedItem = QueuedComment | QueuedReply
+export interface QueuedDecision {
+  readonly kind: 'decision'
+  readonly number: number
+  readonly decision: string
+  readonly page: string
+  readonly line: number
+  readonly question: string
+  readonly answer: Answer
+  readonly chosenOption?: string | undefined
+  readonly time: string
+}
 
-export type NewQueuedItem = Omit<QueuedComment, 'number'> | Omit<QueuedReply, 'number'>
+export type QueuedItem = QueuedComment | QueuedReply | QueuedDecision
+
+export type NewQueuedItem =
+  Omit<QueuedComment, 'number'> | Omit<QueuedReply, 'number'> | Omit<QueuedDecision, 'number'>
 
 interface NewQueuedComment {
   readonly type: ThreadType
@@ -74,6 +89,24 @@ export function queueReply(thread: Thread, text: string, time: string): NewQueue
   return { kind: 'reply', thread: thread.id, text: checkMessageText(text), time }
 }
 
+export function queueDecision(
+  input: NewDecisionAnswer,
+  time: string,
+  chosenOption?: string,
+): NewQueuedItem {
+  const checked = answerDecision(input, time)
+  return {
+    kind: 'decision',
+    decision: checked.id,
+    page: checked.page,
+    line: checked.line,
+    question: checked.question,
+    answer: checked.answer,
+    ...(chosenOption === undefined ? {} : { chosenOption }),
+    time,
+  }
+}
+
 export function findQueuedItem(items: readonly QueuedItem[], number: number): QueuedItem {
   const item = items.find((each) => each.number === number)
   if (item === undefined) {
@@ -86,6 +119,10 @@ export function editQueuedItem(
   items: readonly QueuedItem[],
   number: number,
   text: string,
-): QueuedItem {
-  return { ...findQueuedItem(items, number), text: checkMessageText(text) }
+): QueuedComment | QueuedReply {
+  const item = findQueuedItem(items, number)
+  if (item.kind === 'decision') {
+    throw new NotQueueableError(`editing decision ${item.decision}`)
+  }
+  return { ...item, text: checkMessageText(text) }
 }

@@ -5,7 +5,12 @@ import { type DecisionLogEntry } from '../decisions/decision-log'
 import { type DecisionReview } from '../decisions/decision-review'
 import { type NewEvent, type ScratchPadEvent } from '../events/scratch-pad-event'
 import { type Improvement, type NewImprovement } from '../improvements/improvements'
-import { type NewQueuedItem, type QueuedItem } from '../outbox/outbox'
+import {
+  type NewQueuedItem,
+  type QueuedComment,
+  type QueuedItem,
+  type QueuedReply,
+} from '../outbox/outbox'
 import { type ProgressTracker } from '../progress-tracker/progress-tracker'
 import { type ReadMarks, type SectionHash } from '../read-marks/read-marks'
 import { type Thread } from '../threads/thread'
@@ -129,7 +134,7 @@ export class PadDb {
     return this.outbox.save(item)
   }
 
-  updateQueuedItem(item: QueuedItem): void {
+  updateQueuedItem(item: QueuedComment | QueuedReply): void {
     this.outbox.updateText(item)
   }
 

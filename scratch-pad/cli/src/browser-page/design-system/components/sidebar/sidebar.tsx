@@ -12,11 +12,12 @@ interface SidebarProps {
   readonly heading: string
   readonly collapsed: boolean
   readonly onCollapsedChange: (collapsed: boolean) => void
+  readonly footerTools?: ReactNode
   readonly children: ReactNode
 }
 
 export function Sidebar(props: SidebarProps) {
-  const { label, title, titleHref, onNavigate, views, heading, collapsed } = props
+  const { label, title, titleHref, onNavigate, views, heading, collapsed, footerTools } = props
   return (
     <nav className="sidebar" aria-label={label} data-collapsed={collapsed}>
       <a
@@ -36,6 +37,7 @@ export function Sidebar(props: SidebarProps) {
         <ul className="sidebar__list">{props.children}</ul>
       </div>
       <div className="sidebar__foot">
+        {footerTools !== undefined && <div className="sidebar__foot-tools">{footerTools}</div>}
         <IconButton
           icon={collapsed ? 'sidebar-expand' : 'sidebar-collapse'}
           label={collapsed ? 'Expand the sidebar' : 'Collapse the sidebar'}

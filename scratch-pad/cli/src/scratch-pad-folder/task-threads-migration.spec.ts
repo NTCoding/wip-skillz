@@ -83,9 +83,11 @@ describe('the threads on tasks', () => {
   it('keeps the replies in the outbox of version 8 when pad.db is migrated to version 9', () => {
     const folder = scratchPadOfVersion8()
 
-    expect(folder.read((pad) => pad.readOutbox()).map((item) => item.text)).toStrictEqual([
-      'And on a fast one?',
-    ])
+    expect(
+      folder
+        .read((pad) => pad.readOutbox())
+        .map((item) => (item.kind === 'decision' ? item.decision : item.text)),
+    ).toStrictEqual(['And on a fast one?'])
   })
 
   it('saves a thread on a task after pad.db of version 8 is migrated', () => {

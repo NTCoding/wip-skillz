@@ -292,8 +292,53 @@ INSERT INTO threads
 DROP TABLE threads_on_pages;
 `
 
+// Version 10 allows decisions in the outbox. A queued decision has its decision_id, page,
+// decision_line, decision_question and either decision_choice or decision_written.
+const decisionsInOutbox = `
+CREATE TEMP TABLE outbox_before_decisions AS SELECT * FROM outbox;
+DROP TABLE outbox;
+CREATE TABLE outbox (
+  number INTEGER PRIMARY KEY AUTOINCREMENT CHECK (number >= 1),
+  time TEXT NOT NULL,
+  text TEXT,
+  thread_id TEXT REFERENCES threads (id),
+  page TEXT,
+  first_line INTEGER CHECK (first_line >= 1),
+  last_line INTEGER CHECK (last_line >= first_line),
+  selected_text TEXT,
+  prefix TEXT,
+  suffix TEXT,
+  copies_on_page INTEGER CHECK (copies_on_page >= 0),
+  decision_id TEXT,
+  decision_line INTEGER CHECK (decision_line >= 1),
+  decision_question TEXT,
+  decision_choice TEXT,
+  decision_written TEXT,
+  decision_option TEXT,
+  CHECK (
+    (thread_id IS NOT NULL AND first_line IS NULL AND decision_id IS NULL)
+    OR (thread_id IS NULL AND first_line IS NOT NULL AND decision_id IS NULL)
+    OR (thread_id IS NULL AND first_line IS NULL AND decision_id IS NOT NULL)
+  ),
+  CHECK ((decision_id IS NULL) = (text IS NOT NULL)),
+  CHECK ((first_line IS NULL) = (last_line IS NULL)),
+  CHECK ((first_line IS NULL) = (selected_text IS NULL)),
+  CHECK (thread_id IS NOT NULL OR page IS NOT NULL),
+  CHECK ((decision_id IS NULL) = (decision_line IS NULL)),
+  CHECK ((decision_id IS NULL) = (decision_question IS NULL)),
+  CHECK (decision_id IS NULL OR ((decision_choice IS NULL) <> (decision_written IS NULL)))
+) STRICT;
+INSERT INTO outbox
+  (number, time, text, thread_id, page, first_line, last_line, selected_text, prefix, suffix,
+   copies_on_page)
+  SELECT number, time, text, thread_id, page, first_line, last_line, selected_text, prefix, suffix,
+    copies_on_page
+  FROM outbox_before_decisions;
+DROP TABLE outbox_before_decisions;
+`
+
 export const padSchema: PadSchema = {
-  version: 9,
+  version: 10,
   firstTables: firstPadTables,
   migrations: [
     { version: 2, sql: improvementsTable },
@@ -304,6 +349,7 @@ export const padSchema: PadSchema = {
     { version: 7, sql: taskAssignments },
     { version: 8, sql: decisionReviewsTable },
     { version: 9, sql: threadsOnTasks },
+    { version: 10, sql: decisionsInOutbox },
   ],
 }
 

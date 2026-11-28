@@ -1,4 +1,5 @@
 import {
+  DraftToggle,
   Inbox,
   Outbox,
   StatusPill,
@@ -6,13 +7,9 @@ import {
   type Navigate,
   type OutboxEntry,
 } from './design-system/design-system'
-import { type PageReadMark, type PageSummary } from './api-responses'
+import { type PageReadMark } from './api-responses'
 import { fileOfPage } from './browser-route'
-import { type DesktopNotifications } from './desktop-notifications'
-import { NotificationsButton } from './inbox-notifications'
-import { PadSearch, type SearchMatch } from './pad-search'
 import { type PageActions } from './page-with-threads'
-import { type ScratchPadSearch } from './scratch-pad-connection'
 
 // The button after the name of the current page marks a new page as read and a read page as unread.
 export function pageActionOf(actions: PageActions | undefined, mark: PageReadMark | undefined) {
@@ -28,10 +25,8 @@ export function pageActionOf(actions: PageActions | undefined, mark: PageReadMar
 interface TopBarActionsProps {
   readonly serverStopped: boolean
   readonly actions: PageActions | undefined
-  readonly notifications: DesktopNotifications | undefined
-  readonly search: ScratchPadSearch['search'] | undefined
-  readonly pages: readonly PageSummary[]
-  readonly onOpenSearchMatch: (match: SearchMatch) => void
+  readonly draftMode: boolean
+  readonly onDraftModeChange: (enabled: boolean) => void
   readonly inboxEntries: readonly InboxEntry[]
   readonly outboxCount: number
   readonly outboxEntries: readonly OutboxEntry[]
@@ -42,10 +37,11 @@ interface TopBarActionsProps {
 export function TopBarActions({
   serverStopped,
   actions,
-  notifications,
-  search,
+  draftMode,
+  onDraftModeChange,
   ...props
 }: TopBarActionsProps) {
+  const showOutbox = draftMode || props.outboxCount > 0
   return (
     <>
       {serverStopped && (
@@ -53,22 +49,21 @@ export function TopBarActions({
       )}
       {actions !== undefined && (
         <>
-          {notifications !== undefined && <NotificationsButton notifications={notifications} />}
-          {search !== undefined && (
-            <PadSearch search={search} pages={props.pages} onOpen={props.onOpenSearchMatch} />
-          )}
           <Inbox
             entries={props.inboxEntries}
             onNavigate={props.onNavigate}
             onMarkDone={actions.markTaskDone}
           />
-          <Outbox
-            count={props.outboxCount}
-            entries={props.outboxEntries}
-            editing={props.outboxEditing}
-            onSendAll={actions.sendOutbox}
-            onNavigate={props.onNavigate}
-          />
+          {showOutbox && (
+            <Outbox
+              count={props.outboxCount}
+              entries={props.outboxEntries}
+              editing={props.outboxEditing}
+              onSendAll={actions.sendOutbox}
+              onNavigate={props.onNavigate}
+            />
+          )}
+          <DraftToggle enabled={draftMode} onChange={onDraftModeChange} />
         </>
       )}
     </>

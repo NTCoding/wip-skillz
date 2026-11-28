@@ -129,7 +129,10 @@ describe('nickEditsQueuedItem', () => {
 
     expect(nickEditsQueuedItem(folder, 1, 'Is 8 retries enough?').text).toBe('Is 8 retries enough?')
     expect(
-      folder.read((pad) => [pad.readOutbox()[0]?.text, pad.readEvents().at(-1)?.kind]),
+      folder.read((pad) => {
+        const [first] = pad.readOutbox()
+        return [first?.kind === 'comment' ? first.text : undefined, pad.readEvents().at(-1)?.kind]
+      }),
     ).toStrictEqual(['Is 8 retries enough?', 'queued-item-edited'])
   })
 

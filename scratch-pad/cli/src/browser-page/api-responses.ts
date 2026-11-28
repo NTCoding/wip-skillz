@@ -223,6 +223,17 @@ const queuedItem = z.discriminatedUnion('kind', [
     text: z.string(),
     time: z.string(),
   }),
+  z.object({
+    kind: z.literal('decision'),
+    number: z.number(),
+    decision: z.string(),
+    page: z.string(),
+    line: z.number(),
+    question: z.string(),
+    answer,
+    chosenOption: optionalText,
+    time: z.string(),
+  }),
 ])
 
 export const outboxResponse = z.object({ items: z.array(queuedItem) })

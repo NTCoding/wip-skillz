@@ -14,6 +14,7 @@ import {
   nickMarksPageUnread,
   nickMarksSectionRead,
   nickQueuesComment,
+  nickQueuesDecision,
   nickQueuesReply,
   nickRemovesQueuedItem,
   nickReplies,
@@ -157,6 +158,20 @@ function nickAnswersDecisionBlock(
   const { block, question, page } = decisionBlockOn(folder, id, request.page)
   assertChoiceOnDecision(block, request.answer, page)
   return nickAnswersDecision(
+    folder,
+    { id: block.id, page, line: block.firstLine, question, answer: request.answer },
+    chosenOptionOf(block, request.answer),
+  )
+}
+
+function nickQueuesDecisionBlock(
+  folder: ScratchPadFolder,
+  id: string,
+  request: AnswerRequest,
+): void {
+  const { block, question, page } = decisionBlockOn(folder, id, request.page)
+  assertChoiceOnDecision(block, request.answer, page)
+  nickQueuesDecision(
     folder,
     { id: block.id, page, line: block.firstLine, question, answer: request.answer },
     chosenOptionOf(block, request.answer),
@@ -308,6 +323,10 @@ const routes: readonly Route[] = [
   padRoute('POST', '/outbox/replies', (folder, request) => {
     const body = bodyOf(request)
     nickQueuesReply(folder, body.text('thread'), body.messageText('message'))
+    return json(outboxOf(folder), 201)
+  }),
+  padRoute('POST', '/outbox/decisions/([^/]+)', (folder, request, id) => {
+    nickQueuesDecisionBlock(folder, id, answerRequestFrom(bodyOf(request)))
     return json(outboxOf(folder), 201)
   }),
   padRoute('POST', '/outbox/([0-9]+)', (folder, request, number) => {

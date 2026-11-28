@@ -68,7 +68,7 @@ describe('a scratch pad of the build before the numbers', () => {
       folder.read((pad) => [
         pad.readThread('c-1').page,
         pad.readDecisionAnswer('d-1').page,
-        ...pad.readOutbox().map((item) => (item.kind === 'comment' ? item.page : item.thread)),
+        ...pad.readOutbox().map((item) => (item.kind === 'reply' ? item.thread : item.page)),
       ]),
     ).toStrictEqual(['pages/plan.md', 'pages/plan.md', 'pages/plan.md', 'c-1'])
   })

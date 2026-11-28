@@ -40,7 +40,7 @@ function scratchPadOfVersion6(): ScratchPadFolder {
 }
 
 describe('the assignments of the tasks', () => {
-  it("keeps the tasks and the subtasks of version 6 and doesn't assign them when pad.db is migrated to version 9", () => {
+  it("keeps the tasks and the subtasks of version 6 and doesn't assign them when pad.db is migrated to version 10", () => {
     const folder = scratchPadOfVersion6()
 
     expect(folder.read((pad) => pad.readProgressTracker().tasks)).toStrictEqual([
@@ -72,7 +72,7 @@ describe('the assignments of the tasks', () => {
         ],
       },
     ])
-    expect(userVersion(folder)).toBe(9)
+    expect(userVersion(folder)).toBe(10)
   })
 
   it('saves the assignment of a subtask of version 6 after pad.db is migrated', () => {

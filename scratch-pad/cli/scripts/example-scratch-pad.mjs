@@ -732,6 +732,16 @@ Option 1, because the invoice is the legal document.
     // example doesn't need to add anything.
     add: async () => {},
   },
+  {
+    feature:
+      'Draft mode in the top bar and a queued decision in the outbox. Search and desktop notifications are in the footer of the left sidebar. Toggle Draft mode on in the top bar to queue comments, replies and decisions instead of sending them straight away. Decision d-1 on "How the job runs" is already queued in the outbox so Nick can review and send all.',
+    add: async (demo) => {
+      await demo.post('outbox/decisions/d-1', {
+        page: 'pages/1-how-the-job-runs.md',
+        choice: 'proposal',
+      })
+    },
+  },
 ]
 
 // Adds every example of `featureExamples` to the scratch pad `pad` while its server is running at

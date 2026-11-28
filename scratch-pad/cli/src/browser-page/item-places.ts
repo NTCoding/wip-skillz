@@ -96,6 +96,14 @@ export function queuedItemPlace(
       quote: attached?.text ?? item.anchor.selectedText,
     }
   }
+  if (item.kind === 'decision') {
+    return {
+      page: item.page,
+      card: item.decision,
+      where: placeOf(pages, item.page, sectionAt(pages, item.page, item.line)),
+      quote: item.question,
+    }
+  }
   const thread = threads.find((each) => each.id === item.thread)
   const first = thread?.messages[0]
   if (thread === undefined || first === undefined) {

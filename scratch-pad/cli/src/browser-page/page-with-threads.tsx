@@ -9,11 +9,9 @@ import {
   type ViewedPage,
 } from './api-responses'
 import {
-  MarginCard,
   MarginLane,
   MarginMarker,
   ReadingColumn,
-  SelectedTextQuote,
   SelectionTools,
   ThreadCard,
   ThreadDraft,
@@ -25,6 +23,7 @@ import {
 } from './design-system/design-system'
 import { shownTime } from './message-time'
 import {
+  queuedCommentItems,
   queuedItemMessage,
   queuedKey,
   queuedRepliesTo,
@@ -59,6 +58,7 @@ export interface PageActions extends QueuedItemActions, ReadMarkActions, Decisio
   readonly deleteImprovement: (number: number) => Promise<void>
   readonly queueComment: (thread: NewThread) => Promise<void>
   readonly queueReply: (id: string, message: string) => Promise<void>
+  readonly queueDecision: (id: string, page: string, answer: Answer) => Promise<void>
   readonly sendOutbox: () => Promise<void>
 }
 
@@ -82,6 +82,7 @@ interface PageWithThreadsProps {
   readonly taskChips?: ReactNode
   // The match that Nick has opened from the search, which is highlighted on the page
   readonly searchMatch?: SearchMatchOnPage | undefined
+  readonly draftMode: boolean
 }
 
 interface Draft {
@@ -156,6 +157,7 @@ function highlightsOf(
 
 interface ThreadCardActions {
   readonly onReply: (text: string) => Promise<void>
+  readonly replySubmitLabel?: string | undefined
   readonly onResolve: () => Promise<void>
 }
 
@@ -163,9 +165,13 @@ export function threadCardActions(
   actions: PageActions,
   id: string,
   remember: (thread: Thread) => void,
+  queueReply = false,
 ): ThreadCardActions {
   return {
-    onReply: async (message) => remember(await actions.replyToThread(id, message)),
+    onReply: queueReply
+      ? (message) => actions.queueReply(id, message)
+      : async (message) => remember(await actions.replyToThread(id, message)),
+    replySubmitLabel: queueReply ? 'Add to outbox' : undefined,
     onResolve: async () => remember(await actions.resolveThread(id)),
   }
 }
@@ -185,6 +191,44 @@ function useActiveThread(
     setActive(address.section)
   }
   return [active, setActive]
+}
+
+function draftMarginItems(
+  draft: Draft | undefined,
+  actions: PageActions | undefined,
+  draftMode: boolean,
+  handlers: {
+    readonly onSend: (writing: PageActions, draft: Draft, message: string) => Promise<void>
+    readonly onQueue: (writing: PageActions, draft: Draft, message: string) => Promise<void>
+    readonly onCancel: () => void
+  },
+): MarginItem[] {
+  if (draft === undefined || actions === undefined) {
+    return []
+  }
+  const queue = draftMode && draft.kind === 'comment'
+  return [
+    {
+      key: 'draft',
+      anchorLines: draft.selection.lines,
+      content: (
+        <ThreadDraft
+          key={`${draft.kind} ${draft.selection.lines} ${draft.selection.selectedText}`}
+          kind={draft.kind}
+          selectedText={draft.selection.selectedText}
+          submitLabel={queue ? 'Add to outbox' : undefined}
+          onSend={(message) =>
+            queue
+              ? handlers.onQueue(actions, draft, message)
+              : handlers.onSend(actions, draft, message)
+          }
+          onCancel={handlers.onCancel}
+        />
+      ),
+      marker: undefined,
+      popup: true,
+    },
+  ]
 }
 
 export function PageWithThreads(props: PageWithThreadsProps) {
@@ -247,17 +291,20 @@ export function PageWithThreads(props: PageWithThreadsProps) {
     await writing.queueComment(newThreadOf(current, page.page, message))
     setDraft(undefined)
   }
+  const { draftMode } = props
   const elementContext = elementContextOf(
     context,
     page,
     choices,
-    actions?.answerDecision,
+    draftMode ? actions?.queueDecision : actions?.answerDecision,
     actions,
     {
       startDraft,
       answered: (id, choice) => {
-        setChoices((current) => new Map([...current, [id, choice]]))
-        setActive(id)
+        if (!draftMode) {
+          setChoices((current) => new Map([...current, [id, choice]]))
+          setActive(id)
+        }
       },
     },
   )
@@ -289,13 +336,15 @@ export function PageWithThreads(props: PageWithThreadsProps) {
         textChanged={textChanged}
         active={thread.id === active}
         onActivate={() => setActive(thread.id)}
-        {...(actions === undefined ? {} : threadCardActions(actions, thread.id, remember))}
+        {...(actions === undefined
+          ? {}
+          : threadCardActions(
+              actions,
+              thread.id,
+              remember,
+              draftMode && thread.type === 'comment',
+            ))}
         onHide={() => hide(thread)}
-        onAddToOutbox={
-          actions === undefined || thread.type !== 'comment'
-            ? undefined
-            : (text) => actions.queueReply(thread.id, text)
-        }
         outbox={
           actions === undefined
             ? undefined
@@ -317,68 +366,17 @@ export function PageWithThreads(props: PageWithThreadsProps) {
     popup: draft === undefined && thread.id === active,
     behindMarker: props.resolvedThreads.behindMarker(thread),
   }))
-  const queuedItems: MarginItem[] =
-    actions === undefined
-      ? []
-      : placedQueued.map(({ thread: item, blockLines }) => {
-          const key = queuedKey(item)
-          return {
-            key,
-            anchorLines: anchorLinesOf(blockLines, decisions),
-            content: (
-              <MarginCard
-                id={key}
-                label="Comment in the outbox"
-                name="the comment in the outbox"
-                kind="comment"
-                active={key === active}
-                onFocus={() => setActive(key)}
-              >
-                {(fullSize) => (
-                  <>
-                    {fullSize && <SelectedTextQuote quote={item.anchor} kind="comment" />}
-                    {queuedItemMessage(actions, item, 'Comment')}
-                  </>
-                )}
-              </MarginCard>
-            ),
-            marker: (
-              <MarginMarker
-                label="Comment in the outbox"
-                kind="comment"
-                messages={1}
-                open={draft === undefined && key === active}
-                onClick={() => toggle(key)}
-              />
-            ),
-            popup: draft === undefined && key === active,
-          }
-        })
-  const draftItems: MarginItem[] =
-    draft === undefined || actions === undefined
-      ? []
-      : [
-          {
-            key: 'draft',
-            anchorLines: draft.selection.lines,
-            content: (
-              <ThreadDraft
-                key={`${draft.kind} ${draft.selection.lines} ${draft.selection.selectedText}`}
-                kind={draft.kind}
-                selectedText={draft.selection.selectedText}
-                onSend={(message) => sendDraft(actions, draft, message)}
-                onAddToOutbox={
-                  draft.kind === 'comment'
-                    ? (message) => queueDraft(actions, draft, message)
-                    : undefined
-                }
-                onCancel={() => setDraft(undefined)}
-              />
-            ),
-            marker: undefined,
-            popup: true,
-          },
-        ]
+  const queuedItems = queuedCommentItems(
+    placedQueued,
+    actions,
+    (blockLines) => anchorLinesOf(blockLines, decisions),
+    { active, hasDraft: draft !== undefined, setActive, toggle },
+  )
+  const draftItems = draftMarginItems(draft, actions, draftMode, {
+    onSend: sendDraft,
+    onQueue: queueDraft,
+    onCancel: () => setDraft(undefined),
+  })
   const changedItems = changedSectionItems(props.readMark, actions, {
     body,
     active: draft === undefined ? active : undefined,

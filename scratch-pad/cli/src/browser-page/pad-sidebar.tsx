@@ -1,9 +1,13 @@
 import { type ReactNode } from 'react'
 import { type PageSummary, type ReadMarks, type ViewedPage } from './api-responses'
 import { fileOfPage, type BrowserRoute, type PadAddresses } from './browser-route'
+import { type DesktopNotifications } from './desktop-notifications'
 import { Sidebar, SidebarLink, TableOfContents, type Navigate } from './design-system/design-system'
+import { NotificationsButton } from './inbox-notifications'
+import { PadSearch, type SearchMatch } from './pad-search'
 import { parentsOf, subPagesOf, topLevelPages } from './page-tree'
 import { readMarkOf, sidebarMarkOf } from './read-marks'
+import { type ScratchPadSearch } from './scratch-pad-connection'
 
 interface PadSidebarProps {
   readonly addresses: PadAddresses
@@ -19,6 +23,9 @@ interface PadSidebarProps {
   readonly readMarks: ReadMarks
   // The export doesn't have the Inbox or the Outbox, so its sidebar doesn't link to them.
   readonly withInboxOutbox: boolean
+  readonly notifications?: DesktopNotifications | undefined
+  readonly search?: ScratchPadSearch['search'] | undefined
+  readonly onOpenSearchMatch?: ((match: SearchMatch) => void) | undefined
 }
 
 export function sectionsOf(page: ViewedPage | undefined): ViewedPage['headings'] {
@@ -116,6 +123,19 @@ export function PadSidebar(props: PadSidebarProps) {
       heading="Pages"
       collapsed={props.collapsed}
       onCollapsedChange={props.onCollapsedChange}
+      footerTools={
+        props.withInboxOutbox &&
+        (props.search !== undefined || props.notifications !== undefined) ? (
+          <>
+            {props.search !== undefined && props.onOpenSearchMatch !== undefined && (
+              <PadSearch search={props.search} pages={pages} onOpen={props.onOpenSearchMatch} />
+            )}
+            {props.notifications !== undefined && (
+              <NotificationsButton notifications={props.notifications} />
+            )}
+          </>
+        ) : undefined
+      }
     >
       {topLevelPages(pages).map((summary) =>
         pageLink(summary, summary.page === openBranch, new Set()),

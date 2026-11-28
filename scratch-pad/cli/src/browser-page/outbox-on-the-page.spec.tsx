@@ -57,6 +57,7 @@ function outboxButton(): HTMLElement {
 }
 
 beforeEach(() => {
+  window.localStorage.setItem('scratch-pad-draft-mode', 'on')
   vi.spyOn(window, 'scrollTo').mockImplementation(() => undefined)
 })
 
@@ -161,6 +162,18 @@ describe('the outbox on a page', () => {
     const reply = await within(card('Comment c-1')).findByRole('group', { name: 'Reply' })
     expect(reply.textContent).toContain('Can a shop ask for 10?')
     expect(reply.textContent).toContain('In outbox')
+  })
+
+  it('opens the whole thread at full size and adds a reply to the outbox there when Nick clicks the expand button of a card', async () => {
+    await renderIndex()
+    await userEvent.click(screen.getByRole('button', { name: 'Open c-1 at full size' }))
+    const view = screen.getByRole('dialog', { name: 'Thread on “retries 5 times”' })
+    expect(within(view).getByRole('blockquote').textContent).toBe(
+      'The job retries 5 times. See this section and the retry',
+    )
+    await userEvent.type(within(view).getByRole('textbox', { name: 'Write a reply…' }), 'Why 8?')
+    await userEvent.click(within(view).getByRole('button', { name: 'Add to outbox' }))
+    expect(await within(view).findByText('Why 8?')).toBeDefined()
   })
 
   it('doesn’t offer the outbox for a reply to a grammar note', async () => {
