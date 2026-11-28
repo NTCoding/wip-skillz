@@ -171,7 +171,7 @@ export function threadCardActions(
     onReply: queueReply
       ? (message) => actions.queueReply(id, message)
       : async (message) => remember(await actions.replyToThread(id, message)),
-    replySubmitLabel: queueReply ? 'Add to outbox' : undefined,
+    replySubmitLabel: queueReply ? '+ outbox' : undefined,
     onResolve: async () => remember(await actions.resolveThread(id)),
   }
 }
@@ -216,7 +216,7 @@ function draftMarginItems(
           key={`${draft.kind} ${draft.selection.lines} ${draft.selection.selectedText}`}
           kind={draft.kind}
           selectedText={draft.selection.selectedText}
-          submitLabel={queue ? 'Add to outbox' : undefined}
+          submitLabel={queue ? '+ outbox' : undefined}
           onSend={(message) =>
             queue
               ? handlers.onQueue(actions, draft, message)

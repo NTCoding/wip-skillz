@@ -69,7 +69,7 @@ describe('the outbox on a page', () => {
     selectInBlock('3-4', 4, 14)
     await userEvent.click(screen.getByRole('button', { name: 'Comment' }))
     await userEvent.keyboard('Is the job nightly?')
-    await userEvent.click(screen.getByRole('button', { name: 'Add to outbox' }))
+    await userEvent.click(screen.getByRole('button', { name: '+ outbox' }))
 
     expect(queueComment).toHaveBeenCalledWith({
       type: 'comment',
@@ -89,7 +89,7 @@ describe('the outbox on a page', () => {
     selectInBlock('3-4', 4, 14)
     await userEvent.click(screen.getByRole('button', { name: 'Comment' }))
     await userEvent.keyboard('Is the job nightly?')
-    await userEvent.click(screen.getByRole('button', { name: 'Add to outbox' }))
+    await userEvent.click(screen.getByRole('button', { name: '+ outbox' }))
 
     const queued = await screen.findByRole('region', { name: 'Comment in the outbox' })
     expect([
@@ -142,7 +142,7 @@ describe('the outbox on a page', () => {
     selectInBlock('3-4', 4, 14)
     await userEvent.click(screen.getByRole('button', { name: 'Grammar / tone' }))
     await userEvent.keyboard('Write who runs it.')
-    expect(screen.queryByRole('button', { name: 'Add to outbox' })).toBeNull()
+    expect(screen.queryByRole('button', { name: '+ outbox' })).toBeNull()
   })
 
   it('adds a reply to the outbox and shows it in its thread with the label In outbox', async () => {
@@ -154,7 +154,7 @@ describe('the outbox on a page', () => {
       'Can a shop ask for 10?',
     )
     await userEvent.click(
-      within(card('Comment c-1')).getByRole('button', { name: 'Add to outbox' }),
+      within(card('Comment c-1')).getByRole('button', { name: '+ outbox' }),
     )
 
     expect(queueReply).toHaveBeenCalledWith('c-1', 'Can a shop ask for 10?')
@@ -172,7 +172,7 @@ describe('the outbox on a page', () => {
       'The job retries 5 times. See this section and the retry',
     )
     await userEvent.type(within(view).getByRole('textbox', { name: 'Write a reply…' }), 'Why 8?')
-    await userEvent.click(within(view).getByRole('button', { name: 'Add to outbox' }))
+    await userEvent.click(within(view).getByRole('button', { name: '+ outbox' }))
     expect(await within(view).findByText('Why 8?')).toBeDefined()
   })
 
@@ -183,7 +183,7 @@ describe('the outbox on a page', () => {
       'And the tone?',
     )
     expect(
-      within(card('Grammar / tone g-1')).queryByRole('button', { name: 'Add to outbox' }),
+      within(card('Grammar / tone g-1')).queryByRole('button', { name: '+ outbox' }),
     ).toBeNull()
   })
 
