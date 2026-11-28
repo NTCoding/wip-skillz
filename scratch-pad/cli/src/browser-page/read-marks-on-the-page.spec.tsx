@@ -53,6 +53,7 @@ function breadcrumb(): HTMLElement {
 }
 
 beforeEach(() => {
+  window.localStorage.setItem('scratch-pad-draft-mode', 'off')
   vi.spyOn(window, 'scrollTo').mockImplementation(() => undefined)
 })
 

@@ -31,23 +31,23 @@ beforeEach(() => {
 })
 
 describe('draft mode', () => {
-  it('hides the outbox when draft mode is off and shows it when toggled on and off', async () => {
+  it('shows the outbox by default when draft mode is on and hides it when toggled off', async () => {
     const fake = fakeConnection()
     renderApp(`/${exportPad}/`, fake)
     await screen.findByRole('region', { name: 'Comment c-1' })
 
-    expect(screen.queryByRole('button', { name: /^Outbox/ })).toBeNull()
-
-    const toggle = screen.getByRole('switch', { name: 'Draft mode' })
-    await userEvent.click(toggle)
     expect(screen.getByRole('button', { name: /^Outbox/ })).toBeDefined()
 
     const queueDecision = vi.spyOn(fake.connection, 'queueDecision')
     await userEvent.click(screen.getByRole('button', { name: 'Proposal' }))
     expect(queueDecision).toHaveBeenCalledWith('d-1', 'pages/index.md', { choice: 'proposal' })
 
+    const toggle = screen.getByRole('switch', { name: 'Draft mode' })
     await userEvent.click(toggle)
     expect(screen.queryByRole('button', { name: /^Outbox/ })).toBeNull()
+
+    await userEvent.click(toggle)
+    expect(screen.getByRole('button', { name: /^Outbox/ })).toBeDefined()
   })
 
   it('shows queued decisions in the outbox panel and on the Inbox / Outbox view', async () => {
