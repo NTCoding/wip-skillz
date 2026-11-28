@@ -35,7 +35,7 @@ const defaultPort = 4747
 const checkMilliseconds = 250
 const startMilliseconds = 5000
 const stopMilliseconds = 5000
-const defaultQuietMilliseconds = 120_000
+const defaultQuietMilliseconds = 0
 
 // An agent that ends its turn while `wait` isn't running misses Nick's next comment. That's why
 // the output of the commands that the agent runs while it deals with Nick's items ends with this

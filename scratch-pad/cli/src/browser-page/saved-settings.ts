@@ -33,7 +33,7 @@ export function saveSidebarCollapsed(settings: SavedSettings, collapsed: boolean
 }
 
 function savedDraftMode(settings: SavedSettings): boolean {
-  return savedValue(settings, draftModeKey) === 'on'
+  return savedValue(settings, draftModeKey) !== 'off'
 }
 
 function saveDraftMode(settings: SavedSettings, enabled: boolean): void {

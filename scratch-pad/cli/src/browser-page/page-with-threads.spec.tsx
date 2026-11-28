@@ -51,6 +51,7 @@ function popupOf(name: string): string | null | undefined {
 }
 
 beforeEach(() => {
+  window.localStorage.setItem('scratch-pad-draft-mode', 'off')
   vi.spyOn(window, 'scrollTo').mockImplementation(() => undefined)
 })
 
