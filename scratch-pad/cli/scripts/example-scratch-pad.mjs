@@ -734,10 +734,10 @@ Option 1, because the invoice is the legal document.
   },
   {
     feature:
-      'Draft mode in the top bar and a queued decision in the outbox. Search and desktop notifications are in the footer of the left sidebar. Toggle Draft mode on in the top bar to queue comments, replies and decisions instead of sending them straight away. Decision d-1 on "How the job runs" is already queued in the outbox so Nick can review and send all.',
+      'Draft mode in the top bar and a queued decision in the outbox. Search and desktop notifications are in the footer of the left sidebar. Toggle Draft mode on in the top bar to queue comments, replies and decisions instead of sending them straight away. Decision d-2 on "Wait between retries" is already queued in the outbox so Nick can review and send all.',
     add: async (demo) => {
-      await demo.post('outbox/decisions/d-1', {
-        page: 'pages/1-how-the-job-runs.md',
+      await demo.post('outbox/decisions/d-2', {
+        page: 'pages/wait-between-retries.md',
         choice: 'proposal',
       })
     },
