@@ -23,8 +23,11 @@ import {
   editQueuedItem,
   findQueuedItem,
   queueComment,
+  queueDecision,
   queueReply,
+  type QueuedComment,
   type QueuedItem,
+  type QueuedReply,
 } from '../outbox/outbox'
 import { findPage } from '../pages/page-markdown'
 import {
@@ -172,6 +175,26 @@ export function nickResolves(folder: ScratchPadFolder, id: string): Thread {
   })
 }
 
+function writeNickDecisionAnswer(
+  pad: PadDb,
+  input: NewDecisionAnswer,
+  time: string,
+  chosenOption?: string,
+): DecisionAnswer {
+  assertCanBeDecided(input.id, pad.readDecisionRounds(input.id))
+  const decision = answerDecision(input, time)
+  pad.writeDecisionAnswer(decision)
+  const logged = logDecision(pad.readDecisionLog(), {
+    time,
+    source: 'page',
+    text: `${input.question} ${loggedAnswerLine(input.answer, chosenOption)}`,
+    decision: decision.id,
+  })
+  pad.saveDecisionLogEntry(logged.entry)
+  pad.appendEvent({ time, kind: 'decision-answered', by: 'nick', item: decision.id })
+  return decision
+}
+
 export function nickAnswersDecision(
   folder: ScratchPadFolder,
   input: NewDecisionAnswer,
@@ -179,20 +202,9 @@ export function nickAnswersDecision(
 ): DecisionAnswer {
   const time = new Date().toISOString()
   const page = findPage(folder.pages(), input.page, folder.name)
-  return folder.change((pad) => {
-    assertCanBeDecided(input.id, pad.readDecisionRounds(input.id))
-    const decision = answerDecision({ ...input, page }, time)
-    pad.writeDecisionAnswer(decision)
-    const logged = logDecision(pad.readDecisionLog(), {
-      time,
-      source: 'page',
-      text: `${input.question} ${loggedAnswerLine(input.answer, chosenOption)}`,
-      decision: decision.id,
-    })
-    pad.saveDecisionLogEntry(logged.entry)
-    pad.appendEvent({ time, kind: 'decision-answered', by: 'nick', item: decision.id })
-    return decision
-  })
+  return folder.change((pad) =>
+    writeNickDecisionAnswer(pad, { ...input, page }, time, chosenOption),
+  )
 }
 
 export function nickRequestsChanges(
@@ -301,11 +313,34 @@ export function nickQueuesReply(folder: ScratchPadFolder, id: string, text: stri
   })
 }
 
+export function nickQueuesDecision(
+  folder: ScratchPadFolder,
+  input: NewDecisionAnswer,
+  chosenOption?: string,
+): QueuedItem {
+  const time = new Date().toISOString()
+  const page = findPage(folder.pages(), input.page, folder.name)
+  return folder.change((pad) => {
+    if (pad.readDecisionAnswers().some((answer) => answer.id === input.id)) {
+      throw new DecisionAlreadyAnsweredError(input.id)
+    }
+    assertCanBeDecided(input.id, pad.readDecisionRounds(input.id))
+    const queued = queueDecision({ ...input, page }, time, chosenOption)
+    pad
+      .readOutbox()
+      .filter((existing) => existing.kind === 'decision' && existing.decision === input.id)
+      .forEach((existing) => pad.deleteQueuedItem(existing.number))
+    const item = pad.saveQueuedItem(queued)
+    pad.appendEvent({ time, kind: 'item-queued', by: 'nick', item: undefined })
+    return item
+  })
+}
+
 export function nickEditsQueuedItem(
   folder: ScratchPadFolder,
   number: number,
   text: string,
-): QueuedItem {
+): QueuedComment | QueuedReply {
   const time = new Date().toISOString()
   return folder.change((pad) => {
     const item = editQueuedItem(pad.readOutbox(), number, text)
@@ -329,7 +364,13 @@ export function nickSendsOutbox(folder: ScratchPadFolder): Thread[] {
   const time = new Date().toISOString()
   return folder.change((pad) => {
     const items = pad.readOutbox()
-    const sent = items.map((item) => sendQueuedItem(pad, item, time))
+    const sent: Thread[] = []
+    for (const item of items) {
+      const thread = sendQueuedItem(pad, item, time)
+      if (thread !== undefined) {
+        sent.push(thread)
+      }
+    }
     items.forEach((item) => pad.deleteQueuedItem(item.number))
     if (items.length > 0) {
       pad.appendEvent({ time, kind: 'outbox-sent', by: 'nick', item: undefined })
@@ -340,7 +381,12 @@ export function nickSendsOutbox(folder: ScratchPadFolder): Thread[] {
   })
 }
 
-function sendQueuedItem(pad: PadDb, item: QueuedItem, time: string): Thread {
+function sendQueuedItem(pad: PadDb, item: QueuedItem, time: string): Thread | undefined {
+  if (item.kind === 'decision') {
+    const { decision: id, page, line, question, answer, chosenOption } = item
+    writeNickDecisionAnswer(pad, { id, page, line, question, answer }, time, chosenOption)
+    return undefined
+  }
   return item.kind === 'reply'
     ? writeNickReply(pad, item.thread, item.text, time)
     : writeNickComment(

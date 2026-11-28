@@ -57,6 +57,7 @@ function outboxButton(): HTMLElement {
 }
 
 beforeEach(() => {
+  window.localStorage.setItem('scratch-pad-draft-mode', 'on')
   vi.spyOn(window, 'scrollTo').mockImplementation(() => undefined)
 })
 
@@ -163,6 +164,18 @@ describe('the outbox on a page', () => {
     expect(reply.textContent).toContain('In outbox')
   })
 
+  it('opens the whole thread at full size and adds a reply to the outbox there when Nick clicks the expand button of a card', async () => {
+    await renderIndex()
+    await userEvent.click(screen.getByRole('button', { name: 'Open c-1 at full size' }))
+    const view = screen.getByRole('dialog', { name: 'Thread on “retries 5 times”' })
+    expect(within(view).getByRole('blockquote').textContent).toBe(
+      'The job retries 5 times. See this section and the retry',
+    )
+    await userEvent.type(within(view).getByRole('textbox', { name: 'Write a reply…' }), 'Why 8?')
+    await userEvent.click(within(view).getByRole('button', { name: 'Add to outbox' }))
+    expect(await within(view).findByText('Why 8?')).toBeDefined()
+  })
+
   it('doesn’t offer the outbox for a reply to a grammar note', async () => {
     await renderIndex()
     await userEvent.type(
@@ -181,7 +194,7 @@ describe('the outbox on a page', () => {
 
     expect(await screen.findAllByRole('region', { name: 'Comment in the outbox' })).toHaveLength(1)
     expect(within(card('Comment c-1')).getByRole('group', { name: 'Reply' })).toBeDefined()
-    expect(outboxButton().textContent).toBe('Outbox3')
+    expect(outboxButton().textContent).toBe('3')
   })
 
   it('scrolls to a queued comment when Nick opens a link to it and the outbox loads after the threads', async () => {
@@ -228,7 +241,7 @@ describe('the outbox on a page', () => {
     await vi.waitFor(() =>
       expect(within(card('Comment c-1')).queryByRole('group', { name: 'Reply' })).toBeNull(),
     )
-    expect(outboxButton().textContent).toBe('Outbox1')
+    expect(outboxButton().textContent).toBe('1')
   })
 
   it('sends every queued item and empties the outbox when Nick clicks Send all', async () => {
@@ -243,7 +256,7 @@ describe('the outbox on a page', () => {
     await vi.waitFor(() =>
       expect(screen.queryByRole('region', { name: 'Comment in the outbox' })).toBeNull(),
     )
-    expect(outboxButton().textContent).toBe('Outbox')
+    expect(outboxButton().textContent).toBe('')
   })
 
   it('disables Send all while Nick edits a queued comment and enables it again once he saves the edit', async () => {
@@ -404,7 +417,7 @@ describe('the outbox on a deleted page', () => {
       expect(screen.queryByRole('region', { name: 'Comment in the outbox' })).toBeNull(),
     )
     expect([outboxButton().textContent, screen.getByRole('status').textContent]).toStrictEqual([
-      'Outbox',
+      '',
       'There isn’t any page called queue.md in this scratch pad.',
     ])
   })

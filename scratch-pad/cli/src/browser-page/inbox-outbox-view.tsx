@@ -15,6 +15,7 @@ import {
 import { cardHref, queuedItemPlace, quoteOf, threadPlace } from './item-places'
 import { timeAgo } from './message-time'
 import { authorNames } from './nick-inbox-entries'
+import { queuedItemText } from './outbox-entries'
 import { queuedKey } from './queued-items'
 
 // A comment that has waited for the agent for longer than this is shown as late.
@@ -129,12 +130,12 @@ function queuedRow(item: QueuedItem, props: InboxOutboxViewProps): ItemRow[] {
       kind: 'In the outbox',
       where: place.where,
       quote: place.quote,
-      quoteKind: 'text',
-      last: `Nick: ${item.text}`,
+      quoteKind: item.kind === 'decision' ? 'decision' : 'text',
+      last: `Nick: ${queuedItemText(item)}`,
       time: item.time,
       shownTime: 'Not sent yet',
       late: false,
-      linkLabel: 'Open the thread',
+      linkLabel: item.kind === 'decision' ? 'Open the decision' : 'Open the thread',
       href: cardHref(props.addresses, place.page, place.card),
     },
   ]

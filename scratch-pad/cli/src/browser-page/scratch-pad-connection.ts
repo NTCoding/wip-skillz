@@ -86,6 +86,7 @@ export interface ScratchPadWriting {
   readonly deleteImprovement: (number: number) => Promise<void>
   readonly queueComment: (thread: NewThread) => Promise<void>
   readonly queueReply: (id: string, message: string) => Promise<void>
+  readonly queueDecision: (id: string, page: string, answer: Answer) => Promise<void>
   readonly editQueuedItem: (number: number, message: string) => Promise<void>
   readonly removeQueuedItem: (number: number) => Promise<void>
   readonly sendOutbox: () => Promise<Thread[]>
@@ -260,6 +261,14 @@ export function scratchPadConnection(pad: string, network: BrowserNetwork): Scra
         `${api}/outbox/replies`,
         outboxResponse,
         postOf({ thread: id, message }),
+      )
+    },
+    queueDecision: async (id, page, answer) => {
+      await readJson(
+        network,
+        `${api}/outbox/decisions/${encodeURIComponent(id)}`,
+        outboxResponse,
+        postOf({ page, ...answer }),
       )
     },
     editQueuedItem: async (number, message) => {

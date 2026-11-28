@@ -79,13 +79,26 @@
 .sidebar__foot {
   flex: none;
   display: flex;
-  justify-content: flex-end;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-xs);
   padding: var(--space-md) var(--space-lg);
   border-top: var(--hairline) solid var(--line);
 }
 
+.sidebar__foot-tools {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
 .sidebar[data-collapsed='true'] .sidebar__foot {
+  flex-direction: column;
   justify-content: center;
   margin-top: auto;
   padding: var(--space-md) var(--space-0);
+}
+
+.sidebar[data-collapsed='true'] .sidebar__foot-tools {
+  flex-direction: column;
 }

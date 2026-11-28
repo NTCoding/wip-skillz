@@ -12,7 +12,7 @@ import './outbox.css'
 export interface OutboxEntry {
   readonly key: string
   readonly href: string
-  readonly kind: 'comment' | 'reply'
+  readonly kind: 'comment' | 'reply' | 'decision'
   readonly where: string
   readonly quote: string
   readonly text: string
@@ -32,7 +32,7 @@ interface OutboxProps {
   readonly onNavigate: Navigate
 }
 
-const headings = { comment: 'Comment', reply: 'Reply' } as const
+const headings = { comment: 'Comment', reply: 'Reply', decision: 'Decision' } as const
 
 function countText(count: number): string {
   if (count === 0) {

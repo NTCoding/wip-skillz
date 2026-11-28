@@ -308,4 +308,10 @@
   --command-palette-icon-size: 18px;
   --command-palette-place-icon-size: 13px;
   --key-size: 20px;
+  --switch-h: 30px;
+  --switch-track-w: 24px;
+  --switch-track-h: 14px;
+  --switch-thumb-size: 10px;
+  --switch-thumb-offset: 2px;
+  --switch-thumb-shift: 10px;
 }

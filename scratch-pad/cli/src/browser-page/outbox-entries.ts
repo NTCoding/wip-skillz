@@ -5,6 +5,13 @@ import { cardHref, queuedItemPlace } from './item-places'
 import { shownTime } from './message-time'
 import { queuedKey } from './queued-items'
 
+export function queuedItemText(item: QueuedItem): string {
+  if (item.kind !== 'decision') {
+    return item.text
+  }
+  return 'choice' in item.answer ? (item.chosenOption ?? item.answer.choice) : item.answer.written
+}
+
 // The entries of the Outbox in the top bar. Each entry links to the card of its item, where Nick
 // edits or removes the item. A reply to a thread that isn't in the threads is left out.
 export function outboxEntries(
@@ -24,7 +31,7 @@ export function outboxEntries(
             kind: item.kind,
             where: place.where,
             quote: place.quote,
-            text: item.text,
+            text: queuedItemText(item),
             time: item.time,
             shownTime: `Queued ${shownTime(item.time)}`,
           },

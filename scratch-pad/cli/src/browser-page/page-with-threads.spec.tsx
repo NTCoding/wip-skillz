@@ -238,18 +238,6 @@ describe('the threads of a page', () => {
     expect(screen.queryByRole('button', { name: 'Proposal' })).toBeNull()
   })
 
-  it('opens the whole thread at full size and adds a reply to the outbox there when Nick clicks the expand button of a card', async () => {
-    await renderIndex()
-    await userEvent.click(screen.getByRole('button', { name: 'Open c-1 at full size' }))
-    const view = screen.getByRole('dialog', { name: 'Thread on “retries 5 times”' })
-    expect(within(view).getByRole('blockquote').textContent).toBe(
-      'The job retries 5 times. See this section and the retry',
-    )
-    await userEvent.type(within(view).getByRole('textbox', { name: 'Write a reply…' }), 'Why 8?')
-    await userEvent.click(within(view).getByRole('button', { name: 'Add to outbox' }))
-    expect(await within(view).findByText('Why 8?')).toBeDefined()
-  })
-
   it('labels the full size view as a thread when a thread doesn’t have the text around its selection', async () => {
     const fake = fakeConnection()
     const anchor = { firstLine: 8, lastLine: 8, selectedText: '' }

@@ -3,7 +3,7 @@ import { type Answer } from '../decisions/decision-answer'
 import { type DecisionLogEntry } from '../decisions/decision-log'
 import { isSentBack, type DecisionReview } from '../decisions/decision-review'
 import { nickInbox } from '../nick-inbox/nick-inbox'
-import { type QueuedComment, type QueuedReply } from '../outbox/outbox'
+import { type QueuedComment, type QueuedDecision, type QueuedReply } from '../outbox/outbox'
 import { isUnderNumber, pageFileOf, parentNumberOf, type PageFile } from '../pages/page-files'
 import { existingPage, findPage, pageTitle } from '../pages/page-markdown'
 import { searchResultsOf, type SearchResult } from '../pages/page-search'
@@ -89,7 +89,8 @@ interface NickInboxItems {
   readonly decisions: readonly UnansweredDecision[]
 }
 
-type QueuedItemOnPage = (QueuedComment & { readonly position: ThreadPosition }) | QueuedReply
+type QueuedItemOnPage =
+  (QueuedComment & { readonly position: ThreadPosition }) | QueuedReply | QueuedDecision
 
 interface Outbox {
   readonly items: readonly QueuedItemOnPage[]
@@ -279,12 +280,12 @@ export function outboxOf(folder: ScratchPadFolder): Outbox {
     items: folder
       .read((pad) => pad.readOutbox())
       .map((item) =>
-        item.kind === 'reply'
-          ? item
-          : {
+        item.kind === 'comment'
+          ? {
               ...item,
               position: currentPosition(item.anchor, folder.readPageLines(item.page).join('\n')),
-            },
+            }
+          : item,
       ),
   }
 }

@@ -44,7 +44,7 @@ import { PageOutline } from './page-outline'
 import { fullTreeNodes, pageListEntries, pageOfFileName } from './page-tree'
 import { pageRevisionOf, usePadRevisions } from './pad-revisions'
 import { pagePreview } from './page-preview'
-import { type SavedSettings } from './saved-settings'
+import { useDraftMode, type SavedSettings } from './saved-settings'
 import { PageWithThreads, type PageActions } from './page-with-threads'
 import { useOutboxEdits } from './queued-items'
 import { readMarkOf } from './read-marks'
@@ -110,6 +110,7 @@ interface RouteViewProps {
   readonly navigations: number
   readonly resolvedThreads: ResolvedThreads
   readonly searchMatch: SearchMatch | undefined
+  readonly draftMode: boolean
 }
 
 function isMissing(pages: LoadedValue<PageSummary[]>, file: string): boolean {
@@ -136,24 +137,6 @@ function cardsShownOn(
     page: deleted ? `pages/${route.file}` : loadedOr(page, undefined)?.page,
     cardsRead: lists.every((list) => list.status !== 'loading'),
   }
-}
-
-function InboxOutboxRoute(props: RouteViewProps) {
-  const { pageContext } = props
-  return props.actions === undefined ? (
-    <ReadingColumn>
-      <Notice tone="info">The export doesn’t include the Inbox and the Outbox.</Notice>
-    </ReadingColumn>
-  ) : (
-    <InboxOutboxView
-      addresses={pageContext.addresses}
-      pages={loadedOr(props.pages, [])}
-      inboxEntries={props.inboxEntries}
-      threads={props.threadsOfPad}
-      outbox={props.outbox.items}
-      onNavigate={pageContext.onNavigate}
-    />
-  )
 }
 
 function RouteView(props: RouteViewProps) {
@@ -197,7 +180,20 @@ function RouteView(props: RouteViewProps) {
     )
   }
   if (route.kind === 'inbox-outbox') {
-    return <InboxOutboxRoute {...props} />
+    return actions === undefined ? (
+      <ReadingColumn>
+        <Notice tone="info">The export doesn’t include the Inbox and the Outbox.</Notice>
+      </ReadingColumn>
+    ) : (
+      <InboxOutboxView
+        addresses={pageContext.addresses}
+        pages={loadedOr(props.pages, [])}
+        inboxEntries={props.inboxEntries}
+        threads={props.threadsOfPad}
+        outbox={props.outbox.items}
+        onNavigate={pageContext.onNavigate}
+      />
+    )
   }
   if (page.status === 'failed' && isMissing(props.pages, route.file)) {
     return (
@@ -223,6 +219,7 @@ function RouteView(props: RouteViewProps) {
       resolvedThreads={props.resolvedThreads}
       taskChips={taskChipsOn(props.tracker, props.pages, page.value.page, pageContext)}
       searchMatch={searchMatchOn(props.searchMatch, page.value.page)}
+      draftMode={props.draftMode}
       end={
         route.file === 'index.md' ? (
           <>
@@ -267,6 +264,7 @@ export function ScratchPadApp(props: ScratchPadAppProps) {
   const { pad, addresses, connection, writing, settings, narrowWindow } = props
   const { route, navigate, replace, navigations } = useBrowserNavigation(addresses.routeOf)
   const { collapsed, changeCollapsed } = useSidebarState(settings, narrowWindow, navigations)
+  const [draftMode, changeDraftMode] = useDraftMode(settings)
   const { revisions, serverStopped, changed } = usePadRevisions(connection)
 
   const file = route.kind === 'page' ? route.file : 'index.md'
@@ -357,10 +355,8 @@ export function ScratchPadApp(props: ScratchPadAppProps) {
               <TopBarActions
                 serverStopped={serverStopped}
                 actions={actions}
-                notifications={props.notifications}
-                search={props.search}
-                pages={pageList}
-                onOpenSearchMatch={openSearchMatch}
+                draftMode={draftMode}
+                onDraftModeChange={changeDraftMode}
                 inboxEntries={inboxEntries}
                 outboxCount={outbox.items.length}
                 outboxEntries={queuedEntries}
@@ -384,6 +380,9 @@ export function ScratchPadApp(props: ScratchPadAppProps) {
             onNavigate={navigate}
             readMarks={readMarks}
             withInboxOutbox={actions !== undefined}
+            notifications={props.notifications}
+            search={props.search}
+            onOpenSearchMatch={openSearchMatch}
           />
         }
       >
@@ -406,6 +405,7 @@ export function ScratchPadApp(props: ScratchPadAppProps) {
           navigations={navigations}
           resolvedThreads={resolvedThreads}
           searchMatch={searchMatch}
+          draftMode={draftMode}
         />
         {viewedPage !== undefined && (
           <PageOutline

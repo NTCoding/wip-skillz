@@ -86,12 +86,10 @@ afterEach(() => {
 })
 
 describe('the search of the pages', () => {
-  it('shows the search button to the left of the Inbox and opens the palette when Nick clicks it', async () => {
+  it('shows the search button in the sidebar and opens the palette when Nick clicks it', async () => {
     renderApp(`/${exportPad}/`)
     const button = await screen.findByRole('button', { name: searchLabel })
-    expect(button.nextElementSibling?.querySelector('button')?.getAttribute('aria-label')).toMatch(
-      /^Inbox/,
-    )
+    expect(button.closest('nav')?.getAttribute('aria-label')).toBe('Pages of the scratch pad')
     await userEvent.click(button)
     expect(screen.getByRole('dialog', { name: searchLabel }).hasAttribute('open')).toBe(true)
     expect(screen.getByRole('button', { name: searchLabel, hidden: true }).ariaPressed).toBe('true')

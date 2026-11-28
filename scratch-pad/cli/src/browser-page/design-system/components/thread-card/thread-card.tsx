@@ -28,6 +28,7 @@ interface ThreadCardProps {
   readonly active: boolean
   readonly onActivate: () => void
   readonly onReply?: ((text: string) => Promise<void>) | undefined
+  readonly replySubmitLabel?: string | undefined
   readonly onAddToOutbox?: ((text: string) => Promise<void>) | undefined
   readonly onResolve?: (() => Promise<void>) | undefined
   // Hides the card of a resolved thread behind its marker. Only a resolved card shows the button.
@@ -78,15 +79,16 @@ function ResolvedMessages({ messages }: { readonly messages: readonly ThreadMess
 
 interface ReplyBoxProps {
   readonly resolved: boolean
+  readonly submitLabel?: string | undefined
   readonly onReply: (text: string) => Promise<void>
   readonly onAddToOutbox: ((text: string) => Promise<void>) | undefined
 }
 
-function ReplyBox({ resolved, onReply, onAddToOutbox }: ReplyBoxProps) {
+function ReplyBox({ resolved, submitLabel, onReply, onAddToOutbox }: ReplyBoxProps) {
   return (
     <MessageBox
       label={resolved ? 'Reply to reopen…' : 'Write a reply…'}
-      submitLabel={resolved ? 'Reopen' : 'Reply'}
+      submitLabel={submitLabel ?? (resolved ? 'Reopen' : 'Reply')}
       onSubmit={onReply}
       secondSubmit={
         onAddToOutbox === undefined ? undefined : { ...addToOutbox, onSubmit: onAddToOutbox }
@@ -184,7 +186,12 @@ export function ThreadCard(props: ThreadCardProps) {
           )}
           {onReply !== undefined && (
             <div className="thread-card__reply">
-              <ReplyBox resolved={resolved} onReply={onReply} onAddToOutbox={onAddToOutbox} />
+              <ReplyBox
+                resolved={resolved}
+                submitLabel={props.replySubmitLabel}
+                onReply={onReply}
+                onAddToOutbox={onAddToOutbox}
+              />
             </div>
           )}
         </div>

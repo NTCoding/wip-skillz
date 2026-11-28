@@ -16,6 +16,7 @@ export {
 } from './components/decision-answer-form/decision-answer-form'
 export { DecisionCard } from './components/decision-card/decision-card'
 export { DecisionLog, type DecisionLogRow } from './components/decision-log/decision-log'
+export { DraftToggle } from './components/draft-toggle/draft-toggle'
 export { FilterPills, type FilterPill } from './components/filter-pills/filter-pills'
 export { FullSizeView } from './components/full-size-view/full-size-view'
 export { FullTree, type FullTreeNode } from './components/full-tree/full-tree'

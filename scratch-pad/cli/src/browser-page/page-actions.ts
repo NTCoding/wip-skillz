@@ -63,6 +63,10 @@ export function usePageActions(
         await writing.queueReply(id, message)
         changed({ kind: 'outbox' })
       },
+      queueDecision: async (id: string, page: string, answer: Answer) => {
+        await writing.queueDecision(id, page, answer)
+        changed({ kind: 'outbox' })
+      },
       editQueuedItem: async (number: number, message: string) => {
         await writing.editQueuedItem(number, message)
         changed({ kind: 'outbox' })
@@ -74,6 +78,7 @@ export function usePageActions(
       sendOutbox: async () => {
         const sent = await writing.sendOutbox()
         sent.forEach((thread) => changed({ kind: 'thread', id: thread.id }))
+        changed({ kind: 'decision', id: '' })
         changed({ kind: 'outbox' })
       },
       markPageRead: async (file: string, sections: readonly SectionHash[]) => {

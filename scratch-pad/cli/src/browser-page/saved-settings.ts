@@ -1,4 +1,7 @@
+import { useState } from 'react'
+
 const sidebarKey = 'scratch-pad-sidebar'
+const draftModeKey = 'scratch-pad-draft-mode'
 
 export interface SavedSettings {
   readonly getItem: (key: string) => string | null
@@ -27,4 +30,21 @@ export function savedSidebarCollapsed(settings: SavedSettings): boolean {
 
 export function saveSidebarCollapsed(settings: SavedSettings, collapsed: boolean): void {
   save(settings, sidebarKey, collapsed ? 'collapsed' : 'open')
+}
+
+function savedDraftMode(settings: SavedSettings): boolean {
+  return savedValue(settings, draftModeKey) === 'on'
+}
+
+function saveDraftMode(settings: SavedSettings, enabled: boolean): void {
+  save(settings, draftModeKey, enabled ? 'on' : 'off')
+}
+
+export function useDraftMode(settings: SavedSettings): [boolean, (enabled: boolean) => void] {
+  const [draftMode, setDraftMode] = useState(() => savedDraftMode(settings))
+  const changeDraftMode = (enabled: boolean): void => {
+    setDraftMode(enabled)
+    saveDraftMode(settings, enabled)
+  }
+  return [draftMode, changeDraftMode]
 }

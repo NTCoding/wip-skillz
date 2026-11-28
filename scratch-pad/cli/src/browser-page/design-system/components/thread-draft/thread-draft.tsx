@@ -6,6 +6,7 @@ import './thread-draft.css'
 interface ThreadDraftProps {
   readonly kind: ThreadKindName
   readonly selectedText: string
+  readonly submitLabel?: string | undefined
   readonly onSend: (text: string) => Promise<void>
   readonly onAddToOutbox?: ((text: string) => Promise<void>) | undefined
   readonly onCancel: () => void
@@ -34,7 +35,7 @@ export function ThreadDraft(props: ThreadDraftProps) {
       )}
       <MessageBox
         label={placeholders[kind]}
-        submitLabel="Send"
+        submitLabel={props.submitLabel ?? 'Send'}
         onSubmit={onSend}
         secondSubmit={
           onAddToOutbox === undefined ? undefined : { ...addToOutbox, onSubmit: onAddToOutbox }

@@ -310,6 +310,7 @@ export function fakeConnection(): FakeConnection {
     search: vi.fn((query: string) => Promise.resolve(query === 'retry' ? retrySearchResults : [])),
     ...fakeActions,
     ...outbox.actions,
+    queueDecision: vi.fn(() => Promise.resolve()),
     progressTracker: () => Promise.resolve(progressTracker),
     decisionLog: () => Promise.resolve(decisionLog),
     decisions: () => Promise.resolve(decisionsOfPad),
