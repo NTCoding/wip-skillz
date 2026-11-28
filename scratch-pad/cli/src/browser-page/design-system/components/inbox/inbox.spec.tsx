@@ -119,7 +119,7 @@ function updatesButton(): HTMLElement {
 describe('Inbox', () => {
   it('shows the count of the items that wait for Nick on the button when the list is closed', () => {
     const { button } = renderInbox([decision, reply])
-    expect(button.textContent).toBe('Inbox2')
+    expect(button.textContent).toBe('2')
     expect(button.getAttribute('aria-label')).toBe('Inbox: 2 items wait for you')
     expect(button.getAttribute('aria-expanded')).toBe('false')
     expect(screen.queryByRole('menu')).toBeNull()
@@ -203,7 +203,7 @@ describe('Inbox', () => {
       button.textContent,
       button.querySelector('.top-bar-panel__dot'),
       screen.queryByRole('button', { name: /^Updates to pages/ }),
-    ]).toStrictEqual(['Inbox', null, null])
+    ]).toStrictEqual(['', null, null])
     expect(button.getAttribute('aria-haspopup')).toBeNull()
     expect(button.getAttribute('aria-controls')).toBe(
       screen.getByRole('group', { name: 'Inbox' }).id,
@@ -227,7 +227,7 @@ describe('Inbox', () => {
 
   it('doesn’t count the updates to pages and doesn’t show a dot when an item waits for Nick', () => {
     const { button } = renderInbox([reply, changedPage, newPage])
-    expect(button.textContent).toBe('Inbox1')
+    expect(button.textContent).toBe('1')
     expect(button.getAttribute('aria-label')).toBe('Inbox: 1 item waits for you')
     expect(button.querySelector('.top-bar-panel__dot')).toBeNull()
   })
@@ -235,7 +235,7 @@ describe('Inbox', () => {
   it('shows a dot without a number when there are only updates to pages', async () => {
     const { button } = renderInbox([changedPage])
     expect([button.textContent, button.getAttribute('aria-label')]).toStrictEqual([
-      'Inbox',
+      '',
       'Inbox: pages have been updated',
     ])
     expect(button.querySelector('.top-bar-panel__dot')).not.toBeNull()

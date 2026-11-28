@@ -53,12 +53,12 @@ function renderOutbox(count: number, options: OutboxOptions = {}) {
 describe('Outbox', () => {
   it('shows the count of the queued items on the button', () => {
     const button = renderOutbox(3)
-    expect(button.textContent).toBe('Outbox3')
+    expect(button.textContent).toBe('3')
     expect(button.getAttribute('aria-label')).toBe('Outbox: 3 items are in the outbox.')
   })
 
   it('doesn’t show a count when the outbox is empty', () => {
-    expect(renderOutbox(0).textContent).toBe('Outbox')
+    expect(renderOutbox(0).textContent).toBe('')
   })
 
   it('opens the panel with the count and an enabled Send all button when Nick clicks the button', async () => {

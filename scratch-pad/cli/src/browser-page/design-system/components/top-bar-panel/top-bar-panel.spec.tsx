@@ -49,9 +49,9 @@ function panel(): HTMLElement | null {
 }
 
 describe('TopBarPanel', () => {
-  it('shows the label and the count on the button and describes the count to a screen reader', () => {
+  it('shows the icon and the count on the button and describes the count to a screen reader', () => {
     const button = renderPanel()
-    expect(button.textContent).toBe('Exports2')
+    expect(button.textContent).toBe('2')
     expect(button.getAttribute('aria-label')).toBe('Exports: 2 exports are running')
     expect(button.getAttribute('aria-haspopup')).toBe('menu')
     expect(button.querySelector('[data-tone="outbox"]')?.textContent).toBe('2')
@@ -59,7 +59,7 @@ describe('TopBarPanel', () => {
 
   it('doesn’t show a count when the count is 0', () => {
     const button = renderPanel(0)
-    expect(button.textContent).toBe('Exports')
+    expect(button.textContent).toBe('')
     expect(button.querySelector('.top-bar-panel__dot')).toBeNull()
   })
 
@@ -77,7 +77,7 @@ describe('TopBarPanel', () => {
       </TopBarPanel>,
     )
     const button = screen.getByRole('button', { name: 'Exports: a file has been written' })
-    expect(button.textContent).toBe('Exports')
+    expect(button.textContent).toBe('')
     expect(button.querySelector('.top-bar-panel__dot')).not.toBeNull()
   })
 
@@ -95,7 +95,7 @@ describe('TopBarPanel', () => {
       </TopBarPanel>,
     )
     const button = screen.getByRole('button', { name: 'Exports: 2 exports are running' })
-    expect(button.textContent).toBe('Exports2')
+    expect(button.textContent).toBe('2')
     expect(button.querySelector('.top-bar-panel__dot')).toBeNull()
   })
 

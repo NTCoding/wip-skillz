@@ -8,7 +8,7 @@
   align-items: center;
   gap: var(--space-sm);
   height: var(--control-h);
-  padding: var(--space-0) var(--space-xl);
+  padding: var(--space-0) var(--space-md);
   border: 0;
   border-radius: var(--r-pill);
   background: none;

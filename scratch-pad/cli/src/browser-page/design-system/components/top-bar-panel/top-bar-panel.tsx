@@ -82,6 +82,7 @@ export function TopBarPanel({
         id={buttonId}
         type="button"
         className="top-bar-panel__button"
+        title={label}
         aria-haspopup={popup}
         aria-expanded={open}
         aria-controls={open ? controlledId : undefined}
@@ -89,7 +90,6 @@ export function TopBarPanel({
         onClick={() => setOpen(!open)}
       >
         <Icon name={icon} />
-        {label}
         {count > 0 && (
           <span className="top-bar-panel__count" data-tone={tone}>
             {count}
